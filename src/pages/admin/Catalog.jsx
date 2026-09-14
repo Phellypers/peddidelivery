@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { productService, loadAdminCatalog } from '@/services/api/catalog';
-import { Plus, Search, MoreVertical, Edit, Trash2, Copy, Eye, EyeOff, Star, Loader2, Pause, Play, CheckSquare, Square } from 'lucide-react';
+import { Plus, Search, MoreVertical, Edit, Trash2, Copy, Eye, EyeOff, Star, Loader2, Pause, Play, CheckSquare, Square, Grid2X2 } from 'lucide-react';
 import { AnimatePresence } from 'framer-motion';
 import ProductForm from '@/components/admin/ProductForm';
 
@@ -105,23 +105,68 @@ export default function Catalog() {
         </div>
       )}
 
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
+      <div className="flex flex-col gap-3 sm:flex-row">
+        <div className="relative min-w-0 flex-1">
           <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar itens..." className="w-full pl-10 pr-4 py-2.5 bg-muted rounded-xl text-sm border-0 focus:outline-none focus:ring-2 focus:ring-primary/20" />
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar itens..." className="h-14 w-full rounded-2xl border border-border/60 bg-card pl-11 pr-4 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20" />
         </div>
-        <select value={filterCat} onChange={e => setFilterCat(e.target.value)} className="px-4 py-2.5 bg-muted rounded-xl text-sm border-0 focus:outline-none focus:ring-2 focus:ring-primary/20">
-          <option value="">Todas categorias</option>
+        <div className="relative sm:w-64">
+          <Grid2X2 size={18} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <select value={filterCat} onChange={e => setFilterCat(e.target.value)} className="h-14 w-full appearance-none rounded-2xl border border-border/60 bg-card pl-11 pr-10 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20">
+            <option value="">Todas categorias</option>
           {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-        </select>
+          </select>
+          <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground">⌄</span>
+        </div>
       </div>
 
       {loading ? (
         <div className="flex justify-center py-12"><Loader2 className="animate-spin text-primary" size={32} /></div>
       ) : (
         <div className="bg-card rounded-2xl border border-border/50 overflow-hidden">
+          <div className="divide-y divide-border/50 md:hidden">
+            {filteredProducts.map(product => {
+              const hasPromo = product.promo_price && product.promo_price < product.price;
+              const sellPrice = hasPromo ? product.promo_price : product.price;
+              return (
+                <article key={product.id} className={`flex min-h-[142px] gap-3 p-4 ${product.is_paused ? 'bg-orange-50/40' : ''}`}>
+                  <img src={product.images?.[0] || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=160'} alt="" className="h-24 w-24 flex-shrink-0 rounded-2xl object-cover" />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-start gap-2">
+                      <button onClick={() => { setEditingProduct(product); setShowForm(true); setMenuOpen(null); }} className="min-w-0 text-left text-base font-bold leading-5 text-foreground hover:text-primary">
+                        <span className="line-clamp-2">{product.name}</span>
+                      </button>
+                      {product.is_featured && <Star size={16} className="mt-0.5 flex-shrink-0 fill-amber-400 text-amber-400" />}
+                      <div className="relative ml-auto flex-shrink-0">
+                        <button aria-label={`Ações de ${product.name}`} onClick={() => setMenuOpen(menuOpen === product.id ? null : product.id)} className="-mr-2 -mt-2 rounded-lg p-2 hover:bg-accent"><MoreVertical size={18} /></button>
+                        {menuOpen === product.id && (
+                          <div className="absolute right-0 top-8 z-10 w-40 rounded-xl border border-border bg-card py-1 shadow-lg">
+                            <button onClick={() => { setEditingProduct(product); setShowForm(true); setMenuOpen(null); }} className="flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-accent"><Edit size={14} /> Editar</button>
+                            <button onClick={() => duplicateProduct(product)} className="flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-accent"><Copy size={14} /> Duplicar</button>
+                            <button onClick={() => togglePause(product)} className="flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-accent">{product.is_paused ? <><Play size={14} /> Reativar</> : <><Pause size={14} /> Pausar</>}</button>
+                            <button onClick={() => deleteProduct(product)} className="flex w-full items-center gap-2 px-3 py-2 text-sm text-destructive hover:bg-destructive/10"><Trash2 size={14} /> Excluir</button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <p className="mt-1 line-clamp-2 text-sm leading-5 text-muted-foreground">{product.description || 'Sem descrição cadastrada.'}</p>
+                    <div className="mt-2 flex items-end justify-between gap-2">
+                      <div>
+                        <span className={`text-base font-bold ${hasPromo ? 'text-primary' : 'text-foreground'}`}>R$ {sellPrice?.toFixed(2).replace('.', ',')}</span>
+                        {hasPromo && <span className="ml-2 text-xs text-muted-foreground line-through">R$ {product.price?.toFixed(2).replace('.', ',')}</span>}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {product.is_paused && <span className="rounded-full bg-orange-100 px-2 py-1 text-[10px] font-bold text-orange-700">PAUSADO</span>}
+                        <button onClick={() => toggleSelect(product.id)} aria-label={`Selecionar ${product.name}`} className="rounded-lg p-1">{selected.includes(product.id) ? <CheckSquare size={18} className="text-primary" /> : <Square size={18} className="text-gray-300" />}</button>
+                      </div>
+                    </div>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="hidden w-full text-sm md:table">
               <thead>
                 <tr className="border-b border-border bg-muted/50">
                   <th className="py-3 px-3 w-10">
