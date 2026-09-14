@@ -5,6 +5,21 @@
     "session_id": {
       "type": "string"
     },
+    "event_history": {
+      "type": "array",
+      "description": "Histórico de transições para atividade e métricas, sem alterar stage ou recovery_sent_at.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "stage": { "type": "string" },
+          "at": { "type": "string" },
+          "current_product": { "type": "string" },
+          "cart_action": { "type": "string" },
+          "added_item": { "type": "string" },
+          "cart_items": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
     "stage": {
       "type": "string",
       "enum": [

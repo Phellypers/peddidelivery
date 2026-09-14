@@ -1,0 +1,87 @@
+.peddi-live-panel { padding: 26px; border-color: #e6edf5; background: linear-gradient(160deg, #fff 65%, #fafcff); box-shadow: 0 8px 35px #163a5d05; }
+.peddi-live-panel .peddi-live-header { display: grid; grid-template-columns: 1fr 1fr auto; align-items: center; gap: 26px; }
+.peddi-live-panel .peddi-live-header h2 { font-size: clamp(22px, 2.2vw, 32px); font-weight: 750; letter-spacing: -.7px; }
+.peddi-live-panel .peddi-live-header > div:first-child > p { margin-left: 30px; max-width: 350px; font-size: 13px; color: #71809e; }
+.peddi-live-panel .peddi-live-light { width: 18px; height: 18px; margin-right: 6px; border-radius: 50%; background: #ff593f; box-shadow: 0 0 0 5px #ffede9, 0 0 18px #ff624770; }
+.peddi-live-panel .peddi-live-light > span:last-child { width: 18px; height: 18px; background: linear-gradient(140deg, #ff9256, #ff2828); }
+.peddi-live-panel .peddi-live-total { border-radius: 20px; background: #edfaf4; padding: 12px 24px; text-align: center; font-size: 14px; color: #17233a; }
+.peddi-live-panel .peddi-live-total-top { display: flex; align-items: center; justify-content: center; gap: 14px; color: #00a449; }
+.peddi-live-panel .peddi-live-total-top > span:first-of-type { font-size: 52px; font-weight: 750; line-height: 1.1; letter-spacing: -2px; }
+.peddi-live-panel .peddi-live-badge { padding: 6px 12px; border: 1px solid #cceee0; border-radius: 30px; white-space: nowrap; font-size: 11px; background: #ffffff65; }
+.peddi-live-panel .peddi-live-refresh { display: flex; align-items: center; gap: 10px; font-size: 12px; color: #40548a; }
+.peddi-live-panel .peddi-live-refresh > svg { box-sizing: content-box; padding: 10px; border-radius: 50%; border: 1px solid #e9eef9; }
+.peddi-live-panel .peddi-live-refresh small { display: block; margin-top: 3px; font-size: 10px; color: #8190ac; }
+.peddi-live-panel .peddi-live-body { gap: 18px; grid-template-columns: minmax(0, 1.9fr) minmax(0, 1fr); }
+.peddi-live-panel .peddi-live-funnel { padding: 10px 12px 0; border-radius: 22px; background: linear-gradient(#ecf7ff, #fff 25%); }
+.peddi-live-panel .peddi-live-stage { width: var(--stage-width); margin-left: auto; margin-right: auto; }
+.peddi-live-panel .peddi-live-stage-button { position: relative; isolation: isolate; padding: 15px 30px; min-height: 94px; gap: 20px; color: var(--stage-ink); }
+.peddi-live-panel .peddi-live-stage-button::before { content: ''; position: absolute; inset: 0; z-index: -1; border-radius: 18px; background: linear-gradient(110deg, var(--stage-from), var(--stage-to)); clip-path: polygon(0 0, 100% 0, 96% 100%, 4% 100%); }
+.peddi-live-panel .peddi-live-stage-button:hover::before { filter: brightness(1.025); }
+.peddi-live-panel .peddi-live-stage-button:focus-visible { outline: 2px solid #111; outline-offset: 3px; }
+.peddi-live-panel .peddi-live-stage-icon { width: 52px; height: 52px; border-radius: 50%; background: #ffffffdd; box-shadow: 0 0 0 5px #ffffff20; }
+.peddi-live-panel .peddi-live-stage-title { display: block; font-size: 16px; font-weight: 700; letter-spacing: -.2px; }
+.peddi-live-panel .peddi-live-stage-description { margin-top: 2px; font-size: 11px; opacity: .85; }
+.peddi-live-panel .peddi-live-progress { margin-top: 7px; }
+.peddi-live-panel .peddi-live-progress > div { height: 10px; }
+.peddi-live-panel .peddi-live-progress > span { font-size: 12px; font-weight: 600; }
+.peddi-live-panel .peddi-live-stage-count { padding-left: 18px; border-left: 1px solid #ffffff70; text-align: center; min-width: 65px; }
+.peddi-live-panel .peddi-live-stage-count > span { font-size: 28px; font-weight: 700; line-height: 1.1; }
+.peddi-live-panel .peddi-live-stage-count small { display: block; margin-top: 3px; font-size: 10px; }
+.peddi-live-panel [data-funnel-stage="navegando"] { --stage-width: 100%; --stage-from: #349cff; --stage-to: #66b8ff; --stage-ink: #fff; }
+.peddi-live-panel [data-funnel-stage="navegando"] .peddi-live-progress > div > div { background: #fff; }
+.peddi-live-panel [data-funnel-stage="interessado"] { --stage-width: 92%; --stage-from: #ffcb51; --stage-to: #ffe8ac; --stage-ink: #392711; }
+.peddi-live-panel [data-funnel-stage="carrinho"] { --stage-width: 86%; --stage-from: #ffa05b; --stage-to: #ffd5b7; --stage-ink: #44260f; }
+.peddi-live-panel [data-funnel-stage="checkout"] { --stage-width: 80%; --stage-from: #b391f9; --stage-to: #d7c4ff; --stage-ink: #302069; }
+.peddi-live-panel [data-funnel-stage="concluida"] { --stage-width: 73%; --stage-from: #65d9a5; --stage-to: #a4e9c7; --stage-ink: #063c29; }
+.peddi-live-panel [data-funnel-stage="abandonou"] { --stage-width: 67%; --stage-from: #ff727c; --stage-to: #ffb6bb; --stage-ink: #5a1420; }
+.peddi-live-panel .peddi-live-activity { padding: 22px 18px; border-color: #e6edf5; border-radius: 18px; }
+.peddi-live-panel .peddi-live-activity h3 { font-size: 16px; color: #111b38; }
+.peddi-live-panel .peddi-live-activity li { padding: 20px 0; align-items: center; }
+.peddi-live-panel .peddi-live-activity li p:first-child { font-size: 12px; color: #17233a; }
+.peddi-live-panel .peddi-live-avatar { width: 42px; height: 42px; font-size: 12px; font-weight: 600; }
+.peddi-live-panel .peddi-live-event-time { flex-shrink: 0; font-size: 10px; color: #8190ac; }
+.peddi-live-panel .peddi-live-metrics { border: 1px solid #e6edf5; border-radius: 15px; padding: 16px; gap: 16px; }
+.peddi-live-panel .peddi-live-metric { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.peddi-live-panel .peddi-live-metric:not(:first-child) { border-left: 1px solid #edf0f7; padding-left: 16px; }
+.peddi-live-panel .peddi-live-metric-icon { display: flex; align-items: center; justify-content: center; width: 42px; height: 42px; flex-shrink: 0; border-radius: 50%; }
+.peddi-live-panel .peddi-live-metric-icon.green { color: #00b95f; background: #effbf6; }
+.peddi-live-panel .peddi-live-metric-icon.orange { color: #ff923e; background: #fff6ed; }
+.peddi-live-panel .peddi-live-metric-icon.red { color: #f32f43; background: #fff1f3; }
+.peddi-live-panel .peddi-live-metric > div > span { font-size: 24px; }
+@media (max-width: 1200px) {
+  .peddi-live-panel .peddi-live-header { grid-template-columns: 1fr 1fr; }
+  .peddi-live-panel .peddi-live-refresh { display: none; }
+  .peddi-live-panel .peddi-live-stage-button { padding: 14px 23px; gap: 12px; }
+  .peddi-live-panel .peddi-live-stage-title { font-size: 13px; }
+  .peddi-live-panel .peddi-live-stage-description { font-size: 10px; }
+  .peddi-live-panel .peddi-live-stage-icon { width: 40px; height: 40px; }
+  .peddi-live-panel .peddi-live-stage-count { min-width: 45px; padding-left: 9px; }
+  .peddi-live-panel .peddi-live-activity { padding: 18px 14px; }
+  .peddi-live-panel .peddi-live-avatar { width: 32px; height: 32px; }
+}
+@media (max-width: 900px) {
+  .peddi-live-panel .peddi-live-body { grid-template-columns: minmax(0, 1fr); }
+  .peddi-live-panel .peddi-live-stage { width: calc(100% - (100% - var(--stage-width)) * .6); }
+  .peddi-live-panel .peddi-live-activity li { padding: 15px 0; }
+  .peddi-live-panel .peddi-live-metric:not(:first-child) { border: 0; padding-left: 0; }
+}
+@media (max-width: 540px) {
+  .peddi-live-panel { padding: 16px 12px; }
+  .peddi-live-panel .peddi-live-header { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  .peddi-live-panel .peddi-live-total { padding: 12px; }
+  .peddi-live-panel .peddi-live-total-top > span:first-of-type { font-size: 44px; }
+  .peddi-live-panel .peddi-live-funnel { padding: 6px 0 0; }
+  .peddi-live-panel .peddi-live-stage { width: 100%; }
+  .peddi-live-panel .peddi-live-stage-button { min-height: 94px; padding: 13px 15px; gap: 10px; }
+  .peddi-live-panel .peddi-live-stage-button::before { clip-path: polygon(0 0, 100% 0, 98% 100%, 2% 100%); }
+  .peddi-live-panel .peddi-live-stage-description { font-size: 10px; }
+  .peddi-live-panel .peddi-live-stage-count > span { font-size: 24px; }
+  .peddi-live-panel .peddi-live-activity h3 { font-size: 15px; }
+  .peddi-live-panel .peddi-live-metrics { padding: 12px; gap: 15px 8px; }
+  .peddi-live-panel .peddi-live-metric { gap: 7px; }
+  .peddi-live-panel .peddi-live-metric-icon { width: 32px; height: 32px; }
+  .peddi-live-panel .peddi-live-metric > div > span { font-size: 21px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .peddi-live-panel * { animation: none !important; transition: none !important; }
+}

@@ -37,7 +37,7 @@ function DelivererForm({ deliverer, cities, onClose, onSave }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 overflow-y-auto">
+    <div data-peddi-modal="" className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 overflow-y-auto">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 space-y-4 my-4">
         <h2 className="font-heading font-bold text-lg">{deliverer ? 'Editar Entregador' : 'Novo Entregador'}</h2>
         <form onSubmit={handleSubmit} className="space-y-3">
@@ -143,7 +143,7 @@ function CityForm({ city, deliverers, onClose, onSave }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 overflow-y-auto">
+    <div data-peddi-modal="" className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 overflow-y-auto">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 space-y-4 my-4">
         <h2 className="font-heading font-bold text-lg">{city ? 'Editar Cidade' : 'Nova Cidade'}</h2>
         <form onSubmit={handleSubmit} className="space-y-3">
@@ -308,7 +308,7 @@ function DelivererDetail({ deliverer, cities, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+    <div data-peddi-modal="" className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl flex flex-col max-h-[90vh]">
         {/* Header */}
         <div className="flex items-center justify-between p-5 border-b border-gray-100">
@@ -482,7 +482,7 @@ function InviteModal({ onClose, onSent }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+    <div data-peddi-modal="" className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 space-y-4">
         {sent ? (
           <div className="text-center py-6">
@@ -546,12 +546,12 @@ export default function Deliverers() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="font-heading font-bold text-2xl text-foreground">Entregadores & Cidades</h1>
           <p className="text-sm text-muted-foreground mt-1">{deliverers.length} entregadores · {cities.length} cidades</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {tab === 'deliverers' && (
             <button
               onClick={() => setShowInvite(true)}

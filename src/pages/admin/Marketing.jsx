@@ -362,7 +362,7 @@ export default function Marketing() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-muted p-1 rounded-2xl w-fit">
+      <div className="flex flex-wrap gap-1 bg-muted p-1 rounded-2xl w-full sm:w-fit max-w-full">
         {TABS.map(t => {
           const Icon = t.icon;
           return (

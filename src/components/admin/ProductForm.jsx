@@ -233,7 +233,7 @@ export default function ProductForm({ product, categories, onClose, onSave }) {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 backdrop-blur-sm overflow-y-auto py-6 px-4"
+      data-peddi-modal="" className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 backdrop-blur-sm overflow-y-auto py-6 px-4"
     >
       <motion.div
         initial={{ y: 30, opacity: 0 }}
@@ -242,18 +242,18 @@ export default function ProductForm({ product, categories, onClose, onSave }) {
         className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl border border-gray-100"
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+        <div className="peddi-modal-header flex items-center justify-between px-6 py-4 border-b border-gray-100">
           <div>
             <h2 className="font-heading font-bold text-lg text-gray-900">{product ? 'Editar Produto' : 'Novo Produto'}</h2>
             <p className="text-xs text-gray-400 mt-0.5">Preencha todas as informações do produto</p>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+          <button aria-label="Fechar cadastro de produto" onClick={onClose} className="p-3 hover:bg-gray-100 rounded-xl transition-colors">
             <X size={18} className="text-gray-500" />
           </button>
         </div>
 
         {/* Tabs */}
-        <div className="flex flex-wrap border-b border-gray-100 px-4 gap-1">
+        <div className="peddi-product-tabs flex flex-wrap border-b border-gray-100 px-4 gap-1">
           {TABS.map(t => (
             <button
               key={t.id}
@@ -322,7 +322,7 @@ export default function ProductForm({ product, categories, onClose, onSave }) {
                   <label className={label}>Tempo de preparo (minutos)</label>
                   <input type="number" value={form.prep_time_min} onChange={e => set('prep_time_min', e.target.value)} className={input} placeholder="Ex: 20" />
                 </div>
-                <div className="flex items-center gap-6 pt-1">
+                <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3 pt-1">
                   <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
                     <input type="checkbox" checked={form.is_featured} onChange={e => set('is_featured', e.target.checked)} className="w-4 h-4 rounded accent-primary" />
                     <span className="text-gray-700">Produto em destaque</span>
@@ -748,7 +748,7 @@ export default function ProductForm({ product, categories, onClose, onSave }) {
           </div>
 
           {/* Footer */}
-          <div className="flex gap-3 px-6 py-4 border-t border-gray-100">
+          <div className="peddi-modal-footer flex gap-3 px-6 py-4 border-t border-gray-100">
             <button type="button" onClick={onClose} className="flex-1 py-2.5 rounded-xl text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors">
               Cancelar
             </button>

@@ -32,7 +32,14 @@ async function getUserInfo() {
   return null;
 }
 
-export async function emitLiveEvent(stage, extra = {}, options = {}) {
+let pending = Promise.resolve();
+export function emitLiveEvent(stage, extra = {}, options = {}) {
+  // Serialize writes from the same tab so product/cart effects share one session.
+  pending = pending.then(() => writeLiveEvent(stage, extra, options));
+  return pending;
+}
+
+async function writeLiveEvent(stage, extra = {}, options = {}) {
   try {
     const sessionId = getSessionId();
     const recordId = sessionStorage.getItem(RECORD_KEY);
@@ -65,10 +72,34 @@ export async function emitLiveEvent(stage, extra = {}, options = {}) {
       payload.customer_user_id = userInfo.user_id;
     }
     if (recordId) {
+      const prior = await base44.entities.LiveSession.get(recordId);
+      payload.event_history = extendHistory(prior, payload);
       await base44.entities.LiveSession.update(recordId, payload);
     } else {
+      payload.event_history = extendHistory(null, payload);
       const created = await base44.entities.LiveSession.create(payload);
       if (created?.id) sessionStorage.setItem(RECORD_KEY, created.id);
     }
   } catch (_) {}
+}
+
+function extendHistory(prior, payload) {
+  const history = [...(prior?.event_history || (prior?.last_event_at ? [{ stage: prior.stage, at: prior.last_event_at, current_product: prior.current_product, cart_items: prior.cart_items }] : []))];
+  const last = Date.parse(prior?.last_event_at);
+  const now = Date.parse(payload.last_event_at);
+  const returnedAfterTimeout = ['interessado', 'carrinho', 'checkout'].includes(prior?.stage) && now - last > 300000;
+  if (returnedAfterTimeout) {
+    history.push({ stage: 'abandonou', at: new Date(last + 300000).toISOString() });
+  }
+  const stage = payload.stage || prior?.stage;
+  const productChanged = stage === 'interessado' && payload.current_product !== undefined && payload.current_product !== prior?.current_product;
+  const cartChanged = stage === 'carrinho' && payload.cart_items !== undefined && JSON.stringify(payload.cart_items) !== JSON.stringify(prior?.cart_items);
+  if (!prior || returnedAfterTimeout || stage !== prior.stage || productChanged || cartChanged) {
+    const previousCount = Number(prior?.cart_count || 0);
+    const nextCount = Number(payload.cart_count ?? previousCount);
+    const cartAction = nextCount > previousCount ? 'added' : nextCount < previousCount ? 'removed' : 'updated';
+    const addedItem = payload.cart_items?.find(item => !prior?.cart_items?.includes(item));
+    history.push({ stage, at: payload.last_event_at, current_product: payload.current_product || prior?.current_product, cart_items: payload.cart_items || prior?.cart_items, cart_action: cartAction, added_item: addedItem });
+  }
+  return history;
 }

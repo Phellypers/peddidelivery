@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Star, Tag, Flame, Settings, LogIn } from 'lucide-react';
+import { X, Star, Tag, Flame, Settings, LogIn, Heart } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
 
@@ -97,6 +97,7 @@ export default function MenuDrawer({ open, onClose, categories, activeCategory, 
 
             {/* Footer */}
             <div className="border-t border-gray-100 p-3 space-y-1">
+              <Link to="/favoritos" onClick={onClose} className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"><Heart size={18} />Favoritos</Link>
               {isAdmin && (
                 <Link
                   to="/admin"

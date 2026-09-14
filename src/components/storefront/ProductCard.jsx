@@ -24,7 +24,7 @@ export default function ProductCard({ product }) {
   const badgeColor = BADGE_COLORS[product.badge_color] || BADGE_COLORS.red;
 
   return (
-    <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 flex flex-col">
+    <div data-product-id={product.id} className="peddi-product-card bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 flex flex-col">
       <Link to={`/item/${product.id}`} className="block relative">
         <div className="aspect-square overflow-hidden bg-gray-100">
           <img
@@ -47,6 +47,8 @@ export default function ProductCard({ product }) {
         )}
 
         <button
+          aria-label={`${wishlisted ? 'Remover' : 'Adicionar'} ${product.name} ${wishlisted ? 'dos' : 'aos'} favoritos`}
+          aria-pressed={wishlisted}
           onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleWishlist(product.id); }}
           className="absolute top-2 right-2 w-7 h-7 bg-white/80 rounded-full flex items-center justify-center shadow-sm"
         >
@@ -58,7 +60,7 @@ export default function ProductCard({ product }) {
         <p className="text-sm font-semibold text-gray-800 leading-snug line-clamp-2 min-h-[2.5rem]">{product.name}</p>
 
         {product.description && (
-          <p className="text-[11px] text-gray-400 leading-tight line-clamp-1 min-h-[14px]">{product.description}</p>
+          <p className="peddi-product-description text-[11px] text-gray-400 leading-tight line-clamp-2 min-h-[14px]">{product.description}</p>
         )}
 
         {product.rating_avg > 0 && (
@@ -69,11 +71,11 @@ export default function ProductCard({ product }) {
           </div>
         )}
 
-        <div className="flex items-baseline gap-1.5 mt-0.5 min-w-0">
+        <div className="peddi-product-price flex flex-wrap items-baseline gap-1.5 mt-0.5 min-w-0">
           {hasPromo && (
-            <span className="text-xs text-gray-400 line-through flex-shrink-0">R$ {product.price?.toFixed(2)}</span>
+            <span className="text-xs text-gray-400 line-through flex-shrink-0">R$ {product.price?.toFixed(2).replace('.', ',')}</span>
           )}
-          <span className="text-base font-extrabold text-primary whitespace-nowrap">R$ {displayPrice?.toFixed(2)}</span>
+          <span className="text-base font-extrabold text-primary whitespace-nowrap">R$ {displayPrice?.toFixed(2).replace('.', ',')}</span>
         </div>
 
         <div className="mt-auto flex items-center gap-2 pt-1.5">
@@ -86,6 +88,7 @@ export default function ProductCard({ product }) {
           <button
             onClick={(e) => { e.preventDefault(); e.stopPropagation(); addItem(product); }}
             title="Adicionar ao carrinho"
+            aria-label={`Adicionar ${product.name} ao carrinho`}
             className="w-9 h-9 rounded-xl bg-gray-100 text-gray-600 flex items-center justify-center hover:bg-gray-200 transition-colors flex-shrink-0"
           >
             <ShoppingCart size={15} />

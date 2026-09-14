@@ -131,7 +131,7 @@ export default function Landing() {
 
       {/* ── Registration form (modal) ── */}
       {showForm && (
-        <div className="fixed inset-0 z-[60] bg-black/50 flex items-center justify-center p-4 overflow-y-auto" onClick={() => !loading && setShowForm(false)}>
+        <div data-peddi-modal="" className="fixed inset-0 z-[60] bg-black/50 flex items-center justify-center p-4 overflow-y-auto" onClick={() => !loading && setShowForm(false)}>
           <div className="bg-white border border-gray-100 rounded-3xl shadow-sm p-8 max-w-xl w-full my-8 relative" onClick={e => e.stopPropagation()}>
             <button onClick={() => !loading && setShowForm(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 z-10">
               <X size={20} />

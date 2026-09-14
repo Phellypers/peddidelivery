@@ -78,7 +78,7 @@ export default function IngredientForm({ ingredient, onClose, onSave }) {
     : 0;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 overflow-y-auto">
+    <div data-peddi-modal="" className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 overflow-y-auto">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 space-y-4 my-4">
         <div className="flex items-center justify-between">
           <h2 className="font-heading font-bold text-lg">{ingredient ? 'Editar Insumo' : 'Novo Insumo'}</h2>

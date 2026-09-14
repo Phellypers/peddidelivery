@@ -1,21 +1,30 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { base44 } from '@/api/base44Client';
 import { sendWhatsAppMessage } from '@/lib/whatsappDispatch';
-import { Eye, ShoppingCart, CreditCard, CheckCircle2, UserX, Radio, Clock, ShoppingBag, Send, Check, Loader2, User } from 'lucide-react';
+import { Eye, ShoppingCart, CreditCard, CheckCircle2, UserX, Radio, Clock, ShoppingBag, Send, Check, Loader2, User, Users, RefreshCw, BarChart3, Percent } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { summarizeLiveSessions } from '@/lib/liveFunnel';
+import './LiveNowBlock.css';
+
+const DESCRIPTIONS = {
+  navegando: 'Pessoas explorando seu cardápio',
+  interessado: 'Visualizaram itens ou promoções',
+  carrinho: 'Adicionaram itens ao carrinho',
+  checkout: 'Preenchendo os dados de entrega',
+  concluida: 'Finalizaram um pedido hoje',
+  abandonou: 'Saíram sem finalizar hoje',
+};
 
 const STAGES = [
   { key: 'navegando', label: 'Navegando', icon: Eye, color: 'text-blue-600', bg: 'bg-blue-50', dot: 'bg-blue-500' },
   { key: 'interessado', label: 'Interessado', icon: Radio, color: 'text-amber-600', bg: 'bg-amber-50', dot: 'bg-amber-500' },
   { key: 'carrinho', label: 'Carrinho Ativo', icon: ShoppingCart, color: 'text-orange-600', bg: 'bg-orange-50', dot: 'bg-orange-500' },
   { key: 'checkout', label: 'Em Checkout', icon: CreditCard, color: 'text-purple-600', bg: 'bg-purple-50', dot: 'bg-purple-500' },
-  { key: 'concluida', label: 'Compra Concluída', icon: CheckCircle2, color: 'text-green-600', bg: 'bg-green-50', dot: 'bg-green-500' },
+  { key: 'concluida', label: 'Compra Concluída', icon: CheckCircle2, color: 'text-green-600', bg: 'bg-green-50', dot: 'bg-[#22C55E]' },
   { key: 'abandonou', label: 'Abandonou', icon: UserX, color: 'text-red-600', bg: 'bg-red-50', dot: 'bg-red-500' },
 ];
 
-const THREE_MIN = 3 * 60 * 1000;
 const FIVE_MIN = 5 * 60 * 1000;
-const ONE_HOUR = 60 * 60 * 1000;
 const TWENTY_FOUR_H = 24 * 60 * 60 * 1000;
 
 function timeAgo(dateStr) {
@@ -23,14 +32,15 @@ function timeAgo(dateStr) {
   const diff = Date.now() - new Date(dateStr).getTime();
   const mins = Math.floor(diff / 60000);
   const secs = Math.floor((diff % 60000) / 1000);
+  if (diff < 5000) return 'agora';
   if (mins < 1) return `${secs}s atrás`;
   if (mins < 60) return `${mins}min atrás`;
   return `${Math.floor(mins / 60)}h atrás`;
 }
 
 function displayName(s) {
-  if (s.customer_name) return s.customer_name;
-  return `Visitante #${(s.session_id || '').slice(-4).toUpperCase()}`;
+  if (s.customer_user_id && s.customer_name) return s.customer_name;
+  return 'Visitante';
 }
 
 export default function LiveNowBlock() {
@@ -38,27 +48,19 @@ export default function LiveNowBlock() {
   const [store, setStore] = useState(null);
   const [loading, setLoading] = useState(true);
   const [expandedStage, setExpandedStage] = useState(null);
-  const [, setTick] = useState(0);
+  const [tick, setTick] = useState(0);
+  const [error, setError] = useState(false);
   const [sendingTo, setSendingTo] = useState(null);
   const [sentTo, setSentTo] = useState(new Set());
 
   useEffect(() => {
     Promise.all([
-      base44.entities.LiveSession.list('-last_event_at', 200),
+      base44.entities.LiveSession.list('-last_event_at', 1000),
       base44.entities.Store.list(),
     ]).then(([data, stores]) => {
       setSessions(data);
       setStore(stores[0]);
       setLoading(false);
-
-      // Auto-delete sessions older than 24h (cleanup)
-      const now = Date.now();
-      data.forEach(s => {
-        const lastEvent = s.last_event_at ? new Date(s.last_event_at).getTime() : 0;
-        if ((now - lastEvent) > TWENTY_FOUR_H) {
-          base44.entities.LiveSession.delete(s.id).catch(() => {});
-        }
-      });
 
       // Auto-dispatch recovery for abandoned carts (multicanal)
       const funnelConfig = stores[0]?.funnel_automation || {};
@@ -95,7 +97,7 @@ export default function LiveNowBlock() {
           } catch (_) {}
         }));
       }
-    });
+    }).catch(() => { setError(true); setLoading(false); });
 
     const unsub = base44.entities.LiveSession.subscribe((event) => {
       if (event.type === 'create') {
@@ -116,50 +118,8 @@ export default function LiveNowBlock() {
     return () => { unsub(); clearInterval(interval); };
   }, []);
 
-  const computedSessions = useMemo(() => {
-    const now = Date.now();
-    return sessions.map(s => {
-      const lastEvent = s.last_event_at ? new Date(s.last_event_at).getTime() : 0;
-      const inactiveMs = now - lastEvent;
-      let effectiveStage = s.stage;
-
-      // "Navegando" inactive >3 min: user left, remove from funnel
-      if (s.stage === 'navegando' && inactiveMs > THREE_MIN) {
-        effectiveStage = 'inactive';
-      }
-      // Active stages inactive >5 min: mark as abandoned
-      else if (inactiveMs > FIVE_MIN && ['interessado', 'carrinho', 'checkout'].includes(s.stage)) {
-        effectiveStage = 'abandonou';
-      }
-      // Abandoned older than 24h: remove
-      else if (effectiveStage === 'abandonou' && inactiveMs > TWENTY_FOUR_H) {
-        effectiveStage = 'inactive';
-      }
-      // Concluida older than 1h: remove (no permanent history)
-      else if (s.stage === 'concluida' && inactiveMs > ONE_HOUR) {
-        effectiveStage = 'inactive';
-      }
-
-      return { ...s, effectiveStage, inactiveMs };
-    }).filter(s => s.effectiveStage !== 'inactive');
-  }, [sessions]);
-
-  const activeCount = computedSessions.filter(s =>
-    s.effectiveStage !== 'abandonou' &&
-    s.effectiveStage !== 'concluida' &&
-    s.inactiveMs < THREE_MIN
-  ).length;
-
-  const stageCounts = useMemo(() => {
-    const counts = {};
-    STAGES.forEach(s => counts[s.key] = 0);
-    computedSessions.forEach(s => {
-      counts[s.effectiveStage] = (counts[s.effectiveStage] || 0) + 1;
-    });
-    return counts;
-  }, [computedSessions]);
-
-  const maxCount = Math.max(...Object.values(stageCounts), 1);
+  const summary = useMemo(() => summarizeLiveSessions(sessions, Date.now()), [sessions, tick]);
+  const { computedSessions, stageCounts, activeCount, events, conversions, abandonments, buyingCount, conversionRate } = summary;
 
   const sendRecovery = async (session) => {
     setSendingTo(session.id);
@@ -253,88 +213,63 @@ export default function LiveNowBlock() {
   };
 
   return (
-    <div className="bg-card rounded-2xl border border-border/50 p-5">
-      {/* Header with live indicator */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <span className="relative flex h-3 w-3">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
-            <span className="relative inline-flex h-3 w-3 rounded-full bg-red-500" />
-          </span>
-          <h2 className="font-heading font-semibold text-foreground">Ao Vivo Agora</h2>
+    <section className="peddi-live-panel rounded-2xl border border-gray-200 bg-white p-4 text-[#111111] sm:p-6" aria-label="Funil de vendas ao vivo">
+      <header className="peddi-live-header mb-6 flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="peddi-live-light relative flex h-2 w-2" aria-hidden="true"><span className="absolute h-full w-full animate-ping rounded-full bg-red-400 opacity-40 motion-reduce:animate-none" /><span className="relative h-2 w-2 rounded-full bg-red-500" /></span>
+            <h2 className="text-base font-semibold">Ao Vivo Agora</h2>
+          </div>
+          <p className="mt-1 text-xs text-gray-500">Acompanhe o movimento do seu cardápio.</p>
         </div>
-        <span className="text-xs text-muted-foreground">atualiza sozinho</span>
-      </div>
-
-      {/* Big number */}
-      <div className="text-center mb-5">
-        <motion.p
-          key={activeCount}
-          initial={{ scale: 0.8, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          className="font-heading font-extrabold text-4xl text-primary"
-        >
-          {activeCount}
-        </motion.p>
-        <p className="text-sm text-muted-foreground mt-1">pessoa(s) no seu cardápio agora</p>
-      </div>
-
-      {/* Funnel */}
-      <div className="space-y-1.5">
-        {STAGES.map(stage => {
-          const count = stageCounts[stage.key] || 0;
-          const Icon = stage.icon;
-          const isExpanded = expandedStage === stage.key;
-          const stageSessions = computedSessions.filter(s => s.effectiveStage === stage.key);
-          const widthPct = (count / maxCount) * 100;
-          const isAbandonedStage = stage.key === 'abandonou';
-
-          return (
-            <div key={stage.key}>
-              <button
-                onClick={() => setExpandedStage(isExpanded ? null : stage.key)}
-                className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all ${isExpanded ? stage.bg : 'hover:bg-muted/50'} ${count === 0 ? 'opacity-50' : ''}`}
-              >
-                <div className={`w-8 h-8 rounded-lg ${stage.bg} flex items-center justify-center flex-shrink-0`}>
-                  <Icon size={16} className={stage.color} />
+        <div className="peddi-live-total"><div className="peddi-live-total-top"><Users size={32} /><AnimatedNumber value={activeCount} /><span className="peddi-live-badge">● Tempo real</span></div><span>{activeCount === 1 ? 'pessoa' : 'pessoas'} no seu cardápio agora</span></div>
+        <div className="peddi-live-refresh"><RefreshCw size={22} /><div>atualiza sozinho<small>Dados atualizados automaticamente</small></div></div>
+      </header>
+      {error && <p role="alert" className="mb-4 text-sm text-red-600">Não foi possível carregar o funil. Recarregue para tentar novamente.</p>}
+      <div className="peddi-live-body grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+        <div className="peddi-live-funnel min-w-0 space-y-2">
+          {STAGES.map(stage => {
+            const count = stageCounts[stage.key] || 0;
+            const Icon = stage.icon;
+            const isExpanded = expandedStage === stage.key;
+            const historical = ['concluida', 'abandonou'].includes(stage.key);
+            const denominator = historical ? conversions + abandonments : activeCount;
+            const percentage = denominator ? Math.round(count / denominator * 100) : 0;
+            const stageSessions = computedSessions.filter(s => s.effectiveStage === stage.key);
+            return <div key={stage.key} data-funnel-stage={stage.key} className="peddi-live-stage rounded-xl">
+              <button onClick={() => setExpandedStage(isExpanded ? null : stage.key)} aria-expanded={isExpanded} className="peddi-live-stage-button flex w-full min-w-0 items-center gap-3 rounded-xl p-3 text-left transition-colors">
+                <span className={`peddi-live-stage-icon flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${stage.bg}`}><Icon size={28} className={stage.color} /></span>
+                <div className="min-w-0 flex-1">
+                  <span className="peddi-live-stage-title">{stage.label}</span>
+                  <p className="peddi-live-stage-description">{DESCRIPTIONS[stage.key]}</p>
+                  <div className="peddi-live-progress mt-2 flex items-center gap-3"><div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/40"><motion.div initial={false} animate={{ width: `${percentage}%` }} transition={{ duration: 0.3 }} className={`h-full rounded-full ${stage.dot}`} /></div><span className="w-9 text-right text-[11px] tabular-nums">{percentage}%</span></div>
                 </div>
-                <div className="flex-1 text-left min-w-0">
-                  <p className="text-sm font-medium text-foreground truncate">{stage.label}</p>
-                  <div className="h-1 bg-muted rounded-full mt-1 overflow-hidden">
-                    <div className={`h-full ${stage.dot} rounded-full transition-all duration-500`} style={{ width: `${widthPct}%` }} />
-                  </div>
-                </div>
-                <span className={`font-heading font-bold text-lg ${stage.color} flex-shrink-0 w-8 text-right`}>{count}</span>
+                <div className="peddi-live-stage-count"><AnimatedNumber value={count} /><small>{historical ? 'hoje' : count === 1 ? 'pessoa' : 'pessoas'}</small></div>
               </button>
-
-              <AnimatePresence>
-                {isExpanded && count > 0 && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: 'auto', opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    className="overflow-hidden"
-                  >
-                    <div className="ml-12 mr-2 mt-1 mb-2 space-y-2">
-                      {stageSessions.map(s => renderSession(s, isAbandonedStage))}
-                    </div>
-                  </motion.div>
-                )}
-                {isExpanded && count === 0 && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: 'auto', opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    className="overflow-hidden"
-                  >
-                    <p className="ml-12 mt-1 mb-2 text-xs text-muted-foreground py-2">Nenhuma sessão nesta etapa</p>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          );
-        })}
+              <AnimatePresence initial={false}>{isExpanded && <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.25 }} className="overflow-hidden"><div className="space-y-2 px-3 pb-3">{historical && <p className="text-[11px] text-gray-500">Métricas de hoje; não representam pessoas online.</p>}{stageSessions.length ? stageSessions.map(s => renderSession(s, stage.key === 'abandonou')) : <p className="py-2 text-xs text-gray-500">Nenhuma sessão nesta etapa.</p>}</div></motion.div>}</AnimatePresence>
+            </div>;
+          })}
+          <p className="px-1 pt-1 text-[11px] leading-relaxed text-gray-500">Etapas ativas: percentual das pessoas online. Conclusões e abandonos: percentual dos eventos de hoje.</p>
+        </div>
+        <aside className="peddi-live-activity min-w-0 rounded-xl border border-gray-100 p-4">
+          <h3 className="flex items-center gap-2 text-sm font-semibold"><span className="h-1.5 w-1.5 rounded-full bg-[#22C55E]" />Atividade em tempo real</h3>
+          <p className="mt-1 text-[11px] text-gray-500">Últimos eventos · atualização automática</p>
+          <ol className="mt-4 divide-y divide-gray-100"><AnimatePresence initial={false}>{events.slice(0, 6).map(event => {
+            const stage = STAGES.find(s => s.key === event.stage);
+            const Icon = stage?.icon || Eye;
+            const initials = event.name === 'Visitante' ? null : event.name.split(' ').map(part => part[0]).slice(0, 2).join('').toUpperCase();
+            return <motion.li layout key={event.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.25 }} className="flex min-w-0 items-start gap-3 py-3"><span className={`peddi-live-avatar mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${stage?.bg} ${stage?.color}`}>{initials || <Icon size={18} />}</span><div className="min-w-0 flex-1"><p className="break-words text-xs leading-5"><span className="font-semibold">{event.name}</span> {event.message}</p><p className={`mt-0.5 text-xs ${stage?.color}`}>{stage?.label}</p></div><span className="peddi-live-event-time">{timeAgo(event.at)}</span></motion.li>;
+          })}</AnimatePresence></ol>
+          {!events.length && <p className="py-8 text-center text-xs text-gray-500">Os eventos aparecem quando alguém interage com o cardápio.</p>}
+        </aside>
       </div>
-    </div>
+      <footer className="peddi-live-metrics mt-6 grid grid-cols-2 gap-x-5 gap-y-4 sm:grid-cols-3 xl:grid-cols-5">
+        {[['Pessoas online', activeCount, Users, 'green'], ['Em processo de compra', buyingCount, ShoppingCart, 'orange'], ['Conversões hoje', conversions, BarChart3, 'green'], ['Abandonos hoje', abandonments, UserX, 'red'], ['Taxa de conversão', `${conversionRate}%`, Percent, 'green']].map(([label, value, Icon, color]) => <div key={label} className="peddi-live-metric"><span className={`peddi-live-metric-icon ${color}`}><Icon size={25} /></span><div><AnimatedNumber value={value} className="text-lg font-semibold tabular-nums" /><p className="text-[11px] text-gray-500">{label}</p></div></div>)}
+      </footer>
+    </section>
   );
+}
+
+function AnimatedNumber({ value, className = '' }) {
+  return <motion.span key={value} initial={{ opacity: 0.5, y: 3 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }} className={`inline-block ${className}`}>{value}</motion.span>;
 }

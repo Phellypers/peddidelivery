@@ -6,8 +6,8 @@
 
 @layer base {
   :root {
-    --background: 30 25% 98%;
-    --foreground: 220 20% 12%;
+    --background: 210 20% 98%;
+    --foreground: 0 0% 7%;
     --card: 0 0% 100%;
     --card-foreground: 220 20% 12%;
     --popover: 0 0% 100%;
@@ -16,14 +16,14 @@
     --primary-foreground: 0 0% 100%;
     --secondary: 215 28% 17%;
     --secondary-foreground: 0 0% 100%;
-    --muted: 210 40% 98%;
-    --muted-foreground: 215 16% 47%;
+    --muted: 220 14% 96%;
+    --muted-foreground: 220 9% 46%;
     --accent: 142 71% 92%;
     --accent-foreground: 142 71% 25%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
     --ring: 142 71% 45%;
     --chart-1: 24 95% 53%;
     --chart-2: 160 60% 45%;
@@ -140,4 +140,77 @@
 }
 .marquee-content:hover {
   animation-play-state: paused;
+}
+
+/* Shared mobile foundations. Status colors and page-specific layouts remain local. */
+.peddi-admin main > * { min-width: 0; }
+.peddi-admin main :is(.grid, .flex) > :is(div, form, section) { min-width: 0; }
+.peddi-admin main h1 { letter-spacing: -.04em; }
+.peddi-admin main .bg-card { border-color: hsl(var(--border)); }
+.peddi-admin main table th { background: hsl(var(--muted) / .65); font-weight: 600; }
+.peddi-admin main table :is(th, td) { padding-top: .9rem; padding-bottom: .9rem; }
+.peddi-admin nav a { min-height: 44px; }
+.peddi-admin :is(input, select, textarea),
+[data-peddi-modal] :is(input, select, textarea) { min-width: 0; }
+.peddi-admin input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=hidden]):not([type=color]),
+.peddi-admin select,
+[data-peddi-modal] input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=hidden]):not([type=color]),
+[data-peddi-modal] select { min-height: 44px; }
+.peddi-admin :is(input, select, textarea):focus-visible,
+[data-peddi-modal] :is(input, select, textarea):focus-visible { outline: 2px solid hsl(var(--primary) / .3); outline-offset: 2px; }
+
+[data-peddi-modal] {
+  z-index: 80;
+  padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+  align-items: center;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+[data-peddi-modal] > :first-child {
+  min-width: 0;
+  min-height: 0;
+  max-height: calc(100vh - 32px);
+  max-height: calc(100dvh - 32px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border-radius: 20px;
+  box-shadow: 0 16px 48px #11111118;
+  scrollbar-width: thin;
+}
+[data-peddi-dialog] {
+  z-index: 80;
+  width: calc(100% - 24px);
+  max-height: calc(100vh - 32px);
+  max-height: calc(100dvh - 32px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border-radius: 20px;
+  background: hsl(var(--card));
+  box-shadow: 0 16px 48px #11111118;
+}
+[data-peddi-dialog] > :first-child { padding-right: 24px; }
+[data-peddi-dialog-overlay] { z-index: 70; }
+[data-peddi-select] { z-index: 100; max-height: min(360px, var(--radix-select-content-available-height)); max-width: calc(100vw - 24px); border-radius: 12px; }
+[data-peddi-select-overlay] { z-index: 100; }
+[data-peddi-sheet] { max-height: calc(85dvh - env(safe-area-inset-top)); }
+[data-peddi-sidepanel] { max-height: 100dvh; overflow-y: auto; overscroll-behavior: contain; padding-bottom: max(24px, env(safe-area-inset-bottom)); }
+.peddi-modal-header { position: sticky; top: 0; z-index: 2; background: white; }
+.peddi-modal-footer { position: sticky; bottom: 0; z-index: 2; background: white; box-shadow: 0 -4px 16px #11111105; }
+[data-peddi-modal] button[type=submit] { min-height: 44px; }
+body:has([data-peddi-modal], [data-peddi-dialog]) [data-peddi-preview-toggle] { display: none; }
+
+@media (max-width: 640px) {
+  /* 16px avoids automatic input zoom on iOS. Keep exclusions for compact native controls. */
+  input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=hidden]):not([type=color]), select[class], textarea[class] { font-size: 16px; }
+  .peddi-admin main h1 { font-size: 24px; }
+  .peddi-admin main button[class*="px-"], .peddi-admin main button[class*="py-"] { min-height: 44px; }
+  .peddi-admin main button[class*="p-"] { min-height: 44px; min-width: 44px; }
+  [data-peddi-modal] { align-items: flex-end; }
+  [data-peddi-modal] > :first-child { margin-top: 0; margin-bottom: 0; padding-left: 16px; padding-right: 16px; }
+  [data-peddi-dialog] { padding: 20px 16px; }
+  .peddi-modal-header, .peddi-modal-footer { padding-left: 0; padding-right: 0; }
+  .peddi-product-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); padding-left: 0; padding-right: 0; gap: 0; }
+  .peddi-product-tabs button { padding: 10px 4px; font-size: 12px; min-height: 44px; }
+  [data-peddi-modal] :is(.grid, .flex) > :is(div, form, section) { min-width: 0; }
+  [data-peddi-modal] :is(button, label, p) { overflow-wrap: anywhere; }
 }

@@ -53,7 +53,7 @@ export default function PromoBannerCarousel({ banners }) {
   };
 
   return (
-    <div className="relative w-full overflow-hidden rounded-none" style={{ aspectRatio: '16/7' }}>
+    <div className="peddi-banner-carousel relative w-full overflow-hidden rounded-none" style={{ aspectRatio: '16/7' }}>
       <AnimatePresence mode="wait">
         <motion.div
           key={current}
@@ -69,8 +69,8 @@ export default function PromoBannerCarousel({ banners }) {
             className={`w-full h-full object-cover ${slides[current].product_id ? 'cursor-pointer' : ''}`}
             onClick={() => slides[current].product_id && navigate(`/item/${slides[current].product_id}`)}
           />
-          <div className={`absolute inset-0 bg-gradient-to-r ${slides[current].color || 'from-black/60'} to-transparent`} />
-          <div className="absolute bottom-0 left-0 p-4">
+          <div className={`peddi-banner-shade absolute inset-0 bg-gradient-to-r ${slides[current].color || 'from-black/60'} to-transparent`} />
+          <div className="peddi-banner-copy absolute bottom-0 left-0 p-4">
             {slides[current].badge && (
               <span className="bg-primary text-white text-[10px] font-bold px-2 py-0.5 rounded-full mb-1.5 inline-block">
                 {slides[current].badge}
@@ -80,6 +80,8 @@ export default function PromoBannerCarousel({ banners }) {
             {slides[current].subtitle && (
               <p className="text-white/90 text-xs mt-0.5">{slides[current].subtitle}</p>
             )}
+            {slides[current].product_id && <button type="button" onClick={() => navigate(`/item/${slides[current].product_id}`)} className="peddi-banner-cta">Peça já!</button>}
+            {!slides[current].product_id && <a href="#cardapio-produtos" className="peddi-banner-cta inline-block">Peça já!</a>}
           </div>
         </motion.div>
       </AnimatePresence>
@@ -88,12 +90,14 @@ export default function PromoBannerCarousel({ banners }) {
       {slides.length > 1 && (
         <>
           <button
+            aria-label="Banner anterior"
             onClick={() => { prev(); resetTimer(); }}
             className="absolute left-2 top-1/2 -translate-y-1/2 w-7 h-7 bg-black/30 hover:bg-black/50 text-white rounded-full flex items-center justify-center transition-colors"
           >
             <ChevronLeft size={16} />
           </button>
           <button
+            aria-label="Próximo banner"
             onClick={() => { next(); resetTimer(); }}
             className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 bg-black/30 hover:bg-black/50 text-white rounded-full flex items-center justify-center transition-colors"
           >
@@ -103,10 +107,11 @@ export default function PromoBannerCarousel({ banners }) {
       )}
 
       {/* Dots */}
-      <div className="absolute bottom-2 right-3 flex gap-1">
+      <div className="peddi-banner-dots absolute bottom-2 right-3 flex gap-1">
         {slides.map((_, i) => (
           <button
             key={i}
+            aria-label={`Mostrar banner ${i + 1}`}
             onClick={() => { setCurrent(i); resetTimer(); }}
             className={`h-1.5 rounded-full transition-all ${i === current ? 'bg-white w-4' : 'bg-white/50 w-1.5'}`}
           />

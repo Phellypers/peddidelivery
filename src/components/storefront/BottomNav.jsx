@@ -1,5 +1,6 @@
 import React from 'react';
-import { Home, Search, Heart, ShoppingBag } from 'lucide-react';
+import { Home, Search, ShoppingCart, ClipboardList, User } from 'lucide-react';
+import './Storefront.css';
 import { useCart } from '@/lib/CartContext';
 import { Link, useLocation } from 'react-router-dom';
 
@@ -10,12 +11,13 @@ export default function BottomNav() {
   const navItems = [
     { icon: Home, label: 'Início', path: '/loja' },
     { icon: Search, label: 'Buscar', path: '/buscar' },
-    { icon: Heart, label: 'Favoritos', path: '/favoritos' },
-    { icon: ShoppingBag, label: 'Pedido', action: () => setIsOpen(true), badge: totalItems },
+    { icon: ShoppingCart, label: 'Carrinho', action: () => setIsOpen(true), badge: totalItems },
+    { icon: ClipboardList, label: 'Pedidos', path: '/meus-pedidos' },
+    { icon: User, label: 'Perfil', path: '/perfil' },
   ];
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-200 pb-safe">
+    <nav aria-label="Navegação do cliente" className="peddi-client-nav fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-200 pb-safe">
       <div className="flex items-center justify-around h-14">
         {navItems.map(item => {
           const isActive = item.path && location.pathname === item.path;
@@ -27,7 +29,9 @@ export default function BottomNav() {
             <Wrapper
               key={item.label}
               {...props}
-              className="flex items-center justify-center w-12 h-12 relative"
+              aria-current={isActive ? 'page' : undefined}
+              aria-label={item.label}
+              className={`peddi-client-nav-item flex items-center justify-center relative ${isActive ? 'active' : ''} ${item.action ? 'cart' : ''}`}
             >
               <div className="relative">
                 <Icon
@@ -41,6 +45,7 @@ export default function BottomNav() {
                   </span>
                 )}
               </div>
+              <span className="peddi-client-nav-label">{item.label}</span>
             </Wrapper>
           );
         })}

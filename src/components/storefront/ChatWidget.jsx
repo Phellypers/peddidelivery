@@ -27,9 +27,11 @@ function generateProtocol() {
   return `SUP-${ymd}-${rand}`;
 }
 
-export default function ChatWidget() {
+export default function ChatWidget({ externalOpen = false, onExternalClose, hideLauncher = false }) {
   const { user, isAuthenticated } = useAuth();
   const [open, setOpen] = useState(false);
+  useEffect(() => { if (externalOpen) setOpen(true); }, [externalOpen]);
+  const closeChat = () => { setOpen(false); onExternalClose?.(); };
   const [step, setStep] = useState('reason'); // reason | chat
   const [ticket, setTicket] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -125,16 +127,16 @@ export default function ChatWidget() {
 
   return (
     <>
-      <button onClick={() => setOpen(o => !o)}
+      {!hideLauncher && <button onClick={() => setOpen(o => !o)}
         className="fixed bottom-5 right-5 z-40 w-12 h-12 bg-blue-500 text-white rounded-full shadow-lg flex items-center justify-center hover:bg-blue-600 transition-colors"
         title="Conversar com a loja">
         <MessageCircle size={22} />
-      </button>
+      </button>}
 
       <AnimatePresence>
         {open && (
           <motion.div initial={{ opacity: 0, y: 20, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            className="fixed bottom-20 right-5 z-40 w-80 max-w-[calc(100vw-2rem)] bg-white rounded-3xl shadow-2xl border border-gray-100 flex flex-col overflow-hidden" style={{ height: '450px' }}>
+            className="fixed bottom-24 right-4 z-[70] w-80 max-w-[calc(100vw-2rem)] bg-white rounded-3xl shadow-2xl border border-gray-100 flex flex-col overflow-hidden" style={{ height: 'min(450px, calc(100dvh - 120px))' }}>
 
             {step === 'reason' ? (
               <>
@@ -143,7 +145,7 @@ export default function ChatWidget() {
                     <MessageCircle size={18} />
                     <p className="font-bold text-sm">Atendimento ao cliente</p>
                   </div>
-                  <button onClick={() => setOpen(false)}><X size={18} /></button>
+                  <button aria-label="Fechar chat" onClick={closeChat} className="p-3"><X size={18} /></button>
                 </div>
                 <div className="flex-1 overflow-y-auto p-4 space-y-2">
                   <p className="text-xs text-gray-500 mb-3">Selecione o motivo do seu atendimento para iniciarmos:</p>
@@ -173,7 +175,7 @@ export default function ChatWidget() {
                       {ticket && <p className="text-[10px] text-white/80">Protocolo {ticket.protocol}</p>}
                     </div>
                   </div>
-                  <button onClick={() => setOpen(false)}><X size={18} /></button>
+                  <button aria-label="Fechar chat" onClick={closeChat} className="p-3"><X size={18} /></button>
                 </div>
                 <div ref={scrollRef} className="flex-1 overflow-y-auto p-3 space-y-2 bg-gray-50">
                   {loading ? (

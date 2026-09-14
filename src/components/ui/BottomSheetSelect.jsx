@@ -29,7 +29,7 @@ export default function BottomSheetSelect({ value, onChange, options, placeholde
 
       <AnimatePresence>
         {open && (
-          <div className="fixed inset-0 z-[60] flex items-end justify-center" onClick={() => setOpen(false)}>
+          <div data-peddi-select-overlay="" className="fixed inset-0 z-[60] flex items-end justify-center" onClick={() => setOpen(false)}>
             <motion.div
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               className="absolute inset-0 bg-black/40"
@@ -37,6 +37,7 @@ export default function BottomSheetSelect({ value, onChange, options, placeholde
             <motion.div
               initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 32, stiffness: 320 }}
+              data-peddi-sheet=""
               className="relative bg-white rounded-t-3xl w-full max-w-lg p-4 pb-safe max-h-[70vh] overflow-y-auto"
               onClick={e => e.stopPropagation()}
             >

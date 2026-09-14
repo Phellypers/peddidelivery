@@ -36,7 +36,7 @@ function AccountForm({ account, onSave, onClose }) {
   const lbl = "block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wide";
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={onClose}>
+    <div data-peddi-modal="" className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={onClose}>
       <div className="bg-white rounded-2xl w-full max-w-md p-6 space-y-4 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between">
           <h3 className="font-heading font-bold text-lg">{account?.id ? 'Editar conta' : 'Nova conta'}</h3>

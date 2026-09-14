@@ -12,6 +12,7 @@ export default function MobilePreview({ children }) {
       <>
         <button
           type="button"
+          data-peddi-preview-toggle=""
           onClick={() => setEnabled(true)}
           className="fixed bottom-4 right-4 z-[100] rounded-lg bg-slate-900 px-3 py-2 text-xs font-semibold text-white shadow-lg"
         >

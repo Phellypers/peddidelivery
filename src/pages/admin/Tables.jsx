@@ -149,7 +149,7 @@ export default function Tables() {
         const ord = orders.find(o => o.id === comandaTable.current_order_id);
         if (!ord) return null;
         return (
-          <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => setComandaTable(null)}>
+          <div data-peddi-modal="" className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => setComandaTable(null)}>
             <div className="bg-white rounded-2xl w-full max-w-md p-5 space-y-4 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
               <div className="flex items-center justify-between">
                 <div>

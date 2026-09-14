@@ -613,7 +613,7 @@ export default function DelivererApp() {
 
       {/* Delivery chat overlay */}
       {chatOrder && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-end sm:items-center justify-center" onClick={() => setChatOrder(null)}>
+        <div data-peddi-modal="" className="fixed inset-0 z-50 bg-black/50 flex items-end sm:items-center justify-center" onClick={() => setChatOrder(null)}>
           <div className="bg-white w-full sm:max-w-md sm:rounded-3xl h-[80vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
             <div className="bg-blue-500 text-white p-3 flex items-center justify-between">
               <div>

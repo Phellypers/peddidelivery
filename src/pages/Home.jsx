@@ -12,15 +12,15 @@ import SignupPopup from '@/components/storefront/SignupPopup';
 import OrderStatusNotifier from '@/components/storefront/OrderStatusNotifier';
 import BirthdayPromoNotifier from '@/components/storefront/BirthdayPromoNotifier';
 import AbandonedCartNotifier from '@/components/storefront/AbandonedCartNotifier';
-import { Loader2, Search, AlignJustify, ShoppingCart, User, Heart } from 'lucide-react';
+import { Loader2, Search, AlignJustify, Heart, MapPin, MessageCircle, House, Bell } from 'lucide-react';
 import NotificationBell from '@/components/storefront/NotificationBell';
 import { Link } from 'react-router-dom';
-import { useCart } from '@/lib/CartContext';
 import { useAuth } from '@/lib/AuthContext';
-import { motion, AnimatePresence } from 'framer-motion';
 import { emitLiveEvent } from '@/lib/liveSession';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { loadPublicCatalog } from '@/services/api/peddiApi';
+import BottomNav from '@/components/storefront/BottomNav';
+import '@/components/storefront/Storefront.css';
 
 const CAT_BADGE_COLORS = {
   red: 'bg-red-500', green: 'bg-green-500', orange: 'bg-orange-500',
@@ -40,9 +40,9 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchOpen, setSearchOpen] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const { totalItems, setIsOpen } = useCart();
+
   const { user } = useAuth();
   const isAdmin = ['admin','manager','peddi_admin'].includes(user?.role);
 
@@ -104,7 +104,7 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20" {...bind}>
+    <div className="peddi-storefront min-h-screen bg-gray-50 pb-24" {...bind}>
       {/* Pull-to-refresh indicator */}
       {(pullDistance > 0 || refreshing) && (
         <div className="flex items-center justify-center overflow-hidden" style={{ height: refreshing ? 40 : pullDistance }}>
@@ -121,137 +121,42 @@ export default function Home() {
         isAdmin={isAdmin}
       />
 
-      <div className="max-w-lg mx-auto bg-white min-h-screen">
+      <div className="peddi-store-shell max-w-2xl mx-auto bg-white min-h-screen">
 
-        {/* ── Store Profile Header ── */}
-        <div className="px-5 pt-6 pb-4 text-center border-b border-gray-100">
-          <div className="flex justify-center mb-3">
-            <StoriesRing store={store} isAdmin={isAdmin} onUpdateStore={setStore} />
+        <header className="peddi-store-header">
+          <div className="peddi-store-orange">
+            <button type="button" aria-label="Abrir menu do cardápio" onClick={() => setMenuOpen(true)}><AlignJustify size={27} /></button>
+            <div className="flex items-center gap-3">{user ? <button type="button" aria-label="Conversar com a loja" onClick={() => setChatOpen(true)}><MessageCircle size={27} /></button> : <Link to="/login?returnTo=/loja" aria-label="Entrar para conversar com a loja" className="flex h-11 w-11 items-center justify-center"><MessageCircle size={27} /></Link>}{user ? <NotificationBell /> : <Link to="/login?returnTo=/loja" aria-label="Entrar para ver notificações" className="flex h-11 w-11 items-center justify-center"><Bell size={27} /></Link>}</div>
           </div>
-          <h1 className="font-heading font-extrabold text-xl text-gray-900">{store?.name || 'Meu Restaurante'}</h1>
-          {store?.opening_hours && (
-            <p className="text-xs text-green-600 font-medium mt-0.5">🟢 {store.opening_hours}</p>
-          )}
-          <p className="text-sm text-gray-500 mt-1 leading-relaxed max-w-xs mx-auto">
-            {store?.description || 'Seja bem-vindo! Confira nosso cardápio completo.'}
-          </p>
-          {store?.address && (
-            <p className="text-xs text-gray-400 mt-1">📍 {store.address}{store.city ? `, ${store.city}` : ''}</p>
-          )}
-          {isAdmin && (
-            <Link to="/admin" className="inline-flex items-center gap-1 mt-2 text-xs text-orange-600 font-semibold bg-orange-50 px-3 py-1 rounded-full hover:bg-orange-100 transition-colors">
-              ⚙️ Painel do Gestor
-            </Link>
-          )}
-        </div>
+          <div className="peddi-store-profile">
+            <div className="peddi-store-logo"><StoriesRing store={store} isAdmin={isAdmin} onUpdateStore={setStore} /></div>
+            <h1>{store?.name || 'Meu Restaurante'}</h1>
+            {store?.opening_hours && <p className="peddi-store-hours"><span aria-hidden="true">●</span> {store.opening_hours}</p>}
+            <p className="peddi-store-description">{store?.description || 'Seja bem-vindo! Confira nosso cardápio completo.'}</p>
+            {store?.address && <p className="peddi-store-address"><MapPin size={16} />{store.address}{store.city ? `, ${store.city}` : ''}</p>}
+            {isAdmin && <Link to="/admin" className="inline-flex items-center mt-3 text-xs text-primary font-semibold bg-orange-50 px-3 py-2 rounded-full">Painel do Gestor</Link>}
+          </div>
+        </header>
 
         {/* ── Promo Header Banner ── */}
         <PromoHeaderBanner />
 
-        {/* ── Category Circles ── */}
-        <div className="overflow-x-auto scrollbar-hide border-b border-gray-100">
-          <div className="flex gap-4 px-5 py-4">
-            <button onClick={() => setActiveCategory(null)} className="flex flex-col items-center gap-1.5 flex-shrink-0">
-              <div className={`w-16 h-16 rounded-full overflow-hidden border-2 transition-all ${!activeCategory ? 'border-primary shadow-md shadow-primary/20' : 'border-gray-200'}`}>
-                <div className="w-full h-full bg-gray-100 flex items-center justify-center text-2xl">🏠</div>
-              </div>
-              <span className={`text-[11px] font-semibold ${!activeCategory ? 'text-primary' : 'text-gray-500'}`}>Todos</span>
+        <div className="peddi-store-categories overflow-x-auto scrollbar-hide">
+          <div className="flex gap-3 px-4 py-4">
+            <button type="button" aria-pressed={!activeCategory} onClick={() => setActiveCategory(null)} className={`peddi-store-category ${!activeCategory ? 'active' : ''}`}>
+              <span className="peddi-store-category-image">{store?.logo_url ? <img src={store.logo_url} alt="" /> : <House size={32} />}</span><span>Todos</span>
             </button>
-
-            {featuredCats.map((cat, idx) => {
-            const isActive = activeCategory === cat.id;
-            const fallbackImgs = [
-              'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=120&h=120&fit=crop',
-              'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=120&h=120&fit=crop',
-              'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=120&h=120&fit=crop',
-              'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=120&h=120&fit=crop',
-            ];
-            const catImg = cat.image_url || fallbackImgs[idx % fallbackImgs.length];
-            const catBadgeColor = CAT_BADGE_COLORS[cat.badge_color] || CAT_BADGE_COLORS.orange;
-            return (
-              <button key={cat.id} onClick={() => setActiveCategory(isActive ? null : cat.id)} className="flex flex-col items-center gap-1.5 flex-shrink-0 relative">
-                <div className={`w-16 h-16 rounded-full overflow-hidden border-2 transition-all ${isActive ? 'border-primary shadow-lg shadow-primary/30' : 'border-gray-200'}`}>
-                  <img src={catImg} alt={cat.name} className="w-full h-full object-cover" />
-                </div>
-                {cat.badge_label && (
-                  <span className={`absolute -top-1 left-1/2 -translate-x-1/2 ${catBadgeColor} text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full whitespace-nowrap shadow-sm`}>
-                    {cat.badge_label}
-                  </span>
-                )}
-                <span className={`text-[11px] font-semibold text-center leading-tight line-clamp-2 max-w-[72px] ${isActive ? 'text-primary' : 'text-gray-600'}`}>{cat.name}</span>
-              </button>
-            );
-            })}
+            {featuredCats.map(cat => <button type="button" key={cat.id} aria-pressed={activeCategory === cat.id} onClick={() => setActiveCategory(activeCategory === cat.id ? null : cat.id)} className={`peddi-store-category ${activeCategory === cat.id ? 'active' : ''}`}>
+              <span className="peddi-store-category-image">{cat.image_url ? <img src={cat.image_url} alt="" /> : <span className="text-3xl">{cat.icon || <House size={28} />}</span>}</span>
+              {cat.badge_label && <span className={`peddi-store-category-badge ${CAT_BADGE_COLORS[cat.badge_color] || CAT_BADGE_COLORS.orange}`}>{cat.badge_label}</span>}
+              <span>{cat.name}</span>
+            </button>)}
           </div>
         </div>
 
-        {/* ── Action Bar (sticky) ── */}
-        <div className="flex items-center justify-around border-b border-gray-200 bg-white sticky top-0 z-30 h-12">
-          {/* Menu hamburguer → abre MenuDrawer */}
-          <button
-            onClick={() => setMenuOpen(true)}
-            className="flex items-center justify-center w-12 h-12 text-gray-700 hover:text-primary transition-colors"
-          >
-            <AlignJustify size={22} />
-          </button>
-
-          {/* Busca */}
-          <button
-            onClick={() => setSearchOpen(v => !v)}
-            className={`flex items-center justify-center w-12 h-12 transition-colors ${searchOpen ? 'text-primary' : 'text-gray-700 hover:text-primary'}`}
-          >
-            <Search size={22} />
-          </button>
-
-          {/* Perfil */}
-          <Link to="/perfil" className="flex items-center justify-center w-12 h-12 text-gray-700 hover:text-primary transition-colors relative">
-            <User size={22} />
-            {isAdmin && (
-              <span className="absolute top-2 right-2 w-2 h-2 bg-orange-500 rounded-full" />
-            )}
-          </Link>
-
-          {/* Notificações */}
-          <NotificationBell />
-
-          {/* Carrinho */}
-          <button
-            onClick={() => setIsOpen(true)}
-            className="flex items-center justify-center w-12 h-12 text-gray-700 hover:text-primary transition-colors relative"
-          >
-            <ShoppingCart size={22} />
-            {totalItems > 0 && (
-              <span className="absolute top-2 right-2 bg-red-500 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold leading-none">
-                {totalItems}
-              </span>
-            )}
-          </button>
+        <div className="peddi-store-search px-4 pb-3">
+          <div className="relative"><input type="search" aria-label="Buscar no cardápio" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Buscar no cardápio..." /><Search size={23} aria-hidden="true" /></div>
         </div>
-
-        {/* ── Search Bar (dropdown) ── */}
-        <AnimatePresence>
-          {searchOpen && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              className="overflow-hidden border-b border-gray-100"
-            >
-              <div className="px-4 py-2.5">
-                <div className="relative">
-                  <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                  <input
-                    autoFocus
-                    value={searchQuery}
-                    onChange={e => setSearchQuery(e.target.value)}
-                    placeholder="Buscar no cardápio..."
-                    className="w-full pl-9 pr-4 py-2 bg-gray-100 rounded-lg text-sm border-0 focus:outline-none focus:ring-2 focus:ring-primary/20"
-                  />
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
 
         {/* ── Promo Banner Carousel ── */}
         {!searchQuery && !activeCategory && (
@@ -263,9 +168,9 @@ export default function Home() {
         )}
 
         {/* ── Section Label ── */}
-        <div className="flex items-center justify-between px-4 pt-4 pb-2">
+        <div id="cardapio-produtos" className="flex items-center justify-between px-4 pt-4 pb-2">
           <h2 className="font-heading font-bold text-base text-gray-900">{getSectionLabel()}</h2>
-          {(activeCategory || searchQuery) && (
+          {(
             <button onClick={() => { setActiveCategory(null); setSearchQuery(''); }} className="text-xs text-primary font-medium">
               Ver todos
             </button>
@@ -301,7 +206,8 @@ export default function Home() {
       <OrderStatusNotifier customerEmail={user?.email} />
       <BirthdayPromoNotifier user={user} />
       <AbandonedCartNotifier user={user} />
-      <ChatWidget />
+      <ChatWidget externalOpen={chatOpen} onExternalClose={() => setChatOpen(false)} hideLauncher />
+      <BottomNav />
     </div>
   );
 }

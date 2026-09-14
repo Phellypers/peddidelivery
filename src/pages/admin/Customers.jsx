@@ -52,7 +52,7 @@ function CustomerForm({ profile, onSave, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={onClose}>
+    <div data-peddi-modal="" className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={onClose}>
       <div className="bg-white rounded-2xl w-full max-w-md p-6 space-y-4 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between">
           <h3 className="font-heading font-bold text-lg">{profile?.id ? 'Editar Cliente' : 'Novo Cliente'}</h3>
@@ -152,7 +152,7 @@ function CashbackModal({ profile, onClose, onSave }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={onClose}>
+    <div data-peddi-modal="" className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={onClose}>
       <div className="bg-white rounded-2xl w-full max-w-sm p-6 space-y-4" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between">
           <h3 className="font-heading font-bold text-lg">Ajuste de Cashback</h3>
@@ -214,7 +214,7 @@ function ResetPasswordModal({ profile, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={onClose}>
+    <div data-peddi-modal="" className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={onClose}>
       <div className="bg-white rounded-2xl w-full max-w-sm p-6 space-y-4" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between">
           <h3 className="font-heading font-bold text-lg">Redefinir Senha</h3>
@@ -531,7 +531,7 @@ export default function Customers() {
         <ResetPasswordModal profile={resetProfile} onClose={() => setResetProfile(null)} />
       )}
       {deleteProfile && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => !deleting && setDeleteProfile(null)}>
+        <div data-peddi-modal="" className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => !deleting && setDeleteProfile(null)}>
           <div className="bg-white rounded-2xl w-full max-w-sm p-6 space-y-4 text-center" onClick={e => e.stopPropagation()}>
             <div className="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center mx-auto">
               <AlertTriangle size={28} className="text-red-500" />

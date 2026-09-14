@@ -84,6 +84,7 @@ export default function NotificationBell() {
   return (
     <div className="relative" ref={panelRef}>
       <button
+        aria-label="Ver notificações"
         onClick={() => setOpen(v => !v)}
         className="flex items-center justify-center w-10 h-10 text-gray-700 hover:text-primary transition-colors relative"
       >
