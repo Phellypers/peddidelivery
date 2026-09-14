@@ -1,0 +1,70 @@
+{
+  "name": "LiveSession",
+  "type": "object",
+  "properties": {
+    "session_id": {
+      "type": "string"
+    },
+    "stage": {
+      "type": "string",
+      "enum": [
+        "navegando",
+        "interessado",
+        "carrinho",
+        "checkout",
+        "concluida",
+        "abandonou"
+      ],
+      "default": "navegando"
+    },
+    "last_event_at": {
+      "type": "string"
+    },
+    "cart_count": {
+      "type": "number",
+      "default": 0
+    },
+    "cart_items": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "current_product": {
+      "type": "string"
+    },
+    "user_agent": {
+      "type": "string"
+    },
+    "customer_email": {
+      "type": "string"
+    },
+    "customer_name": {
+      "type": "string"
+    },
+    "customer_user_id": {
+      "type": "string"
+    },
+    "recovery_sent_at": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "session_id",
+    "stage"
+  ],
+  "rls": {
+    "create": {},
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {},
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

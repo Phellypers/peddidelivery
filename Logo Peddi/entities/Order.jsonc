@@ -1,0 +1,238 @@
+{
+  "name": "Order",
+  "type": "object",
+  "properties": {
+    "order_number": {
+      "type": "string"
+    },
+    "customer_name": {
+      "type": "string"
+    },
+    "customer_email": {
+      "type": "string"
+    },
+    "customer_phone": {
+      "type": "string"
+    },
+    "customer_cpf": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "confirmed",
+        "preparing",
+        "shipped",
+        "delivered",
+        "cancelled"
+      ],
+      "default": "pending"
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "product_id": {
+            "type": "string"
+          },
+          "product_name": {
+            "type": "string"
+          },
+          "product_image": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "number"
+          },
+          "unit_price": {
+            "type": "number"
+          },
+          "variation": {
+            "type": "string"
+          },
+          "addons": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "notes": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "subtotal": {
+      "type": "number"
+    },
+    "discount": {
+      "type": "number",
+      "default": 0
+    },
+    "delivery_fee": {
+      "type": "number",
+      "default": 0
+    },
+    "total": {
+      "type": "number"
+    },
+    "coupon_code": {
+      "type": "string"
+    },
+    "payment_method": {
+      "type": "string",
+      "enum": [
+        "pix",
+        "credit_card",
+        "cash",
+        "whatsapp",
+        "bank_transfer",
+        "to_arrange"
+      ]
+    },
+    "payment_status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "paid",
+        "refunded"
+      ],
+      "default": "pending"
+    },
+    "change_for": {
+      "type": "number"
+    },
+    "delivery_method": {
+      "type": "string",
+      "enum": [
+        "delivery",
+        "pickup",
+        "dine_in"
+      ]
+    },
+    "delivery_address": {
+      "type": "string"
+    },
+    "delivery_city": {
+      "type": "string"
+    },
+    "delivery_zip": {
+      "type": "string"
+    },
+    "delivery_neighborhood": {
+      "type": "string"
+    },
+    "delivery_notes": {
+      "type": "string"
+    },
+    "table_number": {
+      "type": "string"
+    },
+    "tracking_code": {
+      "type": "string"
+    },
+    "deliverer_user_id": {
+      "type": "string"
+    },
+    "deliverer_accepted": {
+      "type": "boolean",
+      "default": false
+    },
+    "order_notes": {
+      "type": "string"
+    },
+    "admin_notes": {
+      "type": "string"
+    },
+    "estimated_time_min": {
+      "type": "number"
+    },
+    "edited_by_customer": {
+      "type": "boolean",
+      "default": false
+    },
+    "created_via_pdv": {
+      "type": "boolean",
+      "default": false
+    },
+    "sale_origin": {
+      "type": "string",
+      "enum": [
+        "catalog",
+        "pdv_balcao",
+        "pdv_quick",
+        "pdv_table",
+        "pdv_pickup",
+        "pdv_delivery"
+      ],
+      "default": "catalog"
+    },
+    "viewed_by_admin": {
+      "type": "boolean",
+      "default": false
+    },
+    "viewed_by_deliverer": {
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "required": [
+    "customer_name",
+    "items",
+    "total"
+  ],
+  "rls": {
+    "create": {},
+    "read": {
+      "$or": [
+        {
+          "data.customer_email": "{{user.email}}"
+        },
+        {
+          "data.deliverer_user_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.deliverer_user_id": "{{user.id}}"
+        },
+        {
+          "$and": [
+            {
+              "data.customer_email": "{{user.email}}"
+            },
+            {
+              "$or": [
+                {
+                  "data.status": "pending"
+                },
+                {
+                  "data.status": "confirmed"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

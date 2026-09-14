@@ -1,0 +1,94 @@
+{
+  "name": "Ingredient",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "unit": {
+      "type": "string",
+      "enum": [
+        "unidade",
+        "pacote",
+        "grama",
+        "quilo",
+        "ml",
+        "litro"
+      ],
+      "default": "unidade"
+    },
+    "pack_size": {
+      "type": "number",
+      "default": 1
+    },
+    "quantity_purchased": {
+      "type": "number",
+      "default": 0
+    },
+    "current_stock": {
+      "type": "number",
+      "default": 0
+    },
+    "cost": {
+      "type": "number",
+      "default": 0
+    },
+    "stock_min": {
+      "type": "number",
+      "default": 0
+    },
+    "movements": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "entry",
+              "exit"
+            ]
+          },
+          "quantity": {
+            "type": "number"
+          },
+          "cost": {
+            "type": "number"
+          },
+          "date": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "required": [
+    "name",
+    "unit"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

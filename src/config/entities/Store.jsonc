@@ -1,0 +1,306 @@
+{
+  "name": "Store",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "slug": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "logo_url": {
+      "type": "string"
+    },
+    "banner_url": {
+      "type": "string"
+    },
+    "banners": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "image_url": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "product_id": {
+            "type": "string"
+          },
+          "is_active": {
+            "type": "boolean",
+            "default": true
+          }
+        }
+      }
+    },
+    "stories": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "business_type": {
+      "type": "string",
+      "enum": [
+        "products",
+        "menu",
+        "services"
+      ],
+      "default": "menu"
+    },
+    "phone": {
+      "type": "string"
+    },
+    "whatsapp": {
+      "type": "string"
+    },
+    "address": {
+      "type": "string"
+    },
+    "city": {
+      "type": "string"
+    },
+    "state": {
+      "type": "string"
+    },
+    "zip_code": {
+      "type": "string"
+    },
+    "owner_name": {
+      "type": "string"
+    },
+    "owner_cpf": {
+      "type": "string"
+    },
+    "owner_email": {
+      "type": "string"
+    },
+    "business_segment": {
+      "type": "string"
+    },
+    "primary_color": {
+      "type": "string",
+      "default": "#22C55E"
+    },
+    "secondary_color": {
+      "type": "string",
+      "default": "#0F172A"
+    },
+    "min_order_value": {
+      "type": "number",
+      "default": 0
+    },
+    "free_shipping_above": {
+      "type": "number",
+      "default": 0
+    },
+    "flat_delivery_fee": {
+      "type": "number",
+      "default": 5
+    },
+    "pickup_enabled": {
+      "type": "boolean",
+      "default": true
+    },
+    "delivery_enabled": {
+      "type": "boolean",
+      "default": true
+    },
+    "maintenance_mode": {
+      "type": "boolean",
+      "default": false
+    },
+    "pix_enabled": {
+      "type": "boolean",
+      "default": true
+    },
+    "card_enabled": {
+      "type": "boolean",
+      "default": true
+    },
+    "cash_enabled": {
+      "type": "boolean",
+      "default": true
+    },
+    "pix_discount_percent": {
+      "type": "number",
+      "default": 5
+    },
+    "opening_hours": {
+      "type": "string"
+    },
+    "social_instagram": {
+      "type": "string"
+    },
+    "social_facebook": {
+      "type": "string"
+    },
+    "birthday_promo": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false
+        },
+        "days_before": {
+          "type": "number",
+          "default": 3
+        },
+        "title": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "discount_text": {
+          "type": "string"
+        }
+      }
+    },
+    "abandoned_cart": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false
+        },
+        "timeout_minutes": {
+          "type": "number",
+          "default": 30
+        },
+        "message": {
+          "type": "string"
+        }
+      }
+    },
+    "funnel_automation": {
+      "type": "object",
+      "properties": {
+        "abandoned_cart_title": {
+          "type": "string"
+        },
+        "abandoned_cart_message": {
+          "type": "string"
+        },
+        "auto_dispatch_enabled": {
+          "type": "boolean",
+          "default": false
+        },
+        "dispatch_channels": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "dispatch_before_expiry_hours": {
+          "type": "number",
+          "default": 20
+        },
+        "whatsapp_template": {
+          "type": "string"
+        }
+      }
+    },
+    "signup_popup": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": true
+        },
+        "delay_seconds": {
+          "type": "number",
+          "default": 5
+        },
+        "title": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "primary_btn": {
+          "type": "string"
+        },
+        "secondary_btn": {
+          "type": "string"
+        },
+        "style": {
+          "type": "string",
+          "enum": [
+            "modern",
+            "minimal",
+            "fun"
+          ],
+          "default": "modern"
+        }
+      }
+    },
+    "fake_reviews_enabled": {
+      "type": "boolean",
+      "default": false
+    },
+    "fake_reviews": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "rating": {
+            "type": "number"
+          },
+          "comment": {
+            "type": "string"
+          },
+          "avatar": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "required": [
+    "name",
+    "business_type"
+  ],
+  "rls": {
+    "create": {},
+    "read": {},
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.owner_email": "{{user.email}}"
+        },
+        {
+          "created_by_id": "{{user.id}}"
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.owner_email": "{{user.email}}"
+        },
+        {
+          "created_by_id": "{{user.id}}"
+        }
+      ]
+    }
+  }
+}

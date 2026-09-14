@@ -1,0 +1,75 @@
+{
+  "name": "Campaign",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "cart_value",
+        "order_count",
+        "buy_x_get_y"
+      ],
+      "default": "cart_value"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    },
+    "discount_type": {
+      "type": "string",
+      "enum": [
+        "percentage",
+        "fixed"
+      ],
+      "default": "percentage"
+    },
+    "discount_value": {
+      "type": "number",
+      "default": 10
+    },
+    "min_cart_value": {
+      "type": "number",
+      "default": 0
+    },
+    "min_order_count": {
+      "type": "number",
+      "default": 0
+    },
+    "buy_quantity": {
+      "type": "number",
+      "default": 10
+    },
+    "get_quantity": {
+      "type": "number",
+      "default": 1
+    },
+    "description": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "name",
+    "type"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {},
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

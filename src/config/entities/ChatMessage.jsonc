@@ -1,0 +1,91 @@
+{
+  "name": "ChatMessage",
+  "type": "object",
+  "properties": {
+    "conversation_id": {
+      "type": "string"
+    },
+    "customer_name": {
+      "type": "string"
+    },
+    "customer_email": {
+      "type": "string"
+    },
+    "deliverer_user_id": {
+      "type": "string"
+    },
+    "sender_type": {
+      "type": "string",
+      "enum": [
+        "customer",
+        "store",
+        "deliverer"
+      ],
+      "default": "customer"
+    },
+    "message": {
+      "type": "string"
+    },
+    "is_read_by_store": {
+      "type": "boolean",
+      "default": false
+    },
+    "is_read_by_customer": {
+      "type": "boolean",
+      "default": false
+    },
+    "is_read_by_deliverer": {
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "required": [
+    "conversation_id",
+    "sender_type",
+    "message"
+  ],
+  "rls": {
+    "create": {},
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.customer_email": "{{user.email}}"
+        },
+        {
+          "data.conversation_id": "deliverer_{{user.id}}"
+        },
+        {
+          "data.deliverer_user_id": "{{user.id}}"
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.customer_email": "{{user.email}}"
+        },
+        {
+          "data.conversation_id": "deliverer_{{user.id}}"
+        },
+        {
+          "data.deliverer_user_id": "{{user.id}}"
+        }
+      ]
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

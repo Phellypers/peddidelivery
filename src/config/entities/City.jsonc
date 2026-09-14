@@ -1,0 +1,71 @@
+{
+  "name": "City",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "state": {
+      "type": "string"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    },
+    "deliverer_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "delivery_fee_type": {
+      "type": "string",
+      "enum": [
+        "fixed",
+        "per_km",
+        "custom"
+      ],
+      "default": "fixed"
+    },
+    "delivery_fee_value": {
+      "type": "number",
+      "default": 0
+    },
+    "delivery_fee_per_km": {
+      "type": "number",
+      "default": 0
+    },
+    "custom_fee_description": {
+      "type": "string"
+    },
+    "min_order_value": {
+      "type": "number",
+      "default": 0
+    },
+    "estimated_time_min": {
+      "type": "number",
+      "default": 30
+    }
+  },
+  "required": [
+    "name"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {},
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

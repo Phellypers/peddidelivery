@@ -1,0 +1,30 @@
+# Dependencias e builds
+node_modules/
+dist/
+dist-ssr/
+.vite/
+.firebase/
+server/uploads/
+
+# Variaveis e segredos
+.env
+.env.*
+!.env.example
+/prod-ca-2021.crt
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# IDE e sistema
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+
+# Arquivos temporarios
+*.tmp
+*.temp

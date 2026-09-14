@@ -1,0 +1,11 @@
+{
+  "recommendations": [
+    "dbaeumer.vscode-eslint",
+    "ms-azuretools.vscode-docker",
+    "cweijan.vscode-database-client2",
+    "prisma.prisma",
+    "mikestead.dotenv",
+    "davidanson.vscode-markdownlint"
+  ],
+  "unwantedRecommendations": []
+}

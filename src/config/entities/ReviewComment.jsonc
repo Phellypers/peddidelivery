@@ -1,0 +1,60 @@
+{
+  "name": "ReviewComment",
+  "type": "object",
+  "properties": {
+    "review_id": {
+      "type": "string"
+    },
+    "product_id": {
+      "type": "string"
+    },
+    "author_name": {
+      "type": "string"
+    },
+    "author_user_id": {
+      "type": "string"
+    },
+    "content": {
+      "type": "string"
+    },
+    "likes": {
+      "type": "number",
+      "default": 0
+    },
+    "liked_by": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "reply_to_id": {
+      "type": "string"
+    },
+    "is_reply": {
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "required": [
+    "review_id",
+    "content",
+    "author_name"
+  ],
+  "rls": {
+    "create": {},
+    "read": {},
+    "update": {},
+    "delete": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}

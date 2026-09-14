@@ -1,0 +1,161 @@
+{
+  "name": "Deliverer",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "phone": {
+      "type": "string"
+    },
+    "cpf": {
+      "type": "string"
+    },
+    "email": {
+      "type": "string"
+    },
+    "user_id": {
+      "type": "string"
+    },
+    "vehicle": {
+      "type": "string",
+      "enum": [
+        "moto",
+        "bicicleta",
+        "carro",
+        "a_pe"
+      ],
+      "default": "moto"
+    },
+    "photo_url": {
+      "type": "string"
+    },
+    "bio": {
+      "type": "string"
+    },
+    "email_notifications": {
+      "type": "boolean",
+      "default": true
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    },
+    "notes": {
+      "type": "string"
+    },
+    "city_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "payment_type": {
+      "type": "string",
+      "enum": [
+        "per_delivery",
+        "per_km",
+        "daily",
+        "manual"
+      ],
+      "default": "per_delivery"
+    },
+    "payment_value": {
+      "type": "number",
+      "default": 0
+    },
+    "paid_amount": {
+      "type": "number",
+      "default": 0
+    },
+    "payment_history": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "amount": {
+            "type": "number"
+          },
+          "date": {
+            "type": "string"
+          },
+          "note": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "lat": {
+      "type": "number"
+    },
+    "lng": {
+      "type": "number"
+    },
+    "location_updated_at": {
+      "type": "string"
+    },
+    "current_status": {
+      "type": "string",
+      "enum": [
+        "available",
+        "delivering",
+        "offline"
+      ],
+      "default": "offline"
+    },
+    "rating_avg": {
+      "type": "number",
+      "default": 0
+    },
+    "rating_count": {
+      "type": "number",
+      "default": 0
+    }
+  },
+  "required": [
+    "name",
+    "phone"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.user_id": "{{user.id}}"
+        },
+        {
+          "data.email": "{{user.email}}"
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.user_id": "{{user.id}}"
+        },
+        {
+          "data.email": "{{user.email}}"
+        }
+      ]
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

@@ -1,0 +1,72 @@
+mutation CreateDemoData @transaction {
+  user_insertMany(data: [
+    {
+      id: "777e8400-e29b-41d4-a716-446655440001",
+      name: "Alice Smith",
+      email: "alice@example.com",
+      role: "customer"
+    },
+    {
+      id: "777e8400-e29b-41d4-a716-446655440002",
+      name: "Bob Driver",
+      email: "bob@example.com",
+      role: "courier"
+    },
+    {
+      id: "777e8400-e29b-41d4-a716-446655440003",
+      name: "Charlie Cook",
+      email: "charlie@example.com",
+      role: "customer"
+    }
+  ])
+  establishment_insertMany(data: [
+    {
+      id: "888e8400-e29b-41d4-a716-446655440001",
+      name: "Burger Joint",
+      category: "Fast Food",
+      address: "123 Maple St",
+      rating: 4.5,
+      isOpen: true
+    },
+    {
+      id: "888e8400-e29b-41d4-a716-446655440002",
+      name: "Pizza Palace",
+      category: "Italian",
+      address: "456 Oak Ave",
+      rating: 4.8,
+      isOpen: true
+    }
+  ])
+  product_insertMany(data: [
+    {
+      id: "999e8400-e29b-41d4-a716-446655440001",
+      name: "Cheeseburger",
+      price: 8.99,
+      establishmentId: "888e8400-e29b-41d4-a716-446655440001"
+    },
+    {
+      id: "999e8400-e29b-41d4-a716-446655440002",
+      name: "Pepperoni Pizza",
+      price: 15.99,
+      establishmentId: "888e8400-e29b-41d4-a716-446655440002"
+    }
+  ])
+  order_insertMany(data: [
+    {
+      id: "aaae8400-e29b-41d4-a716-446655440001",
+      status: "delivered",
+      totalAmount: 25.98,
+      consumerId: "777e8400-e29b-41d4-a716-446655440001",
+      establishmentId: "888e8400-e29b-41d4-a716-446655440001",
+      courierId: "777e8400-e29b-41d4-a716-446655440002"
+    }
+  ])
+  orderItem_insertMany(data: [
+    {
+      id: "bbbe8400-e29b-41d4-a716-446655440001",
+      quantity: 2,
+      orderId: "aaae8400-e29b-41d4-a716-446655440001",
+      productId: "999e8400-e29b-41d4-a716-446655440001"
+    }
+  ])
+}
