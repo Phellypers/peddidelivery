@@ -8,10 +8,12 @@ if (process.env.DOTENV_CONFIG_PATH && process.env.DOTENV_CONFIG_PATH !== '.env')
 
 export const env = {
   demoMode: process.env.PEDDI_DEMO_MODE === 'true' && process.env.NODE_ENV !== 'production',
+  mvpMode: process.env.PEDDI_MVP_MODE === 'true',
   port: Number(process.env.PORT ?? 3333),
   databaseUrl: process.env.DATABASE_URL ?? '',
   databaseSSLMode: process.env.DATABASE_SSL_MODE ?? 'auto',
   databaseSSLCAFile: process.env.DATABASE_SSL_CA_FILE ?? '',
+  databaseSSLCA: process.env.DATABASE_SSL_CA ?? '',
   databasePoolMax: Number(process.env.DATABASE_POOL_MAX ?? 5),
   jwtSecret: process.env.JWT_SECRET ?? '',
   jwtExpiresIn: process.env.JWT_EXPIRES_IN ?? '15m',

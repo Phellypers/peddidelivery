@@ -8,6 +8,8 @@ test('PostgreSQL local dispensa TLS; banco remoto exige certificado válido',()=
   const remote={...settings,databaseUrl:'postgresql://test.pooler.supabase.com:5432/postgres?sslmode=require'};
   const options=databaseOptions(remote);
   assert.deepEqual(options.ssl,{rejectUnauthorized:true});
+  assert.deepEqual(databaseOptions({...remote,databaseSSLCA:'public-certificate'}).ssl,
+    {rejectUnauthorized:true,ca:'public-certificate'});
   assert.equal(new URL(options.connectionString!).searchParams.has('sslmode'),false);
   assert.throws(()=>databaseOptions({...remote,databaseSSLMode:'disable'}));
   assert.throws(()=>databaseOptions({...settings,databaseUrl:'mongodb://localhost/test'}));

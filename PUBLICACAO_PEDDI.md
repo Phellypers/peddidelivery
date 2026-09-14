@@ -12,12 +12,40 @@ O endereço `localhost:3333` funciona somente no computador de desenvolvimento.
 Cloud Run é uma opção no Firebase/Google, mas exige plano Blaze com faturamento.
 Nenhum plano pago ou serviço adicional foi ativado.
 
-Há outra dependência: o adaptador de entidades usado pelas telas demo é desativado
-em produção. Publicar somente o frontend não torna todos os módulos disponíveis.
-Antes de hospedar a API, preparar uma configuração de teste remoto com autenticação
-e permissões adequadas; manter o comportamento atual do ambiente local.
-Uploads atuais usam disco local e também precisam de armazenamento persistente
-no serviço escolhido. Não expor as credenciais do banco no frontend.
+O adaptador das telas pode ser habilitado por `PEDDI_MVP_MODE=true`, separado de
+`PEDDI_DEMO_MODE`. O modo online preserva login, permissões e expiração dos tokens,
+mas bloqueia cadastro simulado, envio simulado de email e redefinição local de senha.
+Esses recursos dependem de integrações reais. Upload online também está bloqueado
+até integrar armazenamento persistente, pois o disco do Render gratuito é temporário.
+O ambiente local permanece com seu comportamento anterior.
+
+## Criar o backend no Render
+
+Não há acesso autenticado ao painel Render pelas ferramentas desta sessão;
+criar a conta não cria automaticamente um servidor. Se um serviço já existe,
+atualizar esse serviço em vez de criar outro.
+
+1. No dashboard Render, clicar em **New + > Blueprint**.
+2. Conectar `Phellypers/peddidelivery` e selecionar a branch `peddi/mvp-supabase`.
+3. O Render lê `render.yaml`: serviço `peddi-api`, Node 24, plano Free,
+   build e start prontos. Nenhum novo banco é criado.
+4. No campo `DATABASE_URL`, colar privadamente o valor de `SUPABASE_DATABASE_URL`
+   do `.env` local, usando **Session pooler, porta 5432**, pois o servidor precisa
+   de IPv4. Não colar a conexão direta IPv6 nem a conexão Transaction de porta 6543.
+5. No campo `DATABASE_SSL_CA`, colar o conteúdo completo do certificado público
+   `prod-ca-2021.crt`, incluindo BEGIN CERTIFICATE e END CERTIFICATE.
+6. Revisar o plano Free e criar/aplicar o Blueprint. `JWT_SECRET` será gerado
+   pelo Render: não reutilizar o secret antigo local nem enviá-lo pelo chat.
+7. Aguardar o primeiro deploy e conferir o endereço HTTPS `.onrender.com` em
+   **Overview**. Enviar apenas esse endereço público para validar a API.
+
+As migrations e o seed já estão no Supabase; não são repetidos pelo deploy.
+O build instala dependências de desenvolvimento porque o comando `server` usa
+`tsx` em runtime. O health check `/health` também valida acesso ao banco.
+Deploys automáticos estão desativados: futuras atualizações exigem **Manual Deploy**.
+O plano Free pausa após 15 minutos sem tráfego; a primeira requisição pode demorar
+mais que os 15 segundos de timeout do frontend. Aguardar o backend acordar antes
+de testar o login. O modo online não mantém tokens sem expiração.
 
 ## Build e Hosting
 

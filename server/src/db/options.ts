@@ -3,6 +3,7 @@ import type pg from 'pg';
 
 export function databaseOptions(settings: {
   databaseUrl: string; databaseSSLMode: string; databaseSSLCAFile: string; databasePoolMax: number;
+  databaseSSLCA?: string;
 }): pg.PoolConfig {
   let url:URL;
   try { url=new URL(settings.databaseUrl); }
@@ -17,5 +18,6 @@ export function databaseOptions(settings: {
   return { connectionString: url.toString(), max: settings.databasePoolMax,
     connectionTimeoutMillis: 10000, idleTimeoutMillis: 30000,
     ssl: tls ? { rejectUnauthorized: true,
-      ...(settings.databaseSSLCAFile ? { ca: fs.readFileSync(settings.databaseSSLCAFile,'utf8') } : {}) } : false };
+      ...(settings.databaseSSLCAFile ? { ca: fs.readFileSync(settings.databaseSSLCAFile,'utf8') }
+        : settings.databaseSSLCA ? { ca: settings.databaseSSLCA.replace(/\\n/g,'\n') } : {}) } : false };
 }

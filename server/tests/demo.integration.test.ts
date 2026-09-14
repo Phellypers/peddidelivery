@@ -32,13 +32,36 @@ test('horários por dia usam São Paulo e respeitam virada da madrugada',()=>{
   assert.equal(isProductAvailable({},new Date('2026-09-15T06:00:00Z')),true);
 });
 
-test('demo CRUD persiste cadastros, pedidos e isolamento entre lojas', {skip:process.env.RUN_DATABASE_TESTS!=='true'||!env.demoMode},async()=>{
+test('modo MVP online bloqueia simuladores e upload em disco temporario',async()=>{
+  const originalDemo=env.demoMode,originalMvp=env.mvpMode;
+  env.demoMode=false;env.mvpMode=true;
+  const server=app.listen(0,'127.0.0.1');
+  await new Promise<void>(resolve=>server.once('listening',resolve));
+  const address=server.address();assert.ok(address&&typeof address==='object');
+  try {
+    for(const path of ['reset-request','reset-password','register','email','upload']){
+      const response:Response=await fetch(`http://127.0.0.1:${address.port}/api/v1/demo/${path}`,{
+        method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:'gestor.demo@peddi.local'}),
+      });
+      assert.equal(response.status,503,path);
+      assert.equal((await response.json()).demoResetUrl,undefined);
+    }
+    const token=createAccessToken({id:crypto.randomUUID(),email:'gestor.demo@peddi.local',name:'Demo',role:'manager',businessId:null,storeId:null});
+    assert.ok((jwt.decode(token) as jwt.JwtPayload).exp);
+  } finally {
+    env.demoMode=originalDemo;env.mvpMode=originalMvp;
+    await new Promise<void>(resolve=>server.close(()=>resolve()));
+  }
+});
+
+test('MVP online persiste cadastros, pedidos e isolamento entre lojas', {skip:process.env.RUN_DATABASE_TESTS!=='true'||!env.demoMode},async()=>{
   const business=(await query('INSERT INTO businesses(name,slug) VALUES($1,$2) RETURNING id',['Teste app',`app-${crypto.randomUUID()}`])).rows[0].id;
   const server=app.listen(0,'127.0.0.1');
   await new Promise<void>(resolve=>server.once('listening',resolve));
   const address=server.address();assert.ok(address&&typeof address==='object');
   const base=`http://127.0.0.1:${address.port}/api/v1`;
   let tenants:string[]=[];
+  const originalMode=env.demoMode,originalMvp=env.mvpMode;
   try{
     tenants=(await query("INSERT INTO stores(business_id,name,slug) VALUES($1,'App A','a'),($1,'App B','b') RETURNING id",[business])).rows.map(row=>row.id);
     const manager=(await query("INSERT INTO users(business_id,store_id,email,password_hash,name,role) VALUES($1,$2,$3,'test','Teste','manager') RETURNING id",[business,tenants[0],`test-${crypto.randomUUID()}@peddi.local`])).rows[0].id;
@@ -47,10 +70,9 @@ test('demo CRUD persiste cadastros, pedidos e isolamento entre lojas', {skip:pro
       const response=await fetch(base+path,{method,headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json','X-Peddi-Visitor':crypto.randomUUID()},body:data===undefined?undefined:JSON.stringify(data)});
       return {status:response.status,body:response.status===204?{}:await response.json()};
     };
-    const originalMode=env.demoMode;
     env.demoMode=false;
     assert.equal((await call('/demo/entities/Account')).status,404);
-    env.demoMode=originalMode;
+    env.mvpMode=true;
     for(const entity of ['Account','Campaign','CashbackRule','ChatMessage','City','Coupon','CustomerProfile','Deliverer','DelivererRating','LiveSession','Notification','PromoMessage','ReactivationCampaign','ReviewComment','SupportTicket','Table','UpsellGroup']){
       const created=await call(`/demo/entities/${entity}`,'POST',{name:`Teste ${entity}`,amount:12,code:'APPTEST',message:'Teste local'});
       assert.equal(created.status,201,`${entity}: ${JSON.stringify(created.body)}`);
@@ -93,6 +115,7 @@ test('demo CRUD persiste cadastros, pedidos e isolamento entre lojas', {skip:pro
     assert.equal((await call('/demo/entities/Category')).body.length,0);
     assert.equal((await call('/admin/catalog')).body.categories.length,0);
   }finally{
+    env.demoMode=originalMode;env.mvpMode=originalMvp;
     await new Promise<void>(resolve=>server.close(()=>resolve()));
     if(tenants.length){
       const guests=(await query('SELECT DISTINCT c.id FROM customers c JOIN orders o ON o.customer_id=c.id WHERE c.user_id IS NULL AND o.store_id=ANY($1::uuid[])',[tenants])).rows.map(row=>row.id);

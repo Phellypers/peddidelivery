@@ -13,7 +13,16 @@ import { saveCourier, archiveCourier } from '../couriers/data.js';
 import { syncDelivery } from '../deliveries/data.js';
 
 export const demoRouter=Router();
-demoRouter.use((request,response,next)=>env.demoMode ? next() : response.status(404).json({error:'Ambiente de teste local desativado.'}));
+demoRouter.use((request,response,next)=>(env.demoMode || env.mvpMode) ? next() : response.status(404).json({error:'Adaptador de entidades desativado.'}));
+demoRouter.use((request,response,next)=>{
+  if (!env.demoMode && ['/email','/register','/reset-request','/reset-password'].includes(request.path)) {
+    return response.status(503).json({error:'Funcao de teste local indisponivel online. A integracao real ainda precisa ser configurada.'});
+  }
+  if (!env.demoMode && request.path==='/upload') {
+    return response.status(503).json({error:'Upload online depende de armazenamento persistente; fotos nao serao salvas no disco temporario do servidor.'});
+  }
+  next();
+});
 demoRouter.use(async (request:AuthRequest,response,next)=>{
   if (request.headers.authorization) {
     let accepted=false;

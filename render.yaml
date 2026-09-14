@@ -1,0 +1,32 @@
+services:
+  - type: web
+    name: peddi-api
+    runtime: node
+    plan: free
+    repo: https://github.com/Phellypers/peddidelivery
+    branch: peddi/mvp-supabase
+    buildCommand: npm ci --include=dev && npm run typecheck:server
+    startCommand: npm run server
+    healthCheckPath: /health
+    autoDeployTrigger: off
+    envVars:
+      - key: NODE_VERSION
+        value: 24.19.0
+      - key: NODE_ENV
+        value: production
+      - key: PEDDI_DEMO_MODE
+        value: "false"
+      - key: PEDDI_MVP_MODE
+        value: "true"
+      - key: CLIENT_ORIGIN
+        value: https://peddidelivery-5c848.web.app
+      - key: DATABASE_SSL_MODE
+        value: verify-full
+      - key: DATABASE_POOL_MAX
+        value: "5"
+      - key: DATABASE_URL
+        sync: false
+      - key: DATABASE_SSL_CA
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
