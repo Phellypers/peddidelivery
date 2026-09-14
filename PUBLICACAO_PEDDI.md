@@ -2,13 +2,21 @@
 
 Firebase Hosting preparado para o projeto `peddidelivery-5c848`.
 Domínios do site: `https://peddidelivery-5c848.web.app` e
-`https://peddidelivery-5c848.firebaseapp.com`. Nenhum deploy foi executado.
+`https://peddidelivery-5c848.firebaseapp.com`. Hosting publicado em 14/09/2026.
+Backend ativo: `https://peddi-api.onrender.com`, conectado ao Supabase com TLS.
+Login, CORS e leitura de loja, produtos, categorias, pedidos e entregadores
+passaram no endpoint remoto. O fluxo público produto com variação > checkout >
+histórico > aceitar/retirar/finalizar entrega passou no navegador.
+O produto e o pedido temporários foram removidos por IDs registrados pelo teste.
+As 26 rotas existentes e a troca para Kanban passaram no site público sem
+carregamento preso nem erro JavaScript. Isso valida abertura e os fluxos testados;
+as integrações externas e regras avançadas continuam com os limites abaixo.
 
 ## Antes de publicar
 
 O frontend React/Vite fica no Firebase Hosting; o banco permanece no Supabase.
 O backend Node/Express precisa de um servidor com endereço HTTPS público.
-O endereço `localhost:3333` funciona somente no computador de desenvolvimento.
+O endereço `localhost:3333` continua reservado ao desenvolvimento local.
 Cloud Run é uma opção no Firebase/Google, mas exige plano Blaze com faturamento.
 Nenhum plano pago ou serviço adicional foi ativado.
 
@@ -49,7 +57,9 @@ de testar o login. O modo online não mantém tokens sem expiração.
 
 ## Build e Hosting
 
-1. Configurar o endereço público do backend em `PEDDI_HOSTING_API_URL` no `.env`.
+1. Para repetir a publicação, configurar `https://peddi-api.onrender.com` em
+   `PEDDI_HOSTING_API_URL` no `.env` ou no ambiente de build. Não alterar a API
+   local do frontend para esse endereço sem intenção de usar o banco remoto.
 2. Configurar `CLIENT_ORIGIN` do backend com o domínio HTTPS usado pelo frontend.
 3. Executar `npm.cmd run build:hosting`. Esse comando impede publicação com
    backend local e desativa a moldura mobile de desenvolvimento no build.

@@ -272,3 +272,25 @@ Próximo passo: testar as operações do MVP com as contas demo no navegador.
 As sessões antigas do banco local podem exigir sair e entrar novamente.
 Pagamentos, WhatsApp, email real, push e mapas continuam pendentes de integração;
 os módulos avançados não foram ampliados nesta etapa.
+
+## Publicação HTTPS — 14/09/2026
+
+Frontend publicado em `https://peddidelivery-5c848.web.app`; backend em
+`https://peddi-api.onrender.com`, usando o mesmo Supabase. Health e login
+responderam HTTP 200, com CORS para o domínio Firebase. O modo online habilita
+o adaptador das telas por `PEDDI_MVP_MODE`, sem habilitar o modo demo local.
+Tokens online expiram e renovam pela autenticação existente; os simuladores
+de cadastro, email e redefinição de senha estão bloqueados.
+
+Oito testes de backend passaram após essa preparação, além do teste com
+configuração de produção e certificado CA em variável de ambiente.
+No site público, as 26 rotas e Kanban abriram sem carregamento preso ou erro
+JavaScript. Produto com variação e resposta obrigatória, checkout, histórico
+do cliente e ciclo de entrega passaram. Produto e pedido temporários removidos
+pelos IDs registrados, com verificações de arquivamento e marca de teste.
+
+Somente Firebase Hosting foi implantado, sem Firestore ou Data Connect.
+O frontend público não depende do servidor local. O ambiente de desenvolvimento
+continua disponível. Render Free pode demorar a acordar após ficar sem tráfego.
+Uploads online aguardam armazenamento persistente; as integrações externas e
+os módulos avançados mantêm os limites anteriormente documentados.
