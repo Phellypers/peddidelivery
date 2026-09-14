@@ -23,9 +23,42 @@ Nenhum plano pago ou serviço adicional foi ativado.
 O adaptador das telas pode ser habilitado por `PEDDI_MVP_MODE=true`, separado de
 `PEDDI_DEMO_MODE`. O modo online preserva login, permissões e expiração dos tokens,
 mas bloqueia cadastro simulado, envio simulado de email e redefinição local de senha.
-Esses recursos dependem de integrações reais. Upload online também está bloqueado
-até integrar armazenamento persistente, pois o disco do Render gratuito é temporário.
+Esses recursos dependem de integrações reais. O upload possui integração com
+Supabase Storage; sua ativação no Render depende da configuração descrita abaixo.
 O ambiente local permanece com seu comportamento anterior.
+
+## Imagens no Supabase Storage
+
+Bucket `peddi-images` confirmado público, com limite de 8 MB e tipos JPEG,
+PNG e WebP. A rota de upload exige login e loja no token, valida tipo e assinatura
+da imagem e grava com nome aleatório em `stores/<loja>/users/<usuario>/`.
+Uma chave privada é usada apenas pelo backend no header `apikey`; tokens dos
+usuários PEDDI não são encaminhados ao Supabase. Nenhuma política de escrita
+anônima foi criada. A resposta mantém `file_url`, compatível com as telas atuais.
+
+Teste real em configuração de produção: envio HTTP 201, leitura pública HTTP 200,
+bytes conferidos e URL da imagem persistida no produto. Imagem, produto e refresh
+token temporários foram removidos. O teste não altera o serviço Render existente.
+
+Para ativar, abrir Render > `peddi-api` > **Environment** e adicionar ou editar:
+
+| Variável | Valor |
+|---|---|
+| `SUPABASE_URL` | `https://mqrlbaziiesjpzjivbzm.supabase.co` |
+| `SUPABASE_STORAGE_BUCKET` | `peddi-images` |
+| `SUPABASE_SECRET_KEY` | Chave privada Supabase, copiada diretamente do painel |
+
+Salvar e executar **Manual Deploy > Deploy latest commit**. O campo `sync: false`
+do Blueprint não solicita uma nova chave ao atualizar um Blueprint existente;
+por isso o secret deve ser cadastrado no Environment do serviço.
+Guardar a chave local somente em `.env`, sem prefixo `VITE_`.
+A chave enviada pelo chat deve ser substituída por outra criada no Supabase,
+com a substituta salva diretamente no `.env` e no Render; revogar a antiga depois.
+
+Quando Storage está configurado, o upload usa arquivos persistentes no Supabase.
+Se não estiver configurado, online responde HTTP 503; no modo demo local o
+armazenamento anterior em disco continua disponível. Falhas no Supabase não
+redirecionam arquivos ao disco temporário.
 
 ## Criar o backend no Render
 

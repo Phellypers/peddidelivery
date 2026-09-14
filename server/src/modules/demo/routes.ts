@@ -7,10 +7,11 @@ import jwt from 'jsonwebtoken';
 import { z } from 'zod';
 import { env } from '../../config/env.js';
 import { pool, query } from '../../db/client.js';
-import { requireAuth, type AuthRequest } from '../../auth/middleware.js';
+import { requireAuth, requireRoles, type AuthRequest } from '../../auth/middleware.js';
 import { defaults, entityNames, isManager, matches, readEntities, readOrders, recordView, storeId, writeOrder } from './data.js';
 import { saveCourier, archiveCourier } from '../couriers/data.js';
 import { syncDelivery } from '../deliveries/data.js';
+import { storageConfigured, uploadImage, StorageUploadError } from '../storage/client.js';
 
 export const demoRouter=Router();
 demoRouter.use((request,response,next)=>(env.demoMode || env.mvpMode) ? next() : response.status(404).json({error:'Adaptador de entidades desativado.'}));
@@ -18,9 +19,14 @@ demoRouter.use((request,response,next)=>{
   if (!env.demoMode && ['/email','/register','/reset-request','/reset-password'].includes(request.path)) {
     return response.status(503).json({error:'Funcao de teste local indisponivel online. A integracao real ainda precisa ser configurada.'});
   }
-  if (!env.demoMode && request.path==='/upload') {
-    return response.status(503).json({error:'Upload online depende de armazenamento persistente; fotos nao serao salvas no disco temporario do servidor.'});
+  if (!env.demoMode && request.path==='/upload' && !storageConfigured()) {
+    return response.status(503).json({error:'Configure o Supabase Storage no backend para enviar fotos.'});
   }
+  next();
+});
+demoRouter.use('/upload',requireAuth,requireRoles('manager','peddi_admin','customer','courier'),(request:AuthRequest,response,next)=>{
+  if(!request.auth?.storeId || !z.string().uuid().safeParse(request.auth.storeId).success
+    || !z.string().uuid().safeParse(request.auth.userId).success)return response.status(403).json({error:'Usuario sem loja valida para enviar fotos.'});
   next();
 });
 demoRouter.use(async (request:AuthRequest,response,next)=>{
@@ -177,13 +183,25 @@ async function updateRating(tenant:string,productId:string){
 }
 
 export const uploadPath=path.join(process.cwd(),'server/uploads');
-demoRouter.post('/upload',requireAuth,express.raw({type:['image/png','image/jpeg','image/webp'],limit:'8mb'}),async(request,response)=>{
+demoRouter.post('/upload',express.raw({type:['image/png','image/jpeg','image/webp'],limit:'8mb'}),async(request:AuthRequest,response)=>{
   const buffer=request.body;
   if(!Buffer.isBuffer(buffer))return response.status(400).json({error:'Envie uma foto PNG, JPEG ou WebP.'});
   const type=buffer.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10]))?'png'
     :buffer[0]===255&&buffer[1]===216&&buffer[2]===255?'jpg'
     :buffer.toString('ascii',0,4)==='RIFF'&&buffer.toString('ascii',8,12)==='WEBP'?'webp':null;
   if(!type)return response.status(400).json({error:'Arquivo de imagem inválido.'});
+  const mime=type==='jpg'?'image/jpeg':type==='png'?'image/png':'image/webp';
+  if(request.get('Content-Type')?.split(';')[0].trim()!==mime)return response.status(400).json({error:'O tipo informado nao corresponde ao arquivo da foto.'});
+  if(storageConfigured()){
+    try {
+      const objectPath=`stores/${request.auth!.storeId}/users/${request.auth!.userId}/${crypto.randomUUID()}.${type}`;
+      const file_url=await uploadImage(buffer,objectPath,mime);
+      return response.status(201).json({file_url});
+    } catch(error) {
+      return response.status(error instanceof StorageUploadError?error.status:502).json({error:error instanceof StorageUploadError?error.message:'Nao foi possivel enviar a foto.'});
+    }
+  }
+  if(!env.demoMode)return response.status(503).json({error:'Configure o Supabase Storage no backend para enviar fotos.'});
   await fs.mkdir(uploadPath,{recursive:true});
   const name=`${crypto.randomUUID()}.${type}`;
   await fs.writeFile(path.join(uploadPath,name),buffer);

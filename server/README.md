@@ -141,3 +141,15 @@ Execute
 `npm.cmd run db:check:supabase`. O comando verifica acesso SQL, TLS e tabelas,
 sem alterar `DATABASE_URL`, executar migrations ou seed.
 A chave publishable configurada não substitui a senha PostgreSQL.
+
+## Upload persistente
+
+Configurar `SUPABASE_URL`, `SUPABASE_SECRET_KEY` e
+`SUPABASE_STORAGE_BUCKET=peddi-images` no ambiente do backend. A chave secret
+permanece somente no servidor. A rota existente `/api/v1/demo/upload` exige login,
+loja e perfil permitido, recebe PNG/JPEG/WebP até 8 MB e devolve `file_url` público.
+O bucket deve existir e ser público para fotos do cardápio e perfis públicos.
+Não usar esse bucket para documentos privados. A estrutura do arquivo inclui
+loja, usuário e UUID aleatório; uploads não sobrescrevem arquivos existentes.
+Erro externo não é encaminhado ao cliente nem provoca fallback para disco online.
+Ver `PUBLICACAO_PEDDI.md` para ativação no Render e resultados do teste real.

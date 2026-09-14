@@ -20,6 +20,9 @@ export const env = {
   refreshTokenExpiresIn: process.env.REFRESH_TOKEN_EXPIRES_IN ?? '30d',
   clientOrigin: process.env.CLIENT_ORIGIN ?? 'http://localhost:5173',
   seedTestPassword: process.env.SEED_TEST_PASSWORD ?? '',
+  supabaseUrl: process.env.SUPABASE_URL ?? '',
+  supabaseStorageKey: process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '',
+  supabaseStorageBucket: process.env.SUPABASE_STORAGE_BUCKET ?? 'peddi-images',
 };
 
 if (!env.jwtSecret || (process.env.NODE_ENV === 'production' && (env.jwtSecret.length < 32 || /change-me|gere-|development/i.test(env.jwtSecret)))) {

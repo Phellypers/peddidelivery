@@ -33,8 +33,9 @@ test('horários por dia usam São Paulo e respeitam virada da madrugada',()=>{
 });
 
 test('modo MVP online bloqueia simuladores e upload em disco temporario',async()=>{
-  const originalDemo=env.demoMode,originalMvp=env.mvpMode;
+  const originalDemo=env.demoMode,originalMvp=env.mvpMode,originalStorageKey=env.supabaseStorageKey;
   env.demoMode=false;env.mvpMode=true;
+  env.supabaseStorageKey='';
   const server=app.listen(0,'127.0.0.1');
   await new Promise<void>(resolve=>server.once('listening',resolve));
   const address=server.address();assert.ok(address&&typeof address==='object');
@@ -50,6 +51,7 @@ test('modo MVP online bloqueia simuladores e upload em disco temporario',async()
     assert.ok((jwt.decode(token) as jwt.JwtPayload).exp);
   } finally {
     env.demoMode=originalDemo;env.mvpMode=originalMvp;
+    env.supabaseStorageKey=originalStorageKey;
     await new Promise<void>(resolve=>server.close(()=>resolve()));
   }
 });
