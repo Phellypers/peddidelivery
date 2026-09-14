@@ -23,8 +23,8 @@ As rotas declaradas em `App.jsx` incluem login, cadastro, recuperacao de senha, 
 
 ## Arquitetura e integracoes
 
-- Autenticacao: `AuthProvider`, `useAuth` e telas de login/cadastro; a implementacao depende do SDK/Base44.
-- Dados e API: `@base44/sdk`, `base44Client` e entidades Base44. A configuracao usa `VITE_BASE44_APP_ID` e `VITE_BASE44_APP_BASE_URL`.
+- Autenticacao: `AuthProvider`, `useAuth` e telas de login/cadastro usando JWT da API PEDDI.
+- Dados e API: `peddiApi`, cliente local e entidades persistidas no PostgreSQL do backend proprio.
 - Estado local: providers de autenticacao, carrinho e favoritos; estados de tela com `useState` e cache com React Query.
 - Firebase: nao foram encontrados arquivos de configuracao, dependencia `firebase` ou inicializacao valida.
 - Pagamentos: dependencias Stripe existem, mas a copia precisa ser validada quanto ao uso efetivo e backend de pagamento.
@@ -35,10 +35,10 @@ As rotas declaradas em `App.jsx` incluem login, cadastro, recuperacao de senha, 
 1. A raiz executavel esta aninhada em uma pasta de modulos e nao possui a pasta `src` esperada pelo alias e pelo `index.html`.
 2. Ha duas arvores de exportacao: `marketing` e `Logo Peddi/entities`, sem um contrato claro entre elas.
 3. O codigo espera imports como `@/pages`, `@/components` e `@/lib`, mas os caminhos fisicos encontrados nao correspondem a esse alias a partir do `package.json`.
-4. O nome do pacote ainda e `base44-app` e o README original descreve apenas o fluxo Base44.
+4. O pacote e a documentacao foram atualizados para a API propria PEDDI; exportacoes antigas permanecem somente para auditoria.
 5. Nao existe Git local na pasta analisada; nao ha status, historico ou remoto a preservar nesta copia.
 6. Nao foi possivel afirmar uso de Firebase.
-7. A disponibilidade do backend Base44, das variaveis de ambiente e das entidades remotas e necessaria para validar o app em runtime.
+7. A disponibilidade do PostgreSQL, das variaveis de ambiente e do backend PEDDI e necessaria para validar o app em runtime.
 8. Possiveis duplicidades e imports quebrados precisam ser resolvidos com uma reconstrução controlada da arvore, pois mover arquivos sem testes pode alterar o funcionamento.
 
 ## Reorganizacao planejada
@@ -49,23 +49,23 @@ A pasta de entidades sera tratada como contrato de dados/integração, nao como 
 
 ## Dependencias e execucao
 
-O gerenciador indicado pelo manifesto e npm. Os scripts existentes sao `dev`, `build`, `lint`, `lint:fix`, `typecheck` e `preview`. A instalacao ainda depende de acesso ao registry npm e a execucao depende das variaveis Base44.
+O gerenciador indicado pelo manifesto e npm. Os scripts existentes sao `dev`, `build`, `lint`, `lint:fix`, `typecheck` e `preview`. A instalacao depende de acesso ao registry npm e a execucao depende das variaveis da API PEDDI.
 
 ## Riscos
 
 - Perda de funcionamento ao unificar arvores exportadas sem conferir imports relativos.
-- Dependencia de servico externo Base44 e configuracao de ambiente ausente.
+- Dependencias futuras de pagamento, mapas, comunicacao e analytics ainda precisam de provedor e credenciais.
 - Calculos financeiros possivelmente executados no cliente, sem garantia de consistencia transacional.
 - Regras de negocio espalhadas em componentes e sem testes automatizados.
 - Ausencia de Git local reduz capacidade de rollback; recomenda-se inicializar/versionar antes de uma grande movimentacao.
 
 ## Backend e pendencias
 
-O backend definitivo ainda nao esta presente. Persistencia, autenticacao, autorizacao, entidades, pedidos, estoque, financeiro, notificacoes e funcoes de negocio dependem do Base44 ou de uma futura API. Ver `REGRAS_DE_NEGOCIO_PEDDI.md` e `MAPA_BACKEND_PEDDI.md`.
+O backend proprio esta presente em `server/`, com persistencia, autenticacao, autorizacao, entidades, pedidos, catalogo, entregas e upload. Pagamentos, comunicacao e analytics continuam como integracoes futuras. Ver `REGRAS_DE_NEGOCIO_PEDDI.md` e `MAPA_BACKEND_PEDDI.md`.
 
 ## Consolidacao realizada
 
-`marketing` foi adotado como origem principal porque possui o roteador, 110 arquivos de codigo, paginas de cliente/admin/entregador e os componentes funcionais. De `Logo Peddi/entities` foram aproveitados os 24 schemas JSONC, `base44Client.js` e os seis componentes financeiros. A raiz agora possui `package.json`, `index.html`, `public/` e `src/`.
+`marketing` foi adotado como origem principal porque possui o roteador, 110 arquivos de codigo, paginas de cliente/admin/entregador e os componentes funcionais. De `Logo Peddi/entities` foram aproveitados os 24 schemas JSONC e os seis componentes financeiros. A raiz agora possui `package.json`, `index.html`, `public/` e `src/`.
 
 Os imports `@` foram apontados para `src`, os entrypoints foram corrigidos para `src/main.jsx` e os componentes foram organizados em `pages`, `components`, `lib`, `services`, `features`, `hooks`, `styles` e `config`. A copia original foi preservada.
 

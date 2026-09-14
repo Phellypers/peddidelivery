@@ -48,7 +48,7 @@ async function request(path, options = {}, retried = false) {
 
 export const peddiApi = {
   request,
-  isConfigured: Boolean(import.meta.env.VITE_PEDDI_API_URL),
+  isConfigured: true,
   login: (email, password) => request('/api/v1/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
   me: (token) => request('/api/v1/me', { headers: { Authorization: `Bearer ${token}` } }),
   orders: (token) => request('/api/v1/orders', { headers: { Authorization: `Bearer ${token}` } }),
@@ -68,24 +68,16 @@ export const demoCatalog = {
   ],
 };
 
-export async function loadPublicCatalog(base44) {
-  if (peddiApi.isConfigured) {
-    try {
-      const stores = await peddiApi.stores();
-      const store = stores.stores?.find(store => store.slug === 'loja-demo') || stores.stores?.[0];
-      if (store) {
-        const catalog = await peddiApi.catalog(store.id);
-        return { store, categories: catalog.categories.map(category => ({ ...category, is_featured: category.is_featured ?? true, is_active: category.is_active ?? true })), products: catalog.products.map(product => ({ ...product, category_ids: product.category_ids ?? (product.categoryId ? [product.categoryId] : []), is_published: true })) };
-      }
-    } catch (error) {
-      console.warn('PEDDI API indisponivel; tentando Base44:', error);
-    }
-  }
+export async function loadPublicCatalog() {
   try {
-    const [stores, categories, products] = await Promise.all([base44.entities.Store.list(), base44.entities.Category.list('sort_order'), base44.entities.Product.filter({ is_published: true })]);
-    if (stores[0]) return { store: stores[0], categories, products };
+    const stores = await peddiApi.stores();
+    const store = stores.stores?.find(store => store.slug === 'loja-demo') || stores.stores?.[0];
+    if (store) {
+      const catalog = await peddiApi.catalog(store.id);
+      return { store, categories: catalog.categories.map(category => ({ ...category, is_featured: category.is_featured ?? true, is_active: category.is_active ?? true })), products: catalog.products.map(product => ({ ...product, category_ids: product.category_ids ?? (product.categoryId ? [product.categoryId] : []), is_published: true })) };
+    }
   } catch (error) {
-    console.warn('Base44 indisponivel; usando catalogo de demonstracao local:', error);
+    console.warn('API PEDDI indisponivel; usando catalogo de contingencia local:', error);
   }
   return demoCatalog;
 }

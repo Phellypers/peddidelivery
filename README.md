@@ -24,11 +24,11 @@ src/
 	config/entities/
 ```
 
-A origem principal foi `marketing`, que continha o roteador, as paginas e os componentes usados pela aplicacao. `Logo Peddi/entities` contribuiu com os schemas JSONC, o cliente Base44 e os componentes financeiros.
+A origem principal foi `marketing`, que continha o roteador, as paginas e os componentes usados pela aplicacao. `Logo Peddi/entities` contribuiu com os schemas JSONC e os componentes financeiros.
 
 ## Estado atual
 
-O frontend consolidado usa React 18, Vite, React Router, Tailwind CSS, TanStack Query e o SDK Base44. As copias originais continuam preservadas em `marketing` e `Logo Peddi/entities` para auditoria, enquanto a raiz executavel esta neste diretorio.
+O frontend consolidado usa React 18, Vite, React Router, Tailwind CSS, TanStack Query e a API propria PEDDI. As copias originais continuam preservadas em `marketing` e `Logo Peddi/entities` para auditoria, enquanto a raiz executavel esta neste diretorio.
 
 A reorganizacao estrutural foi deliberadamente bloqueada nesta etapa porque os imports apontam para uma estrutura `src` que nao existe fisicamente no mesmo nivel. Mover arquivos agora poderia remover ou alterar funcionalidades. O diagnostico completo esta em [DOCUMENTACAO_PROJETO.md](DOCUMENTACAO_PROJETO.md), as regras em [REGRAS_DE_NEGOCIO_PEDDI.md](REGRAS_DE_NEGOCIO_PEDDI.md) e o mapa de backend em [MAPA_BACKEND_PEDDI.md](MAPA_BACKEND_PEDDI.md).
 
@@ -40,17 +40,12 @@ A reorganizacao estrutural foi deliberadamente bloqueada nesta etapa porque os i
 - Tailwind CSS 3
 - TanStack React Query
 - Radix UI, Lucide, Recharts, React Hook Form e Zod
-- SDK e plugin Vite da Base44
+- API PEDDI com Express, PostgreSQL, JWT e Supabase Storage
 - Stripe, Leaflet, Framer Motion, jsPDF e outras dependencias listadas no manifesto
 
 ## Como instalar
 
-O manifesto atual esta em:
-
-`marketing/checkout/customer/deliverer/delivery/storefront/ui/hooks/lib/utils`
-
 ```powershell
-Set-Location 'marketing/checkout/customer/deliverer/delivery/storefront/ui/hooks/lib/utils'
 npm install
 ```
 
@@ -60,7 +55,7 @@ npm install
 npm run dev
 ```
 
-A execucao depende das variaveis Base44. Use `.env.example` na raiz como referencia e crie o arquivo de ambiente apenas na raiz do app durante a proxima etapa de unificacao.
+A execucao usa a API PEDDI. Configure `VITE_PEDDI_API_URL` para desenvolvimento e `PEDDI_HOSTING_API_URL` para o build publicado. Integrações externas permanecem opcionais.
 
 ## Scripts
 
@@ -72,7 +67,7 @@ A execucao depende das variaveis Base44. Use `.env.example` na raiz como referen
 
 ## Variaveis e dependencias externas
 
-O backend atual depende de Base44 por `VITE_BASE44_APP_ID` e `VITE_BASE44_APP_BASE_URL`. Firebase nao esta configurado. Stripe e mapas aparecem como dependencias, mas seu uso e suas chaves ainda precisam ser validados.
+O backend proprio fornece autenticacao, entidades, catalogo, pedidos, entregas, upload e sessoes ao vivo. Stripe, mapas, email, push e WhatsApp permanecem pontos de integracao futura.
 
 Nunca versione `.env`, tokens, credenciais ou `node_modules`.
 
@@ -82,14 +77,14 @@ Depois de uma consolidacao segura, a aplicacao deve ter uma raiz unica com `src/
 
 ## Backend e producao
 
-Ainda nao existe backend proprio nem banco definitivo neste workspace. Autenticacao, pedidos, estoque, financeiro, notificacoes, suporte, autorizacao e integridade dos calculos dependem do Base44 ou de uma futura API. Antes de producao, definir contratos server-side, testes, observabilidade, pagamentos, LGPD, CI e versionamento Git.
+O backend proprio esta em `server/`, com PostgreSQL, migrations, JWT, isolamento por loja e testes de contrato. Antes de ampliar a producao, concluir pagamentos, comunicacao externa, observabilidade, LGPD e CI.
 
 ## Proximos passos
 
-1. Inicializar ou conectar um repositorio Git e revisar a grande movimentacao de arquivos.
-2. Configurar o backend Base44 ou substitui-lo por uma API definida.
-3. Executar testes de navegacao autenticada com dados reais ou ambiente Base44 local.
-4. Definir o backend e substituir regras financeiras calculadas somente no cliente.
+1. Configurar as credenciais do PostgreSQL, JWT e Supabase Storage no ambiente de deploy.
+2. Executar migrations e seed em cada ambiente.
+3. Validar pagamentos e comunicacoes externas quando os provedores forem escolhidos.
+4. Mover calculos financeiros restantes para contratos server-side conforme o escopo crescer.
 
 ## Docker e conta demo
 

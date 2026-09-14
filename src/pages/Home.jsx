@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { base44 } from '@/api/base44Client';
 import CartDrawer from '@/components/storefront/CartDrawer';
 import ChatWidget from '@/components/storefront/ChatWidget';
 import ProductCard from '@/components/storefront/ProductCard';
@@ -47,7 +46,7 @@ export default function Home() {
   const isAdmin = ['admin','manager','peddi_admin'].includes(user?.role);
 
   const loadData = useCallback(() => {
-    return loadPublicCatalog(base44).then(({ store: currentStore, categories: cats, products: prods }) => {
+    return loadPublicCatalog().then(({ store: currentStore, categories: cats, products: prods }) => {
       setStore(currentStore);
       setCategories(cats);
       setProducts(prods.filter(p => !p.is_paused));

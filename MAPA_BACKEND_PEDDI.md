@@ -2,7 +2,7 @@
 
 ## Situacao atual
 
-A aplicacao depende do SDK `@base44/sdk` e do cliente `base44Client`. O backend Base44 fornece autenticacao, entidades e funcoes remotas por configuracao de ambiente. Nao foi encontrada configuracao Firebase. Nao ha API propria, banco local ou servidor backend neste workspace.
+A aplicacao usa a API propria em `server/`, com PostgreSQL, JWT, bcrypt e Supabase Storage. O cliente de compatibilidade em `src/api/base44Client.js` apenas preserva a interface usada pelas telas; sua implementacao chama exclusivamente a API PEDDI.
 
 A futura implementacao deve separar adaptadores de servico da UI, manter credenciais somente em variaveis de ambiente e validar autorizacao no servidor. Os itens abaixo sao necessidades derivadas das entidades, rotas e componentes encontrados; contratos detalhados continuam pendentes.
 
@@ -13,7 +13,7 @@ A futura implementacao deve separar adaptadores de servico da UI, manter credenc
 - Consentimento OAuth.
 - Controle de acesso por perfil/funcao para cliente, gestor, admin e entregador.
 - Validacao server-side de permissao para cada entidade e acao.
-- Migrar ou encapsular a dependencia Base44 sem expor token no cliente.
+- Manter tokens somente na sessao JWT e credenciais externas somente no backend.
 
 ## Usuarios
 
@@ -90,22 +90,22 @@ A futura implementacao deve separar adaptadores de servico da UI, manter credenc
 
 ## Dependencias externas atuais
 
-- Base44 SDK/backend: necessario para autenticacao e dados.
+- API PEDDI/PostgreSQL: fonte atual de autenticacao e dados.
 - Stripe: dependencia presente; configuracao e uso efetivo precisam ser validados.
 - Mapas/geolocalizacao: `react-leaflet` esta listado; provedor e chave ainda precisam ser definidos.
 - Servicos de comunicacao: nao comprovados no codigo analisado.
 
 ## Backend proprio iniciado
 
-Foi criada a API em `server/` com PostgreSQL, migrations SQL, JWT, bcrypt, isolamento por `business_id`/`store_id`, catalogo e pedidos. A camada frontend `src/services/api/peddiApi.js` permite usar a API propria quando `VITE_PEDDI_API_URL` estiver configurada e conserva Base44 como fallback temporario.
+Foi criada a API em `server/` com PostgreSQL, migrations SQL, JWT, bcrypt, isolamento por `business_id`/`store_id`, catalogo, pedidos, entregas e upload. A camada frontend `src/services/api/peddiApi.js` usa a API propria como caminho unico; quando ela estiver indisponivel, o storefront exibe apenas um catalogo local de contingencia.
 
 O seed cria a conta `gestor.demo@peddi.local` com a senha definida por `SEED_TEST_PASSWORD`, uma empresa demo, uma loja, categoria e produtos. A conta so e persistida depois de executar migration e seed contra PostgreSQL.
 
-## Itens locais, mockados ou dependentes de Base44
+## Itens locais, mockados ou dependentes de integracao futura
 
-- Dados de negocio e autenticacao: dependentes do Base44 SDK e das entidades remotas; nao ha banco proprio.
+- Dados de negocio e autenticacao: persistidos no PostgreSQL pelo backend PEDDI.
 - Estado de carrinho, favoritos e telas: mantido por providers React e estado de componente; persistencia duravel nao foi comprovada.
 - Firebase: nao configurado.
 - Dados estaticos: labels, cores, nomes de dias e opcoes de formularios existem no cliente e nao substituem dados de backend.
 - Calculos financeiros: executados no cliente a partir de pedidos, produtos e contas recebidos; precisam de servico server-side para consistencia.
-- APIs externas: Base44 e possiveis Stripe/mapas aparecem nas dependencias; chaves e contratos de uso ainda dependem de ambiente.
+- APIs externas: Stripe, mapas, email, push e WhatsApp aguardam provedor, chaves e contratos aprovados.

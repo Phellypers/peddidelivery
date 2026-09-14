@@ -1,6 +1,6 @@
 # PEDDI API
 
-Backend proprio inicial da PEDDI, preparado para substituir gradualmente a Base44.
+Backend proprio da PEDDI, usado como fonte unica de dados e autenticacao da aplicacao.
 
 ## Stack
 
@@ -59,7 +59,7 @@ Os detalhes do modal, incluindo ficha técnica, fotos e variações, são persis
 pela migration `002_product_details.sql`. O custo da ficha é recalculado na API
 com os insumos da mesma loja. Produtos excluídos ficam arquivados para preservar
 os pedidos existentes. No modo demo local, fotos PNG/JPEG/WebP são salvas em
-`server/uploads`; a Base44 permanece disponível na configuração legada.
+`server/uploads` apenas no modo demo; em producao use Supabase Storage.
 
 Para testar persistência e isolamento entre lojas no banco local já migrado:
 
@@ -90,7 +90,7 @@ Pagamento, WhatsApp, push, Firebase, mapas, email, storage e analytics estão ma
 Use `DOTENV_CONFIG_PATH=.env` e `PEDDI_DEMO_MODE=true` no backend.
 Este modo é sempre desativado quando `NODE_ENV=production`.
 Com `VITE_PEDDI_API_URL` definido, o cliente local conecta as entidades das telas
-existentes ao PostgreSQL, sem remover o SDK Base44 nem reorganizar as páginas.
+existentes ao PostgreSQL. O SDK Base44 nao faz parte das dependencias da aplicacao.
 Categorias, produtos, insumos, pedidos e itens usam suas tabelas; os demais
 cadastros demo ficam em `app_records`, com loja e proprietário.
 As entidades de teste são expostas em `/api/v1/demo/entities/:entity`.

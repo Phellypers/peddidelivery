@@ -38,11 +38,7 @@ export default function AdminLayout() {
         <div className="p-4 border-b border-border">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <img
-                src="https://media.base44.com/images/public/6a382b7ab7116d571cddd00c/38efd2ccd_peddidelivery.png"
-                alt="Peddi"
-                className="h-7 object-contain"
-              />
+              <span className="text-xl font-black tracking-tight text-foreground">PEDDI</span>
             </div>
             <button aria-label="Fechar menu" onClick={() => setSidebarOpen(false)} className="lg:hidden p-3 rounded-xl hover:bg-muted">
               <X size={18} />

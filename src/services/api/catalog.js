@@ -1,4 +1,3 @@
-import { base44 } from '@/api/base44Client';
 import { peddiApi } from './peddiApi';
 
 const headers = () => ({ Authorization: `Bearer ${localStorage.getItem('peddi_access_token') || ''}` });
@@ -9,13 +8,11 @@ const entity = (path, key) => ({
   delete: id => peddiApi.request(`/api/v1/admin/${path}/${id}`, { method: 'DELETE', headers: headers() }),
 });
 
-export const productService = peddiApi.isConfigured ? entity('products', 'product') : base44.entities.Product;
-export const ingredientService = peddiApi.isConfigured ? entity('ingredients', 'ingredient') : base44.entities.Ingredient;
+export const productService = entity('products', 'product');
+export const ingredientService = entity('ingredients', 'ingredient');
 export async function loadAdminCatalog() {
-  if (peddiApi.isConfigured) return peddiApi.request('/api/v1/admin/catalog', { headers: headers() });
-  const [products, categories] = await Promise.all([base44.entities.Product.list('-created_date'), base44.entities.Category.list('sort_order')]);
-  return { products, categories };
+  return peddiApi.request('/api/v1/admin/catalog', { headers: headers() });
 }
 export async function loadAdminReports() {
-  return { orders: await base44.entities.Order.list('-created_date') };
+  return peddiApi.request('/api/v1/admin/reports', { headers: headers() });
 }
