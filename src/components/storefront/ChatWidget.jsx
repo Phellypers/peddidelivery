@@ -154,7 +154,7 @@ export default function ChatWidget({ externalOpen = false, onExternalClose, hide
             <>
               <motion.button type="button" aria-label="Fechar chat" onClick={closeChat}
                 initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                className="fixed inset-0 z-[80] cursor-default bg-[#111111]/35 backdrop-blur-[1px]" />
+                className="fixed inset-0 z-[210] cursor-default bg-[#111111]/35 backdrop-blur-[1px]" />
               <motion.section
                 data-peddi-chat-sheet=""
                 role="dialog"
@@ -164,7 +164,7 @@ export default function ChatWidget({ externalOpen = false, onExternalClose, hide
                 transition={{ type: 'spring', damping: 30, stiffness: 330 }}
                 drag="y" dragControls={dragControls} dragListener={false} dragConstraints={{ top: 0, bottom: 0 }} dragElastic={{ top: 0, bottom: 0.35 }}
                 onDragEnd={(_, info) => { if (info.offset.y > 100 || info.velocity.y > 700) closeChat(); }}
-                className="peddi-chat-sheet fixed z-[90] flex flex-col overflow-hidden border border-[#E5E7EB] bg-white text-[#111111] shadow-2xl"
+                className="peddi-chat-sheet fixed z-[220] flex flex-col overflow-hidden border border-[#E5E7EB] bg-white text-[#111111] shadow-2xl"
               >
                 <button type="button" aria-label="Arraste para fechar o chat" onPointerDown={event => dragControls.start(event)} className="flex h-7 flex-shrink-0 touch-none cursor-grab items-center justify-center bg-white active:cursor-grabbing">
                   <span className="h-1.5 w-12 rounded-full bg-[#D1D5DB]" />
