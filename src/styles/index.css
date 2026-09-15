@@ -97,6 +97,26 @@
     @apply bg-background text-foreground font-body;
   }
 
+    .peddi-store-page {
+      --background: 145 30% 97%;
+      --foreground: 220 24% 14%;
+      --card: 0 0% 100%;
+      --card-foreground: 220 24% 14%;
+      --muted: 140 18% 95%;
+      --muted-foreground: 220 10% 43%;
+      --accent: 142 71% 92%;
+      --accent-foreground: 142 71% 25%;
+      --border: 140 18% 88%;
+      --input: 140 18% 88%;
+      --primary: 142 71% 39%;
+      --ring: 142 71% 39%;
+    }
+
+    .peddi-landing {
+      --primary: 142 71% 39%;
+      --ring: 142 71% 39%;
+    }
+
   /* Native-app feel: prevent text selection on interactive controls,
      while keeping readable content (paragraphs, headings, inputs) selectable. */
   button,

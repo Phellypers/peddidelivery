@@ -57,10 +57,10 @@ export default function ProductDetail() {
   };
 
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center bg-background"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
+    return <div className="peddi-store-page min-h-screen flex items-center justify-center bg-background"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
   }
   if (!product) {
-    return <div className="min-h-screen flex flex-col items-center justify-center bg-background"><p className="text-muted-foreground">Item não encontrado</p><Link to="/loja" className="text-primary mt-2">Voltar ao cardápio</Link></div>;
+    return <div className="peddi-store-page min-h-screen flex flex-col items-center justify-center bg-background"><p className="text-muted-foreground">Item não encontrado</p><Link to="/loja" className="text-primary mt-2">Voltar ao cardápio</Link></div>;
   }
 
   const hasPromo = product.promo_price && product.promo_price < product.price;
@@ -95,7 +95,7 @@ export default function ProductDetail() {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-32">
+    <div className="peddi-store-page min-h-screen bg-background pb-32">
       <CartDrawer />
 
       {/* Desktop: side-by-side layout; Mobile: stacked */}

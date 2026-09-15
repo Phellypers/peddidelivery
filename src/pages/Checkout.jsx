@@ -249,7 +249,7 @@ export default function Checkout() {
 
   if (items.length === 0 && step !== 'success' && !saveProfilePrompt) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-background px-4">
+      <div className="peddi-store-page min-h-screen flex flex-col items-center justify-center bg-background px-4">
         <p className="text-muted-foreground mb-4">Seu carrinho está vazio</p>
         <Link to="/loja" className="text-primary font-medium">Voltar ao cardápio</Link>
       </div>
@@ -259,7 +259,7 @@ export default function Checkout() {
   // Save profile prompt
   if (saveProfilePrompt) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background px-4">
+      <div className="peddi-store-page min-h-screen flex items-center justify-center bg-background px-4">
         <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-card rounded-2xl border border-border p-6 max-w-sm w-full text-center space-y-4">
           <div className="text-4xl">💾</div>
           <h2 className="font-heading font-bold text-lg text-foreground">Salvar seus dados?</h2>
@@ -276,7 +276,7 @@ export default function Checkout() {
   if (step === 'success') {
     const whatsapp = store?.whatsapp?.replace(/\D/g, '');
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-background px-4 text-center">
+      <div className="peddi-store-page min-h-screen flex flex-col items-center justify-center bg-background px-4 text-center">
         <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="mb-6">
           <CheckCircle2 size={72} className="text-green-500 mx-auto" />
         </motion.div>
@@ -300,7 +300,7 @@ export default function Checkout() {
   const whatsapp = store?.whatsapp?.replace(/\D/g, '');
 
   return (
-    <div className="min-h-screen bg-background pb-8">
+    <div className="peddi-store-page min-h-screen bg-background pb-8">
       <div className="sticky top-0 z-30 bg-card/95 backdrop-blur-md border-b border-border">
         <div className="max-w-2xl mx-auto px-4 flex items-center h-14">
           <Link to="/loja" className="p-2 -ml-2 hover:bg-accent rounded-full transition-colors">

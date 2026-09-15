@@ -69,11 +69,11 @@ export default function Landing() {
   };
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="peddi-landing min-h-screen bg-white text-slate-900">
       {/* ── Nav ── */}
       <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100">
         <div className="max-w-6xl mx-auto px-5 h-16 flex items-center justify-between">
-          <img src="https://media.base44.com/images/public/6a382b7ab7116d571cddd00c/905a659a8_d663f7ae-8a44-4372-8708-273d4d1061ea-removebg-preview.png" alt="PEDDI" className="h-8 object-contain" />
+          <span className="font-heading text-2xl font-extrabold tracking-tight text-primary">PEDDI</span>
           <div className="flex items-center gap-3">
             <Link to="/login" className="text-sm font-medium text-gray-600 hover:text-primary transition-colors flex items-center gap-1.5">
               <Lock size={15} /> Entrar
@@ -86,7 +86,7 @@ export default function Landing() {
       </nav>
 
       {/* ── Hero ── */}
-      <section className="max-w-6xl mx-auto px-5 pt-16 pb-12 text-center">
+      <section className="mx-auto max-w-6xl rounded-b-[2.5rem] bg-gradient-to-b from-green-50 via-white to-white px-5 pb-16 pt-16 text-center">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
           <span className="inline-block text-xs font-bold text-primary bg-primary/10 px-3 py-1 rounded-full mb-4"> Plataforma de Delivery & PDV</span>
           <h1 className="font-heading font-extrabold text-4xl md:text-5xl text-gray-900 leading-tight max-w-2xl mx-auto">
@@ -118,7 +118,7 @@ export default function Landing() {
             { icon: Heart, title: 'Marketing Automático', desc: 'Cashback, promoções de aniversário, carrinho abandonado e upsell.' },
           ].map((f, i) => (
             <motion.div key={i} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }}
-              className="bg-white border border-gray-100 rounded-3xl p-6 hover:shadow-lg transition-shadow">
+              className="rounded-3xl border border-green-100 bg-white p-6 text-left shadow-sm transition-shadow hover:-translate-y-1 hover:shadow-lg">
               <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center mb-4">
                 <f.icon size={24} className="text-primary" />
               </div>
@@ -229,7 +229,7 @@ export default function Landing() {
       {/* ── Footer ── */}
       <footer className="border-t border-gray-100 py-8 mt-12">
         <div className="max-w-6xl mx-auto px-5 flex flex-col items-center gap-3">
-          <img src="https://media.base44.com/images/public/6a382b7ab7116d571cddd00c/905a659a8_d663f7ae-8a44-4372-8708-273d4d1061ea-removebg-preview.png" alt="PEDDI" className="h-7 object-contain" />
+          <span className="font-heading text-xl font-extrabold tracking-tight text-primary">PEDDI</span>
           <p className="text-xs text-gray-400">© {new Date().getFullYear()} PEDDI — Plataforma SaaS para lojas e restaurantes</p>
           <Link to="/loja" className="text-xs text-gray-400 hover:text-primary transition-colors">Acessar vitrine</Link>
         </div>
