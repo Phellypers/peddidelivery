@@ -272,7 +272,7 @@ export default function LiveNowBlock() {
                 </div>
                 <div className="peddi-live-stage-count"><AnimatedNumber value={count} /><small>{historical ? 'hoje' : count === 1 ? 'pessoa' : 'pessoas'}</small></div>
               </button>
-              <AnimatePresence initial={false}>{isExpanded && <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.25 }} className="overflow-hidden"><div className="space-y-2 px-3 pb-3">{historical && <p className="text-[11px] text-gray-500">Métricas de hoje; não representam pessoas online.</p>}{stageSessions.length ? stageSessions.map(s => renderSession(s, stage.key === 'abandonou')) : <p className="py-2 text-xs text-gray-500">Nenhuma sessão nesta etapa.</p>}</div></motion.div>}</AnimatePresence>
+              <AnimatePresence initial={false}>{isExpanded && <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.25 }} className="peddi-live-stage-details overflow-hidden"><div className="space-y-2 px-3 pb-3">{historical && <p className="text-[11px] text-gray-500">Métricas de hoje; não representam pessoas online.</p>}{stageSessions.length ? stageSessions.map(s => renderSession(s, stage.key === 'abandonou')) : <p className="py-2 text-xs text-gray-500">Nenhuma sessão nesta etapa.</p>}</div></motion.div>}</AnimatePresence>
             </div>;
           })}
           <p className="px-1 pt-1 text-[11px] leading-relaxed text-gray-500">Etapas ativas: percentual das pessoas online. Conclusões e abandonos: percentual dos eventos de hoje.</p>
