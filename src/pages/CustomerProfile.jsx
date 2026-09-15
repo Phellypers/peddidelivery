@@ -9,8 +9,45 @@ import BottomSheetSelect from '@/components/ui/BottomSheetSelect';
 import { Trash2, AlertTriangle } from 'lucide-react';
 import { useWishlist } from '@/lib/WishlistContext';
 import SafeBackButton from '@/components/navigation/SafeBackButton';
+import { isProductAvailable } from '@/lib/productAvailability';
 
 const MONTHS = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+
+const formatPrice = value => Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+function CatalogRecommendationCard({ product }) {
+  const price = Number(product.price || 0);
+  const promoPrice = Number(product.promo_price || 0);
+  const hasPromotion = promoPrice > 0 && promoPrice < price;
+  const currentPrice = hasPromotion ? promoPrice : price;
+  const discount = hasPromotion && price > 0 ? Math.round((1 - promoPrice / price) * 100) : 0;
+  const available = product.is_published !== false
+    && !product.is_paused
+    && Number(product.stock ?? 999) > 0
+    && isProductAvailable(product);
+  const image = product.images?.[0];
+
+  return (
+    <Link data-catalog-product-id={product.id} to={`/item/${product.id}`} className="w-36 flex-shrink-0 overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition-transform active:scale-[0.98]">
+      {image && (
+        <div className="relative h-28 w-full overflow-hidden bg-gray-50">
+          <img src={image} alt={product.name} className="h-full w-full object-cover" loading="lazy" />
+          {discount > 0 && <span className="absolute left-2 top-2 rounded-full bg-red-500 px-2 py-1 text-[10px] font-bold text-white">-{discount}%</span>}
+        </div>
+      )}
+      <div className="p-2.5">
+        <p className="line-clamp-2 min-h-8 text-xs font-bold leading-4 text-gray-900">{product.name}</p>
+        <div className="mt-1.5 flex min-h-8 flex-col justify-end">
+          {hasPromotion && <span className="text-[10px] text-gray-400 line-through">{formatPrice(price)}</span>}
+          {currentPrice > 0 && <span className="text-xs font-bold text-primary">{formatPrice(currentPrice)}</span>}
+        </div>
+        <span className={`mt-2 inline-flex rounded-full px-2 py-1 text-[10px] font-semibold ${available ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+          {available ? 'Disponível' : 'Indisponível'}
+        </span>
+      </div>
+    </Link>
+  );
+}
 
 function EditProfileModal({ profile, user, onClose, onSaved }) {
   const [form, setForm] = useState({
@@ -216,7 +253,7 @@ export default function CustomerProfile() {
       const [profs, ords, prods] = await Promise.all([
         base44.entities.CustomerProfile.filter({ user_id: user.id }),
         base44.entities.Order.filter({ customer_email: user.email }, '-created_date', 100),
-        base44.entities.Product.filter({ is_published: true }, '-created_date', 20),
+        base44.entities.Product.filter({ is_published: true }, '-created_date'),
       ]);
       if (profs[0]) {
         setProfile(profs[0]);
@@ -241,16 +278,19 @@ export default function CustomerProfile() {
   ];
 
   // "Order again" — unique products from recent orders
-  const orderAgainItems = [];
-  const seen = new Set();
-  for (const order of recentOrders) {
-    for (const item of (order.items || [])) {
-      if (!seen.has(item.product_id) && item.product_id) {
-        seen.add(item.product_id);
-        orderAgainItems.push(item);
+  const orderAgainProductIds = useMemo(() => {
+    const ids = [];
+    const seen = new Set();
+    for (const order of recentOrders) {
+      for (const item of (order.items || [])) {
+        if (item.product_id && !seen.has(item.product_id)) {
+          seen.add(item.product_id);
+          ids.push(item.product_id);
+        }
       }
     }
-  }
+    return ids;
+  }, [recentOrders]);
 
   const birthText = profile?.birth_month && profile?.birth_year
     ? `🎂 ${MONTHS[(profile.birth_month || 1) - 1]}/${profile.birth_year}`
@@ -269,9 +309,10 @@ export default function CustomerProfile() {
       ? score(b) - score(a) || (b.views || 0) - (a.views || 0)
       : (b.views || 0) - (a.views || 0)).slice(0, 8);
   }, [products, purchasedIds]);
-  const orderAgainProducts = useMemo(() => orderAgainItems.map(item => products.find(product => product.id === item.product_id) || {
-    id: item.product_id, name: item.product_name, images: item.product_image ? [item.product_image] : [], price: item.unit_price,
-  }).filter(product => product.id), [orderAgainItems, products]);
+  const orderAgainProducts = useMemo(() => {
+    const catalogById = new Map(products.map(product => [product.id, product]));
+    return orderAgainProductIds.map(productId => catalogById.get(productId)).filter(Boolean);
+  }, [orderAgainProductIds, products]);
   const promotionProducts = useMemo(() => products.filter(product => product.promo_price && product.promo_price < product.price), [products]);
   const favoriteProducts = useMemo(() => products.filter(product => wishlist.includes(product.id)), [products, wishlist]);
   const highlightProducts = {
@@ -394,12 +435,7 @@ export default function CustomerProfile() {
               </div>
               {highlightProducts.length > 0 ? (
                 <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-hide">
-                  {highlightProducts.map(product => (
-                    <Link key={product.id} to={`/item/${product.id}`} className="w-32 flex-shrink-0 overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
-                      <div className="h-24 w-full bg-gray-100">{product.images?.[0] ? <img src={product.images[0]} alt={product.name} className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center text-2xl">🍽️</div>}</div>
-                      <div className="p-2"><p className="truncate text-xs font-bold text-gray-800">{product.name}</p>{Number(product.promo_price || product.price) > 0 && <p className="mt-1 text-xs font-bold text-primary">R$ {Number(product.promo_price || product.price).toFixed(2).replace('.', ',')}</p>}</div>
-                    </Link>
-                  ))}
+                  {highlightProducts.map(product => <CatalogRecommendationCard key={product.id} product={product} />)}
                 </div>
               ) : <p className="rounded-2xl bg-gray-50 px-4 py-6 text-center text-sm text-gray-500">Nenhum item disponível nesta seção.</p>}
             </section>
