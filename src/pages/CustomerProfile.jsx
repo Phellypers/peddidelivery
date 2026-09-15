@@ -10,6 +10,7 @@ import { Trash2, AlertTriangle } from 'lucide-react';
 import { useWishlist } from '@/lib/WishlistContext';
 import SafeBackButton from '@/components/navigation/SafeBackButton';
 import { isProductAvailable } from '@/lib/productAvailability';
+import ProductRating from '@/components/storefront/ProductRating';
 
 const MONTHS = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 
@@ -37,6 +38,7 @@ function CatalogRecommendationCard({ product }) {
       )}
       <div className="p-2.5">
         <p className="line-clamp-2 min-h-8 text-xs font-bold leading-4 text-gray-900">{product.name}</p>
+        <ProductRating product={product} showNew className="mt-1" />
         <div className="mt-1.5 flex min-h-8 flex-col justify-end">
           {hasPromotion && <span className="text-[10px] text-gray-400 line-through">{formatPrice(price)}</span>}
           {currentPrice > 0 && <span className="text-xs font-bold text-primary">{formatPrice(currentPrice)}</span>}

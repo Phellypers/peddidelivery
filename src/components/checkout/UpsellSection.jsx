@@ -3,6 +3,7 @@ import { base44 } from '@/api/base44Client';
 import { useCart } from '@/lib/CartContext';
 import { useToast } from '@/components/ui/use-toast';
 import { Plus, Check } from 'lucide-react';
+import ProductRating from '@/components/storefront/ProductRating';
 
 export default function UpsellSection() {
   const [groups, setGroups] = useState([]);
@@ -60,6 +61,7 @@ export default function UpsellSection() {
                     </div>
                     <div className="p-2">
                       <p className="text-[11px] font-semibold text-foreground truncate leading-tight">{p.name}</p>
+                      <ProductRating product={p} className="mt-1" />
                       <p className="text-[11px] font-bold text-primary mt-0.5">R$ {price?.toFixed(2)}</p>
                       <button
                         type="button"

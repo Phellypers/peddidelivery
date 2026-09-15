@@ -1,8 +1,9 @@
 import React from 'react';
-import { Heart, Star, ShoppingCart } from 'lucide-react';
+import { Heart, ShoppingCart } from 'lucide-react';
 import { useCart } from '@/lib/CartContext';
 import { useWishlist } from '@/lib/WishlistContext';
 import { Link, useNavigate } from 'react-router-dom';
+import ProductRating from '@/components/storefront/ProductRating';
 
 const BADGE_COLORS = {
   red: 'bg-red-500',
@@ -63,13 +64,7 @@ export default function ProductCard({ product }) {
           <p className="peddi-product-description text-[11px] text-gray-400 leading-tight line-clamp-2 min-h-[14px]">{product.description}</p>
         )}
 
-        {product.rating_avg > 0 && (
-          <div className="flex items-center gap-1 min-h-[16px]">
-            <Star size={11} className="fill-amber-400 text-amber-400" />
-            <span className="text-[11px] font-semibold text-gray-600">{product.rating_avg?.toFixed(1)}</span>
-            {product.rating_count > 0 && <span className="text-[10px] text-gray-400">({product.rating_count})</span>}
-          </div>
-        )}
+        <ProductRating product={product} />
 
         <div className="peddi-product-price flex flex-wrap items-baseline gap-1.5 mt-0.5 min-w-0">
           {hasPromo && (
