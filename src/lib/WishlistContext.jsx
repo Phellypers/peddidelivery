@@ -1,9 +1,11 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { isPresentationDemo } from '@/lib/presentationDemo';
 
 const WishlistContext = createContext();
 
 export function WishlistProvider({ children }) {
   const [wishlist, setWishlist] = useState(() => {
+    if (isPresentationDemo()) return [];
     try {
       const saved = localStorage.getItem('vitrine_wishlist');
       return saved ? JSON.parse(saved) : [];
@@ -11,6 +13,7 @@ export function WishlistProvider({ children }) {
   });
 
   useEffect(() => {
+    if (isPresentationDemo()) return;
     localStorage.setItem('vitrine_wishlist', JSON.stringify(wishlist));
   }, [wishlist]);
 

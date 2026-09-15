@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { peddiApi } from '@/services/api/peddiApi';
+import { resetPresentationDemo } from '@/lib/presentationDemo';
 
 const AuthContext = createContext();
 
@@ -49,6 +50,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = (shouldRedirect = true) => {
+    resetPresentationDemo();
     setUser(null);
     setIsAuthenticated(false);
     localStorage.removeItem('peddi_access_token');

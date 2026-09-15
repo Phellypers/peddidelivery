@@ -1,3 +1,5 @@
+import { isPresentationDemo, simulateExternalAction } from '@/lib/presentationDemo';
+
 const apiUrl = import.meta.env.VITE_PEDDI_API_URL || 'http://localhost:3333';
 let refreshPending;
 
@@ -28,6 +30,11 @@ async function refreshSession() {
 }
 
 async function request(path, options = {}, retried = false) {
+  const method = String(options.method || 'GET').toUpperCase();
+  if (isPresentationDemo() && !['GET', 'HEAD', 'OPTIONS'].includes(method) && !path.startsWith('/api/v1/auth/')) {
+    simulateExternalAction('Ação simulada. Nenhuma informação foi enviada ou gravada fora desta sessão.');
+    return { demo: true, temporary: true, deleted: 0 };
+  }
   const response = await fetch(`${apiUrl}${path}`, {
     signal: AbortSignal.timeout(15000),
     ...options,

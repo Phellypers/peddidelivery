@@ -1,10 +1,12 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { emitLiveEvent } from '@/lib/liveSession';
+import { isPresentationDemo } from '@/lib/presentationDemo';
 
 const CartContext = createContext();
 
 export function CartProvider({ children }) {
   const [items, setItems] = useState(() => {
+    if (isPresentationDemo()) return [];
     try {
       const saved = localStorage.getItem('vitrine_cart');
       return saved ? JSON.parse(saved) : [];
@@ -13,6 +15,7 @@ export function CartProvider({ children }) {
   const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
+    if (isPresentationDemo()) return;
     localStorage.setItem('vitrine_cart', JSON.stringify(items));
     if (items.length > 0) {
       if (!localStorage.getItem('vitrine_cart_ts')) {

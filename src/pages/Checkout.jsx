@@ -8,6 +8,7 @@ import { motion } from 'framer-motion';
 import UpsellSection from '@/components/checkout/UpsellSection';
 import { emitLiveEvent } from '@/lib/liveSession';
 import SafeBackButton from '@/components/navigation/SafeBackButton';
+import { simulateExternalAction } from '@/lib/presentationDemo';
 
 const paymentMethods = [
   { id: 'pix', label: 'Pix', icon: '💠', discount: true },
@@ -288,7 +289,7 @@ export default function Checkout() {
             Voltar ao cardápio
           </Link>
           {whatsapp && (
-            <a href={`https://wa.me/55${whatsapp}?text=Preciso+de+ajuda+com+meu+pedido`} target="_blank" rel="noreferrer"
+            <a href={`https://wa.me/55${whatsapp}?text=Preciso+de+ajuda+com+meu+pedido`} target="_blank" rel="noreferrer" onClick={event => { if (simulateExternalAction('Contato por WhatsApp simulado. Nenhuma conversa externa foi aberta.')) event.preventDefault(); }}
               className="flex items-center justify-center gap-2 px-6 py-3 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors">
               <MessageCircle size={16} className="text-green-600" /> Precisa de ajuda? Fale conosco
             </a>
@@ -555,7 +556,7 @@ export default function Checkout() {
 
         {/* Botão de suporte */}
         {whatsapp && (
-          <a href={`https://wa.me/55${whatsapp}?text=Preciso+de+ajuda+com+meu+pedido`} target="_blank" rel="noreferrer"
+          <a href={`https://wa.me/55${whatsapp}?text=Preciso+de+ajuda+com+meu+pedido`} target="_blank" rel="noreferrer" onClick={event => { if (simulateExternalAction('Contato por WhatsApp simulado. Nenhuma conversa externa foi aberta.')) event.preventDefault(); }}
             className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl border border-border text-sm font-medium text-muted-foreground hover:bg-muted transition-colors">
             <MessageCircle size={16} className="text-green-600" /> Precisa de ajuda? Fale com o atendente
           </a>

@@ -4,6 +4,7 @@ import { getStockDeduction } from '@/lib/recipeCost';
 import { Search, Loader2, ChevronDown, ChevronUp, Clock, MapPin, CreditCard, MessageSquare, LayoutList, Columns, Phone, Bike, Edit, Check, X, Plus, Minus, Trash2, ShoppingBag, Send } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
+import { simulateExternalAction } from '@/lib/presentationDemo';
 
 const ORIGIN_SHORT = {
   catalog: 'Catálogo',
@@ -80,6 +81,7 @@ function SendMessageButton({ order }) {
     .replace(/{endereco}/g, order.delivery_address || '')
     .replace(/{total}/g, `R$ ${order.total?.toFixed(2) || '0,00'}`);
   const send = (template) => {
+    if (simulateExternalAction('Mensagem de WhatsApp simulada. Nada foi enviado ao cliente.')) { setOpen(false); return; }
     window.open(`https://wa.me/55${phone}?text=${encodeURIComponent(fill(template))}`, '_blank');
     setOpen(false);
   };

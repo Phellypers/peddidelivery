@@ -4,7 +4,7 @@ import bcrypt from 'bcryptjs';
 import { env } from './config/env.js';
 import { pool, query } from './db/client.js';
 import { createAccessToken, createRefreshToken, hashToken } from './auth/tokens.js';
-import { requireAuth, requireRoles, type AuthRequest } from './auth/middleware.js';
+import { blockPresentationDemoWrites, requireAuth, requireRoles, type AuthRequest } from './auth/middleware.js';
 import { catalogRouter, productView } from './modules/products/routes.js';
 import { demoRouter, uploadPath } from './modules/demo/routes.js';
 import { courierRouter } from './modules/couriers/routes.js';
@@ -56,7 +56,7 @@ app.post('/api/v1/auth/refresh', async (request, response) => {
 
 app.get('/api/v1/me', requireAuth, async (request: AuthRequest, response) => {
   const result = await query('SELECT id, email, name, role, business_id AS "businessId", store_id AS "storeId" FROM users WHERE id = $1', [request.auth!.userId]);
-  response.json({ user: result.rows[0] });
+  response.json({ user: { ...result.rows[0], ...(request.auth?.demoMode ? { demoMode: request.auth.demoMode } : {}) } });
 });
 
 app.get('/api/v1/stores/:storeId/catalog', async (request, response) => {
@@ -75,7 +75,7 @@ app.get('/api/v1/stores', async (_request, response) => {
   response.json({ stores: result.rows.map(({ details,...store }) => ({ ...details,...store })) });
 });
 
-app.post('/api/v1/orders', requireAuth, async (request: AuthRequest, response) => {
+app.post('/api/v1/orders', requireAuth, blockPresentationDemoWrites, async (request: AuthRequest, response) => {
   if (!request.auth?.storeId || !['customer', 'manager', 'peddi_admin'].includes(request.auth.role)) return response.status(403).json({ error: 'Perfil sem permissao para pedidos.' });
   const items = Array.isArray(request.body?.items) ? request.body.items : [];
   if (!items.length) return response.status(400).json({ error: 'O pedido precisa de itens.' });

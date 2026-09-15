@@ -1,11 +1,11 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { requireAuth, requireRoles, type AuthRequest } from '../../auth/middleware.js';
+import { blockPresentationDemoWrites, requireAuth, requireRoles, type AuthRequest } from '../../auth/middleware.js';
 import { query, pool } from '../../db/client.js';
 import { archiveCourier, courierView, saveCourier } from './data.js';
 
 export const courierRouter=Router();
-const managers=[requireAuth,requireRoles('manager','peddi_admin')];
+const managers=[requireAuth,requireRoles('manager','peddi_admin'),blockPresentationDemoWrites];
 courierRouter.get('/admin/couriers',...managers,async(request:AuthRequest,response)=>{
   if (!request.auth?.storeId) return response.status(403).json({error:'Usuário sem loja.'});
   const rows=await query("SELECT * FROM couriers WHERE store_id=$1 AND COALESCE(details->>'deleted','false')<>'true' ORDER BY created_at DESC",[request.auth.storeId]);

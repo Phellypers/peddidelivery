@@ -7,6 +7,22 @@ import { query,closeDatabase } from '../src/db/client.js';
 import { createAccessToken, verifyAccessToken } from '../src/auth/tokens.js';
 import { isProductAvailable } from '../../src/lib/productAvailability.js';
 import jwt from 'jsonwebtoken';
+import { blockPresentationDemoWrites } from '../src/auth/middleware.js';
+
+test('conta de apresentação recebe claim isolada e bloqueia gravações reais', () => {
+  const user={id:crypto.randomUUID(),email:'designer.demo@peddi.app',name:'Designer Demo',role:'manager',businessId:crypto.randomUUID(),storeId:crypto.randomUUID()};
+  const claims=jwt.decode(createAccessToken(user)) as jwt.JwtPayload;
+  assert.equal(claims.demoMode,'presentation');
+
+  let status=0;let nextCalled=false;
+  const response={status(code:number){status=code;return this;},json(){return this;}};
+  blockPresentationDemoWrites({method:'PATCH',auth:{userId:user.id,email:user.email,role:user.role,businessId:user.businessId,storeId:user.storeId,demoMode:'presentation'}} as any,response as any,()=>{nextCalled=true});
+  assert.equal(status,403);
+  assert.equal(nextCalled,false);
+
+  blockPresentationDemoWrites({method:'GET',auth:{userId:user.id,email:user.email,role:user.role,businessId:user.businessId,storeId:user.storeId,demoMode:'presentation'}} as any,response as any,()=>{nextCalled=true});
+  assert.equal(nextCalled,true);
+});
 
 test('somente o gestor demo local recebe token sem expiração',()=>{
   const original=env.demoMode;

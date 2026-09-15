@@ -1,11 +1,12 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { query } from '../../db/client.js';
-import { requireAuth, requireRoles, type AuthRequest } from '../../auth/middleware.js';
+import { blockPresentationDemoWrites, requireAuth, requireRoles, type AuthRequest } from '../../auth/middleware.js';
 import { getPriceReductionUpdate } from '../../../../src/lib/productHighlights.js';
 
 export const catalogRouter = Router();
 catalogRouter.use(requireAuth, requireRoles('manager', 'peddi_admin'));
+catalogRouter.use(blockPresentationDemoWrites);
 catalogRouter.use((request: AuthRequest, response, next) => {
   if (!request.auth?.storeId) return response.status(403).json({ error: 'Usuário sem loja.' });
   next();

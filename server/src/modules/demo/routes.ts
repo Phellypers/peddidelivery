@@ -7,7 +7,7 @@ import jwt from 'jsonwebtoken';
 import { z } from 'zod';
 import { env } from '../../config/env.js';
 import { pool, query } from '../../db/client.js';
-import { requireAuth, requireRoles, type AuthRequest } from '../../auth/middleware.js';
+import { blockPresentationDemoWrites, requireAuth, requireRoles, type AuthRequest } from '../../auth/middleware.js';
 import { defaults, entityNames, isManager, matches, readEntities, readOrders, recordView, storeId, writeOrder } from './data.js';
 import { saveCourier, archiveCourier } from '../couriers/data.js';
 import { syncDelivery } from '../deliveries/data.js';
@@ -43,6 +43,7 @@ demoRouter.use(async (request:AuthRequest,response,next)=>{
   }
   next();
 });
+demoRouter.use(blockPresentationDemoWrites);
 demoRouter.delete('/live-sessions/history', requireAuth, requireRoles('manager', 'peddi_admin'), async (request:AuthRequest, response) => {
   const result = await query("DELETE FROM app_records WHERE store_id=$1 AND entity_name='LiveSession'", [storeId(request)]);
   response.json({ deleted: result.rowCount ?? 0 });
