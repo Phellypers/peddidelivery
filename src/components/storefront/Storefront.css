@@ -70,6 +70,10 @@
 .peddi-story-panel { max-height: calc(100dvh - 94px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); }
 .peddi-story-media { height: clamp(120px, 28dvh, 190px); }
 .peddi-cart-drawer { color-scheme: light; background: #fff; }
+.peddi-chat-sheet { color-scheme: light; left: 0; right: 0; bottom: calc(84px + env(safe-area-inset-bottom)); width: 100vw; height: min(76dvh, calc(100dvh - 100px - env(safe-area-inset-top) - env(safe-area-inset-bottom))); border-radius: 26px 26px 0 0; }
+@media (min-width: 640px) {
+  .peddi-chat-sheet { left: auto; right: 24px; bottom: 24px; width: min(420px, calc(100vw - 48px)); height: min(620px, calc(100dvh - 48px)); border-radius: 24px; }
+}
 @media (max-width: 639px) {
   .peddi-cart-drawer { left: 0 !important; right: 0 !important; width: 100vw !important; max-width: none !important; }
 }

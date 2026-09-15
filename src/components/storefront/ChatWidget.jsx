@@ -3,6 +3,8 @@ import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
 import { MessageCircle, X, Send, Loader2, Package, Bike, Edit3, HelpCircle, MessageSquare } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { createPortal } from 'react-dom';
+import { useDragControls } from 'framer-motion';
 
 const REASONS = [
   { id: 'order_problem', label: 'Problema com pedido', icon: Package },
@@ -40,6 +42,19 @@ export default function ChatWidget({ externalOpen = false, onExternalClose, hide
   const [sending, setSending] = useState(false);
   const [starting, setStarting] = useState(false);
   const scrollRef = useRef(null);
+  const dragControls = useDragControls();
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const handleKeyDown = event => { if (event.key === 'Escape') closeChat(); };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [open]);
 
   // Check for existing active ticket on mount
   useEffect(() => {
@@ -128,86 +143,101 @@ export default function ChatWidget({ externalOpen = false, onExternalClose, hide
   return (
     <>
       {!hideLauncher && <button onClick={() => setOpen(o => !o)}
-        className="fixed bottom-5 right-5 z-40 w-12 h-12 bg-blue-500 text-white rounded-full shadow-lg flex items-center justify-center hover:bg-blue-600 transition-colors"
+        className="fixed bottom-5 right-5 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-[#22C55E] text-white shadow-lg transition-colors hover:bg-[#16A34A]"
         title="Conversar com a loja">
         <MessageCircle size={22} />
       </button>}
 
-      <AnimatePresence>
-        {open && (
-          <motion.div initial={{ opacity: 0, y: 20, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            className="fixed bottom-24 right-4 z-[70] w-80 max-w-[calc(100vw-2rem)] bg-white rounded-3xl shadow-2xl border border-gray-100 flex flex-col overflow-hidden" style={{ height: 'min(450px, calc(100dvh - 120px))' }}>
+      {createPortal(
+        <AnimatePresence>
+          {open && (
+            <>
+              <motion.button type="button" aria-label="Fechar chat" onClick={closeChat}
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                className="fixed inset-0 z-[80] cursor-default bg-[#111111]/35 backdrop-blur-[1px]" />
+              <motion.section
+                data-peddi-chat-sheet=""
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="peddi-chat-title"
+                initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+                transition={{ type: 'spring', damping: 30, stiffness: 330 }}
+                drag="y" dragControls={dragControls} dragListener={false} dragConstraints={{ top: 0, bottom: 0 }} dragElastic={{ top: 0, bottom: 0.35 }}
+                onDragEnd={(_, info) => { if (info.offset.y > 100 || info.velocity.y > 700) closeChat(); }}
+                className="peddi-chat-sheet fixed z-[90] flex flex-col overflow-hidden border border-[#E5E7EB] bg-white text-[#111111] shadow-2xl"
+              >
+                <button type="button" aria-label="Arraste para fechar o chat" onPointerDown={event => dragControls.start(event)} className="flex h-7 flex-shrink-0 touch-none cursor-grab items-center justify-center bg-white active:cursor-grabbing">
+                  <span className="h-1.5 w-12 rounded-full bg-[#D1D5DB]" />
+                </button>
 
-            {step === 'reason' ? (
-              <>
-                <div className="bg-blue-500 text-white p-3 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <MessageCircle size={18} />
-                    <p className="font-bold text-sm">Atendimento ao cliente</p>
-                  </div>
-                  <button aria-label="Fechar chat" onClick={closeChat} className="p-3"><X size={18} /></button>
-                </div>
-                <div className="flex-1 overflow-y-auto p-4 space-y-2">
-                  <p className="text-xs text-gray-500 mb-3">Selecione o motivo do seu atendimento para iniciarmos:</p>
-                  {starting ? (
-                    <div className="flex justify-center py-8"><Loader2 className="animate-spin text-blue-500" size={24} /></div>
-                  ) : REASONS.map(r => {
-                    const Icon = r.icon;
-                    return (
-                      <button key={r.id} onClick={() => startTicket(r.id)}
-                        className="w-full flex items-center gap-3 p-3 rounded-xl border border-gray-100 hover:border-blue-300 hover:bg-blue-50 transition-colors text-left">
-                        <div className="w-9 h-9 rounded-full bg-blue-50 flex items-center justify-center flex-shrink-0">
-                          <Icon size={16} className="text-blue-500" />
-                        </div>
-                        <span className="text-sm font-medium text-gray-700">{r.label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="bg-blue-500 text-white p-3 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <MessageCircle size={18} />
-                    <div>
-                      <p className="font-bold text-sm">Chat com a loja</p>
-                      {ticket && <p className="text-[10px] text-white/80">Protocolo {ticket.protocol}</p>}
+                <header className="flex flex-shrink-0 items-center justify-between gap-3 border-b border-[#E5E7EB] bg-white px-4 pb-4 sm:px-5">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <span className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-[#22C55E] text-white"><MessageCircle size={23} /></span>
+                    <div className="min-w-0">
+                      <h2 id="peddi-chat-title" className="truncate text-lg font-bold text-[#111111]">Chat com a loja</h2>
+                      <p className="truncate text-xs text-[#6B7280]">{ticket?.protocol ? `Protocolo ${ticket.protocol}` : 'Novo atendimento'}</p>
                     </div>
                   </div>
-                  <button aria-label="Fechar chat" onClick={closeChat} className="p-3"><X size={18} /></button>
-                </div>
-                <div ref={scrollRef} className="flex-1 overflow-y-auto p-3 space-y-2 bg-gray-50">
-                  {loading ? (
-                    <div className="flex justify-center py-8"><Loader2 className="animate-spin text-blue-500" size={24} /></div>
-                  ) : messages.length === 0 ? (
-                    <div className="text-center py-8 text-gray-400">
-                      <MessageCircle size={32} className="mx-auto mb-2 opacity-30" />
-                      <p className="text-xs">Envie uma mensagem para a loja</p>
+                  <button type="button" aria-label="Fechar chat" onClick={closeChat} className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl text-[#6B7280] transition-colors hover:bg-[#F3F4F6] hover:text-[#111111]"><X size={22} /></button>
+                </header>
+
+                {step === 'reason' ? (
+                  <div className="min-h-0 flex-1 overflow-y-auto bg-white p-4 sm:p-5">
+                    <div className="mb-4 rounded-2xl bg-[#ECFDF3] p-4">
+                      <p className="text-sm font-bold text-[#15803D]">Estamos online!</p>
+                      <p className="mt-0.5 text-sm text-[#6B7280]">Nossa equipe responde o mais rápido possível.</p>
                     </div>
-                  ) : messages.map(m => (
-                    <div key={m.id} className={`flex ${m.sender_type === 'customer' ? 'justify-end' : 'justify-start'}`}>
-                      <div className={`max-w-[80%] px-3 py-2 rounded-2xl text-sm ${m.sender_type === 'customer' ? 'bg-blue-500 text-white' : 'bg-white border border-gray-100 text-gray-800'}`}>
-                        {m.message}
-                        <p className={`text-[9px] mt-0.5 ${m.sender_type === 'customer' ? 'text-white/60' : 'text-gray-400'}`}>
-                          {new Date(m.created_date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                        </p>
+                    <p className="mb-3 text-sm text-[#6B7280]">Selecione o motivo do atendimento:</p>
+                    <div className="space-y-2">
+                      {starting ? (
+                        <div className="flex justify-center py-8"><Loader2 className="animate-spin text-[#22C55E]" size={24} /></div>
+                      ) : REASONS.map(reason => {
+                        const Icon = reason.icon;
+                        return (
+                          <button key={reason.id} type="button" onClick={() => startTicket(reason.id)}
+                            className="flex min-h-14 w-full items-center gap-3 rounded-xl border border-[#E5E7EB] bg-white p-3 text-left transition-colors hover:border-[#22C55E] hover:bg-[#F0FDF4]">
+                            <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-[#ECFDF3]"><Icon size={18} className="text-[#16A34A]" /></span>
+                            <span className="text-sm font-semibold text-[#111111]">{reason.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div ref={scrollRef} className="min-h-0 flex-1 space-y-3 overflow-y-auto bg-[#F9FAFB] p-4 overscroll-contain">
+                      <div className="rounded-2xl bg-[#ECFDF3] px-4 py-3">
+                        <p className="text-sm font-bold text-[#15803D]">Estamos online!</p>
+                        <p className="text-xs text-[#6B7280]">Nossa equipe responde o mais rápido possível.</p>
                       </div>
+                      {loading ? (
+                        <div className="flex justify-center py-8"><Loader2 className="animate-spin text-[#22C55E]" size={24} /></div>
+                      ) : messages.length === 0 ? (
+                        <div className="py-10 text-center text-[#9CA3AF]"><MessageCircle size={34} className="mx-auto mb-2 opacity-40" /><p className="text-sm">Envie uma mensagem para a loja</p></div>
+                      ) : messages.map(message => (
+                        <div key={message.id} className={`flex ${message.sender_type === 'customer' ? 'justify-end' : 'justify-start'}`}>
+                          <div className={`max-w-[82%] whitespace-pre-wrap rounded-2xl px-3.5 py-2.5 text-sm ${message.sender_type === 'customer' ? 'bg-[#DCFCE7] text-[#111111]' : 'border border-[#E5E7EB] bg-white text-[#111111]'}`}>
+                            {message.message}
+                            <p className="mt-1 text-right text-[10px] text-[#6B7280]">{new Date(message.created_date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</p>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-                <div className="p-2 border-t border-gray-100 flex gap-1.5">
-                  <input value={text} onChange={e => setText(e.target.value)} placeholder="Mensagem..." onKeyDown={e => { if (e.key === 'Enter') send(); }}
-                    className="flex-1 px-3 py-2 bg-gray-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
-                  <button onClick={send} disabled={sending || !text.trim()} className="w-9 h-9 bg-blue-500 text-white rounded-xl flex items-center justify-center disabled:opacity-50">
-                    {sending ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />}
-                  </button>
-                </div>
-              </>
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>
+                    <form onSubmit={event => { event.preventDefault(); send(); }} className="flex flex-shrink-0 items-center gap-2 border-t border-[#E5E7EB] bg-white px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 sm:px-4">
+                      <input value={text} onChange={event => setText(event.target.value)} placeholder="Mensagem..." aria-label="Mensagem"
+                        className="min-h-12 min-w-0 flex-1 rounded-2xl border border-[#D1D5DB] bg-white px-4 text-base text-[#111111] outline-none placeholder:text-[#9CA3AF] focus:border-[#22C55E] focus:ring-2 focus:ring-[#22C55E]/20" />
+                      <button type="submit" aria-label="Enviar mensagem" disabled={sending || !text.trim()} className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl bg-[#22C55E] text-white transition-colors hover:bg-[#16A34A] disabled:opacity-40">
+                        {sending ? <Loader2 size={18} className="animate-spin" /> : <Send size={19} />}
+                      </button>
+                    </form>
+                  </>
+                )}
+              </motion.section>
+            </>
+          )}
+        </AnimatePresence>,
+        document.body,
+      )}
     </>
   );
 }
