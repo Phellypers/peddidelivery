@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/lib/AuthContext';
 import { Link } from 'react-router-dom';
 import { ShoppingBag, Heart, Settings, ChevronRight, LogIn, Star, Edit, LogOut, Camera, RefreshCw, Loader2, X, Check, FileText, ArrowLeft } from 'lucide-react';
@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import FinancialReportModal from '@/components/customer/FinancialReportModal';
 import BottomSheetSelect from '@/components/ui/BottomSheetSelect';
 import { Trash2, AlertTriangle } from 'lucide-react';
+import { useWishlist } from '@/lib/WishlistContext';
 
 const MONTHS = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 
@@ -14,6 +15,7 @@ function EditProfileModal({ profile, user, onClose, onSaved }) {
   const [form, setForm] = useState({
     name: profile?.name || user?.full_name || '',
     username: profile?.username || '',
+    bio: profile?.bio || '',
     phone: profile?.phone || '',
     birth_month: profile?.birth_month || '',
     birth_year: profile?.birth_year || '',
@@ -120,6 +122,12 @@ function EditProfileModal({ profile, user, onClose, onSaved }) {
             </div>
           </div>
           <div>
+            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Bio</label>
+            <textarea value={form.bio} onChange={e => set('bio', e.target.value)} rows={2} maxLength={120}
+              placeholder="Conte um pouco sobre você" className="w-full mt-1 px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/30" />
+            <p className="mt-1 text-right text-[10px] text-gray-400">{form.bio.length}/120</p>
+          </div>
+          <div>
             <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">WhatsApp</label>
             <input value={form.phone} onChange={e => set('phone', e.target.value)}
               placeholder="(11) 99999-9999" className="w-full mt-1 px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
@@ -190,6 +198,7 @@ function DeleteAccountModal({ user, profile, loading, onClose, onConfirm }) {
 
 export default function CustomerProfile() {
   const { user, isAuthenticated, logout, navigateToLogin } = useAuth();
+  const { wishlist } = useWishlist();
   const [profile, setProfile] = useState(null);
   const [recentOrders, setRecentOrders] = useState([]);
   const [products, setProducts] = useState([]);
@@ -198,6 +207,7 @@ export default function CustomerProfile() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [activeHighlight, setActiveHighlight] = useState('recommended');
 
   const loadData = async () => {
     if (!user?.id) { setLoading(false); return; }
@@ -216,7 +226,7 @@ export default function CustomerProfile() {
         setProfile(p);
       }
       setRecentOrders(ords);
-      setProducts([...prods].sort(() => Math.random() - 0.5).slice(0, 6));
+      setProducts(prods.filter(product => !product.is_paused));
     } catch (_) {}
     setLoading(false);
   };
@@ -245,6 +255,40 @@ export default function CustomerProfile() {
     ? `🎂 ${MONTHS[(profile.birth_month || 1) - 1]}/${profile.birth_year}`
     : null;
 
+  const purchasedIds = useMemo(() => new Set(recentOrders.flatMap(order => (order.items || []).map(item => item.product_id).filter(Boolean))), [recentOrders]);
+  const recommendedProducts = useMemo(() => {
+    const purchasedProducts = products.filter(product => purchasedIds.has(product.id));
+    const categoryAffinity = new Set(purchasedProducts.flatMap(product => product.category_ids || []));
+    const tagAffinity = new Set(purchasedProducts.flatMap(product => product.tags || []));
+    const score = product => (product.category_ids || []).filter(id => categoryAffinity.has(id)).length * 3
+      + (product.tags || []).filter(tag => tagAffinity.has(tag)).length * 2;
+    const candidates = products.filter(product => !purchasedIds.has(product.id));
+    const base = candidates.length ? candidates : products;
+    return [...base].sort((a, b) => purchasedProducts.length
+      ? score(b) - score(a) || (b.views || 0) - (a.views || 0)
+      : (b.views || 0) - (a.views || 0)).slice(0, 8);
+  }, [products, purchasedIds]);
+  const orderAgainProducts = useMemo(() => orderAgainItems.map(item => products.find(product => product.id === item.product_id) || {
+    id: item.product_id, name: item.product_name, images: item.product_image ? [item.product_image] : [], price: item.unit_price,
+  }).filter(product => product.id), [orderAgainItems, products]);
+  const promotionProducts = useMemo(() => products.filter(product => product.promo_price && product.promo_price < product.price), [products]);
+  const favoriteProducts = useMemo(() => products.filter(product => wishlist.includes(product.id)), [products, wishlist]);
+  const highlightProducts = {
+    recommended: recommendedProducts,
+    reorder: orderAgainProducts,
+    promotions: promotionProducts,
+    favorites: favoriteProducts,
+  }[activeHighlight];
+  const highlightTitle = {
+    recommended: 'Recomendados para você', reorder: 'Peça de novo', promotions: 'Promoções', favorites: 'Seus favoritos',
+  }[activeHighlight];
+  const highlights = [
+    { id: 'recommended', label: 'Recomendados', icon: Star },
+    { id: 'reorder', label: 'Peça de novo', icon: RefreshCw },
+    { id: 'promotions', label: 'Promoções', icon: FileText },
+    { id: 'favorites', label: 'Favoritos', icon: Heart },
+  ];
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-lg mx-auto bg-white min-h-screen">
@@ -267,26 +311,25 @@ export default function CustomerProfile() {
         ) : (
           <>
             {/* ── Profile Header ── */}
-            <div className="relative">
-              {/* Cover with optional banner + back arrow */}
-              <div className="relative h-28 overflow-hidden">
+            <section className="relative bg-white">
+              <div className="relative h-40 overflow-hidden bg-gray-100">
                 {profile?.cover_url
                   ? <img src={profile.cover_url} alt="" className="w-full h-full object-cover" />
-                  : <div className="w-full h-full bg-gradient-to-br from-primary to-emerald-400" />
+                  : <div className="w-full h-full bg-gradient-to-br from-emerald-900 via-primary to-emerald-400" />
                 }
-                <Link to="/loja" className="absolute top-3 left-3 w-9 h-9 bg-black/30 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-black/40 transition-colors z-10">
-                  <ArrowLeft size={18} />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/25 to-transparent" />
+                <Link to="/loja" aria-label="Voltar ao cardápio" className="absolute left-4 top-[max(1rem,env(safe-area-inset-top))] z-10 flex h-11 w-11 items-center justify-center rounded-full bg-black/35 text-white backdrop-blur-md transition-colors hover:bg-black/50">
+                  <ArrowLeft size={21} />
                 </Link>
-                <button onClick={() => setEditOpen(true)} className="absolute top-3 right-3 w-9 h-9 bg-black/30 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-black/40 transition-colors z-10">
-                  <Camera size={16} />
+                <button aria-label="Alterar foto de capa" onClick={() => setEditOpen(true)} className="absolute right-4 top-[max(1rem,env(safe-area-inset-top))] z-10 flex h-11 w-11 items-center justify-center rounded-full bg-black/35 text-white backdrop-blur-md transition-colors hover:bg-black/50">
+                  <Camera size={19} />
                 </button>
               </div>
 
-              {/* Avatar */}
-              <div className="px-5 pb-4">
-                <div className="flex items-end justify-between -mt-12 mb-3">
-                  <div className="relative">
-                    <div className="w-24 h-24 rounded-full border-4 border-white bg-gray-100 overflow-hidden shadow-md">
+              <div className="px-4 pb-4 sm:px-5">
+                <div className="-mt-12 flex items-end justify-between gap-3">
+                  <div className="relative flex-shrink-0">
+                    <div className="h-28 w-28 overflow-hidden rounded-full border-4 border-white bg-gray-100 shadow-sm">
                       {profile?.photo_url
                         ? <img src={profile.photo_url} alt="" className="w-full h-full object-cover" />
                         : <div className="w-full h-full flex items-center justify-center text-3xl font-bold text-gray-400">
@@ -294,76 +337,71 @@ export default function CustomerProfile() {
                           </div>
                       }
                     </div>
+                    <button type="button" aria-label="Alterar foto do perfil" onClick={() => setEditOpen(true)} className="absolute bottom-1 right-0 flex h-9 w-9 items-center justify-center rounded-full border-2 border-white bg-primary text-white shadow-sm"><Camera size={16} /></button>
                   </div>
                   <button onClick={() => setEditOpen(true)}
-                    className="flex items-center gap-1.5 px-4 py-2 border-2 border-gray-200 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors">
-                    <Edit size={14} /> Editar
+                    className="mb-1 flex min-h-10 items-center gap-1.5 rounded-full border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50">
+                    <Edit size={14} /> Editar perfil
                   </button>
                 </div>
 
-                <div>
-                  <h1 className="font-heading font-bold text-xl text-gray-900">
+                <div className="mt-3">
+                  <h1 className="font-heading text-xl font-bold text-gray-900">
                     {profile?.name || user.full_name || 'Olá!'}
                   </h1>
-                  {profile?.username && (
-                    <p className="text-sm text-gray-400 mt-0.5">@{profile.username}</p>
-                  )}
-                  {birthText && <p className="text-xs text-gray-400 mt-1">{birthText}</p>}
+                  <p className="mt-0.5 text-sm text-gray-500">{profile?.username ? `@${profile.username}` : 'Cliente PEDDI'}</p>
+                  {profile?.bio && <p className="mt-2 text-sm leading-relaxed text-gray-800">{profile.bio}</p>}
+                  {birthText && <p className="mt-1 text-xs text-gray-400">{birthText}</p>}
                 </div>
 
-                {/* Stats row */}
-                {(() => {
-                  const delivered = recentOrders.filter(o => o.status === 'delivered').length;
-                  const cancelled = recentOrders.filter(o => o.status === 'cancelled').length;
-                  return (
-                    <div className="flex gap-3 mt-4 pt-4 border-t border-gray-100 overflow-x-auto scrollbar-hide">
-                      <div className="text-center flex-shrink-0">
-                        <p className="font-heading font-bold text-lg text-gray-900">{delivered}</p>
-                        <p className="text-xs text-gray-400">Concluídos</p>
-                      </div>
-                      <div className="w-px bg-gray-100 flex-shrink-0" />
-                      <div className="text-center flex-shrink-0">
-                        <p className="font-heading font-bold text-lg text-red-400">{cancelled}</p>
-                        <p className="text-xs text-gray-400">Cancelados</p>
-                      </div>
-                      <div className="w-px bg-gray-100 flex-shrink-0" />
-                      <div className="text-center flex-shrink-0">
-                        <p className="font-heading font-bold text-lg text-gray-900">
-                          R$ {(profile?.total_spent || 0).toFixed(0)}
-                        </p>
-                        <p className="text-xs text-gray-400">Gasto total</p>
-                      </div>
-                      <div className="w-px bg-gray-100 flex-shrink-0" />
-                      <div className="text-center flex-shrink-0">
-                        <div className="flex items-center gap-1 justify-center">
-                          <Star size={14} className="fill-amber-400 text-amber-400" />
-                          <p className="font-heading font-bold text-lg text-gray-900">
-                            {(profile?.internal_rating || 5).toFixed(1)}
-                          </p>
-                        </div>
-                        <p className="text-xs text-gray-400">Avaliação</p>
-                      </div>
-                      {(profile?.cashback_balance || 0) > 0 && (
-                        <>
-                          <div className="w-px bg-gray-100 flex-shrink-0" />
-                          <div className="text-center flex-shrink-0">
-                            <p className="font-heading font-bold text-lg text-green-600">
-                              R$ {(profile.cashback_balance).toFixed(2)}
-                            </p>
-                            <p className="text-xs text-gray-400">Cashback</p>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  );
-                })()}
+                <div aria-label="Resumo do perfil" className="mt-5 grid grid-cols-4 gap-1 text-center">
+                  <div><p className="font-heading text-base font-bold text-gray-900">{recentOrders.length}</p><p className="text-[11px] text-gray-500">Pedidos</p></div>
+                  <div><p className="font-heading text-base font-bold text-gray-900">{wishlist.length}</p><p className="text-[11px] text-gray-500">Favoritos</p></div>
+                  <div><p className="font-heading text-sm font-bold text-gray-900">R$ {Number(profile?.total_spent || 0).toFixed(0)}</p><p className="text-[11px] text-gray-500">Gasto total</p></div>
+                  <div><p className="flex items-center justify-center gap-1 font-heading text-base font-bold text-gray-900"><Star size={13} className="fill-amber-400 text-amber-400" />{Number(profile?.internal_rating || 5).toFixed(1)}</p><p className="text-[11px] text-gray-500">Avaliação</p></div>
+                </div>
+
+                {(profile?.cashback_balance || 0) > 0 && <p className="mt-3 text-center text-xs font-semibold text-green-700">Cashback disponível: R$ {Number(profile.cashback_balance).toFixed(2).replace('.', ',')}</p>}
 
                 <button onClick={() => setReportOpen(true)}
-                  className="w-full flex items-center justify-center gap-2 mt-3 py-2.5 border-2 border-dashed border-primary/40 rounded-xl text-primary text-sm font-semibold hover:bg-primary/5 transition-colors">
+                  className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-gray-50 py-2.5 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-100">
                   <FileText size={15} /> Relatório financeiro
                 </button>
               </div>
-            </div>
+            </section>
+
+            {/* ── Highlights ── */}
+            <section className="border-t border-gray-100 bg-white px-3 py-4">
+              <div className="flex justify-between gap-2 overflow-x-auto scrollbar-hide">
+                {highlights.map(item => {
+                  const Icon = item.icon;
+                  const active = activeHighlight === item.id;
+                  return (
+                    <button key={item.id} type="button" aria-pressed={active} onClick={() => setActiveHighlight(item.id)} className="group flex min-w-[74px] flex-col items-center gap-2 text-center">
+                      <span className={`flex h-16 w-16 items-center justify-center rounded-full border-2 transition-colors ${active ? 'border-primary bg-primary/10 text-primary' : 'border-gray-200 bg-gray-50 text-gray-500 group-hover:border-primary/40'}`}><Icon size={25} className={item.id === 'favorites' && active ? 'fill-current' : ''} /></span>
+                      <span className={`text-[11px] font-medium ${active ? 'text-primary' : 'text-gray-700'}`}>{item.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+
+            <section data-profile-recommendations="" className="border-t border-gray-100 bg-white px-4 py-4">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <h2 className="font-heading text-base font-bold text-gray-900">{highlightTitle}</h2>
+                <Link to={activeHighlight === 'favorites' ? '/favoritos' : activeHighlight === 'reorder' ? '/meus-pedidos' : '/loja'} className="flex-shrink-0 text-xs font-semibold text-primary">Ver todos</Link>
+              </div>
+              {highlightProducts.length > 0 ? (
+                <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-hide">
+                  {highlightProducts.map(product => (
+                    <Link key={product.id} to={`/item/${product.id}`} className="w-32 flex-shrink-0 overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
+                      <div className="h-24 w-full bg-gray-100">{product.images?.[0] ? <img src={product.images[0]} alt={product.name} className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center text-2xl">🍽️</div>}</div>
+                      <div className="p-2"><p className="truncate text-xs font-bold text-gray-800">{product.name}</p>{Number(product.promo_price || product.price) > 0 && <p className="mt-1 text-xs font-bold text-primary">R$ {Number(product.promo_price || product.price).toFixed(2).replace('.', ',')}</p>}</div>
+                    </Link>
+                  ))}
+                </div>
+              ) : <p className="rounded-2xl bg-gray-50 px-4 py-6 text-center text-sm text-gray-500">Nenhum item disponível nesta seção.</p>}
+            </section>
 
             {/* ── Menu items ── */}
             <div className="px-4 py-4 border-t border-gray-100 space-y-2">
@@ -418,53 +456,6 @@ export default function CustomerProfile() {
                 <span className="text-sm font-semibold">Excluir Conta</span>
               </button>
             </div>
-
-            {/* ── Peça de novo ── */}
-            {orderAgainItems.length > 0 && (
-              <div className="px-4 py-4 border-t border-gray-100">
-                <div className="flex items-center gap-2 mb-3">
-                  <RefreshCw size={16} className="text-primary" />
-                  <h2 className="font-heading font-semibold text-gray-800 text-sm">Peça de novo</h2>
-                </div>
-                <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-1">
-                  {orderAgainItems.slice(0, 6).map((item, i) => (
-                    <Link key={i} to={`/item/${item.product_id}`} className="flex-shrink-0 w-24 text-center group">
-                      <div className="w-24 h-24 rounded-2xl bg-gray-100 overflow-hidden mb-1.5 group-hover:shadow-md transition-shadow">
-                        {item.product_image
-                          ? <img src={item.product_image} alt={item.product_name} className="w-full h-full object-cover" />
-                          : <div className="w-full h-full flex items-center justify-center text-2xl">🍽️</div>
-                        }
-                      </div>
-                      <p className="text-xs text-gray-600 font-medium truncate">{item.product_name}</p>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* ── Você também pode gostar ── */}
-            {products.length > 0 && (
-              <div className="px-4 py-4 border-t border-gray-100">
-                <div className="flex items-center gap-2 mb-3">
-                  <Star size={16} className="text-amber-400" />
-                  <h2 className="font-heading font-semibold text-gray-800 text-sm">Você também pode gostar</h2>
-                </div>
-                <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-1">
-                  {products.map(p => (
-                    <Link key={p.id} to={`/item/${p.id}`} className="flex-shrink-0 w-28 group">
-                      <div className="w-28 h-28 rounded-2xl bg-gray-100 overflow-hidden mb-1.5 group-hover:shadow-md transition-shadow">
-                        {p.images?.[0]
-                          ? <img src={p.images[0]} alt={p.name} className="w-full h-full object-cover" />
-                          : <div className="w-full h-full flex items-center justify-center text-2xl">🍽️</div>
-                        }
-                      </div>
-                      <p className="text-xs text-gray-700 font-semibold truncate">{p.name}</p>
-                      <p className="text-xs text-primary font-bold">R$ {(p.promo_price || p.price)?.toFixed(2)}</p>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            )}
 
             <div className="pb-20 text-center">
               <Link to="/loja" className="text-sm text-primary font-medium">← Voltar ao cardápio</Link>

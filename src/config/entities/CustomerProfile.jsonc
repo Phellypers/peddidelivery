@@ -11,6 +11,10 @@
     "username": {
       "type": "string"
     },
+    "bio": {
+      "type": "string",
+      "maxLength": 120
+    },
     "email": {
       "type": "string"
     },
