@@ -106,7 +106,7 @@
         "primary_color": {
           "type": "string",
           "pattern": "^#[0-9A-Fa-f]{6}$",
-          "default": "#F97316"
+          "default": "#22C55E"
         },
         "text_color": {
           "type": "string",

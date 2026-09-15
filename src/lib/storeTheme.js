@@ -29,7 +29,7 @@ export function hexToHsl(hex) {
 
 export function getStoreTheme(store = {}) {
   const config = store.menu_theme || {};
-  const primary = normalizeHex(config.primary_color, normalizeHex(store.primary_color, '#F97316'));
+  const primary = normalizeHex(config.primary_color, normalizeHex(store.primary_color, '#22C55E'));
   const text = normalizeHex(config.text_color, '#172033');
   const background = normalizeHex(config.background_color, '#F6F8F7');
   const radius = RADII.has(config.radius) ? config.radius : '18px';

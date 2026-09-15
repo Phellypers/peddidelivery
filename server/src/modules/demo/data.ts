@@ -78,7 +78,7 @@ export async function readEntities(entity: string, request: AuthRequest) {
     case 'Store': {
       const result = await query('SELECT * FROM stores WHERE id=$1', [tenant]);
       return result.rows.map(row => ({ ...defaults(entity), delivery_enabled:true,pickup_enabled:true,pix_enabled:true,card_enabled:true,cash_enabled:true,
-        primary_color:'#F97316', business_type:'menu', ...row.details, id: row.id,name:row.name,slug:row.slug,created_date:row.created_at }));
+        primary_color:'#22C55E', business_type:'menu', ...row.details, id: row.id,name:row.name,slug:row.slug,created_date:row.created_at }));
     }
     case 'Ingredient': {
       if (!manager) return [];

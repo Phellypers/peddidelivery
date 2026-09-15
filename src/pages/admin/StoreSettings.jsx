@@ -4,7 +4,7 @@ import { Loader2, Save, ImageIcon, Store, Copy, Check, Link2, Bike, Palette, Rot
 import FakeReviewsManager from '@/components/admin/FakeReviewsManager';
 import { getStoreTheme } from '@/lib/storeTheme';
 
-const BRAND_PRESETS = ['#F97316', '#16A34A', '#2563EB', '#7C3AED', '#DC2626', '#111111'];
+const BRAND_PRESETS = ['#22C55E', '#16A34A', '#2563EB', '#7C3AED', '#DC2626', '#111111'];
 
 export default function StoreSettings() {
   const [form, setForm] = useState(null);
@@ -25,8 +25,8 @@ export default function StoreSettings() {
         setForm({
           name: '', description: '', phone: '', whatsapp: '', address: '',
           city: '', state: '', business_type: 'menu', opening_hours: '',
-          primary_color: '#F97316', logo_url: '', banner_url: '',
-          menu_theme: { primary_color: '#F97316', text_color: '#172033', background_color: '#F6F8F7', radius: '18px' },
+          primary_color: '#22C55E', logo_url: '', banner_url: '',
+          menu_theme: { primary_color: '#22C55E', text_color: '#172033', background_color: '#F6F8F7', radius: '18px' },
           pix_enabled: true, card_enabled: true, cash_enabled: true,
           delivery_enabled: true, pickup_enabled: true,
           flat_delivery_fee: 5, min_order_value: 0, free_shipping_above: 0,
@@ -169,12 +169,12 @@ export default function StoreSettings() {
             <p className={lbl}>Cores rápidas</p>
             <div className="flex flex-wrap gap-2">
               {BRAND_PRESETS.map(color => <button key={color} type="button" aria-label={`Usar a cor ${color}`} aria-pressed={previewTheme.primary === color} onClick={() => setTheme('primary_color', color)} className={`h-11 w-11 rounded-full border-4 transition-transform hover:scale-105 ${previewTheme.primary === color ? 'border-gray-900' : 'border-white ring-1 ring-gray-200'}`} style={{ backgroundColor: color }} />)}
-              <button type="button" onClick={() => set('menu_theme', { primary_color: '#F97316', text_color: '#172033', background_color: '#F6F8F7', radius: '18px' })} className="flex min-h-11 items-center gap-2 rounded-xl border border-gray-200 px-3 text-xs font-semibold text-gray-600 hover:bg-gray-50"><RotateCcw size={15} />Restaurar</button>
+              <button type="button" onClick={() => set('menu_theme', { primary_color: '#22C55E', text_color: '#172033', background_color: '#F6F8F7', radius: '18px' })} className="flex min-h-11 items-center gap-2 rounded-xl border border-gray-200 px-3 text-xs font-semibold text-gray-600 hover:bg-gray-50"><RotateCcw size={15} />Restaurar</button>
             </div>
           </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             {[
-              ['primary_color', 'Cor principal', form.primary_color || '#F97316'],
+              ['primary_color', 'Cor principal', form.primary_color || '#22C55E'],
               ['text_color', 'Cor dos textos', '#172033'],
               ['background_color', 'Cor de fundo', '#F6F8F7'],
             ].map(([field, label, fallback]) => (

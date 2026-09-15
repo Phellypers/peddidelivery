@@ -1,7 +1,7 @@
-.peddi-storefront { --primary: 25 95% 53%; --ring: 25 95% 53%; background: var(--store-background, #f6f8f7); color: var(--store-text, #172033); }
+.peddi-storefront { --primary: 142 71% 45%; --ring: 142 71% 45%; background: var(--store-background, #f6f8f7); color: var(--store-text, #172033); }
 .peddi-store-shell { max-width: 640px; }
 .peddi-store-header { position: relative; background: #fff; }
-.peddi-store-orange { display: flex; align-items: flex-start; justify-content: space-between; height: 174px; padding: 24px 20px; padding-top: max(24px, env(safe-area-inset-top)); background: linear-gradient(110deg, color-mix(in srgb, var(--store-primary, #f97316), white 8%), var(--store-primary, #f97316)); color: var(--store-on-primary, #fff); }
+.peddi-store-orange { display: flex; align-items: flex-start; justify-content: space-between; height: 174px; padding: 24px 20px; padding-top: max(24px, env(safe-area-inset-top)); background: linear-gradient(110deg, color-mix(in srgb, var(--store-primary, #22c55e), white 8%), var(--store-primary, #22c55e)); color: var(--store-on-primary, #fff); }
 .peddi-store-orange::after { content: ''; position: absolute; left: 0; width: 100%; height: 145px; top: 108px; background: white; border-radius: 50% 50% 0 0; pointer-events: none; }
 .peddi-store-orange > button, .peddi-store-orange > div { position: relative; z-index: 2; }
 .peddi-store-orange button { display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; color: var(--store-on-primary, #fff); border-radius: 12px; }
@@ -9,34 +9,34 @@
 .peddi-store-orange button:hover { background: #ffffff15; }
 .peddi-store-profile { position: relative; z-index: 1; padding: 0 22px 22px; margin-top: -113px; text-align: center; }
 .peddi-store-logo { display: inline-flex; padding: 6px; border-radius: 50%; background: #fff; margin-bottom: 8px; }
-.peddi-store-logo > div > div { box-shadow: none !important; --tw-ring-color: var(--store-primary, #f97316); }
+.peddi-store-logo > div > div { box-shadow: none !important; --tw-ring-color: var(--store-primary, #22c55e); }
 .peddi-store-logo .w-24 { width: 96px; height: 96px; }
-.peddi-store-logo .w-24:not(.stories-ring) { box-shadow: 0 0 0 2px var(--store-primary, #f97316) !important; }
+.peddi-store-logo .w-24:not(.stories-ring) { box-shadow: 0 0 0 2px var(--store-primary, #22c55e) !important; }
 .peddi-store-profile h1 { font-size: 26px; line-height: 1.2; font-weight: 750; letter-spacing: -.7px; color: var(--store-text, #172033); }
-.peddi-store-hours { margin-top: 7px; color: var(--store-primary, #f97316); font-size: 12px; }
+.peddi-store-hours { margin-top: 7px; color: var(--store-primary, #22c55e); font-size: 12px; }
 .peddi-store-description { margin: 9px auto 0; max-width: 440px; font-size: 14px; line-height: 1.65; color: #606677; }
 .peddi-store-address { display: flex; align-items: flex-start; justify-content: center; gap: 6px; margin-top: 10px; font-size: 12px; color: #747a88; }
-.peddi-store-address svg { color: var(--store-primary, #f97316); flex-shrink: 0; margin-top: 1px; }
+.peddi-store-address svg { color: var(--store-primary, #22c55e); flex-shrink: 0; margin-top: 1px; }
 .peddi-store-categories { background: white; }
 .peddi-store-category { position: relative; display: flex; flex-direction: column; align-items: center; gap: 7px; width: 72px; flex-shrink: 0; color: #626777; font-size: 11px; font-weight: 600; text-align: center; }
 .peddi-store-category-image { display: flex; align-items: center; justify-content: center; width: 62px; height: 62px; border-radius: 50%; overflow: hidden; background: #f6f6f6; border: 1px solid #e2e3e7; }
 .peddi-store-category-image img { width: 100%; height: 100%; object-fit: cover; }
-.peddi-store-category.active { color: var(--store-primary, #f97316); }
-.peddi-store-category.active .peddi-store-category-image { border: 2px solid var(--store-primary, #f97316); background: white; }
+.peddi-store-category.active { color: var(--store-primary, #22c55e); }
+.peddi-store-category.active .peddi-store-category-image { border: 2px solid var(--store-primary, #22c55e); background: white; }
 .peddi-store-category.has-new-product .peddi-store-category-image { animation: peddi-category-new-glow 2.8s ease-in-out infinite; }
 @keyframes peddi-category-new-glow {
-  0%, 100% { box-shadow: 0 0 0 2px color-mix(in srgb, var(--store-primary, #f97316), transparent 78%), 0 0 6px color-mix(in srgb, var(--store-primary, #f97316), transparent 84%); }
-  50% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--store-primary, #f97316), transparent 35%), 0 0 16px color-mix(in srgb, var(--store-primary, #f97316), transparent 52%); }
+  0%, 100% { box-shadow: 0 0 0 2px color-mix(in srgb, var(--store-primary, #22c55e), transparent 78%), 0 0 6px color-mix(in srgb, var(--store-primary, #22c55e), transparent 84%); }
+  50% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--store-primary, #22c55e), transparent 35%), 0 0 16px color-mix(in srgb, var(--store-primary, #22c55e), transparent 52%); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .peddi-store-category.has-new-product .peddi-store-category-image { animation: none; box-shadow: 0 0 0 2px color-mix(in srgb, var(--store-primary, #f97316), transparent 45%); }
+  .peddi-store-category.has-new-product .peddi-store-category-image { animation: none; box-shadow: 0 0 0 2px color-mix(in srgb, var(--store-primary, #22c55e), transparent 45%); }
 }
 .peddi-store-category-badge { position: absolute; top: -6px; left: 50%; transform: translateX(-50%); color: white; border-radius: 12px; padding: 3px 7px; font-size: 9px; white-space: nowrap; }
 .peddi-store-search input { width: 100%; min-width: 0; height: 46px; padding: 10px 48px 10px 15px; border: 1px solid #e0e2e7; border-radius: var(--store-radius, 18px); background: white; outline: none; font-size: 14px; }
-.peddi-store-search input:focus { border-color: var(--store-primary, #f97316); box-shadow: 0 0 0 3px color-mix(in srgb, var(--store-primary, #f97316), transparent 85%); }
+.peddi-store-search input:focus { border-color: var(--store-primary, #22c55e); box-shadow: 0 0 0 3px color-mix(in srgb, var(--store-primary, #22c55e), transparent 85%); }
 .peddi-store-search svg { position: absolute; top: 12px; right: 15px; color: #53596a; pointer-events: none; }
 .peddi-storefront #cardapio-produtos h2 { font-size: 19px; letter-spacing: -.5px; color: var(--store-text, #172033); }
-.peddi-storefront .peddi-product-card { border-color: color-mix(in srgb, var(--store-primary, #f97316), #dfe5e1 78%); box-shadow: none; border-radius: var(--store-radius, 18px); background: white; }
+.peddi-storefront .peddi-product-card { border-color: color-mix(in srgb, var(--store-primary, #22c55e), #dfe5e1 78%); box-shadow: none; border-radius: var(--store-radius, 18px); background: white; }
 .peddi-storefront .peddi-product-card > a > div { aspect-ratio: 1.45; }
 .peddi-storefront .peddi-product-card > a > button { width: 36px; height: 36px; background: #ffffffed; }
 .peddi-storefront .peddi-product-card > a > button svg { width: 20px; height: 20px; }
@@ -46,7 +46,7 @@
 .peddi-storefront .peddi-product-price > span:first-child { order: 2; font-size: 10px; }
 .peddi-storefront .peddi-product-price > span:last-child { order: 1; font-size: 15px; }
 .peddi-storefront .peddi-product-card > div > div:last-child button { height: 44px; border-radius: var(--store-radius, 18px); }
-.peddi-storefront .peddi-product-card > div > div:last-child button:first-child { background: var(--store-primary, #f97316); }
+.peddi-storefront .peddi-product-card > div > div:last-child button:first-child { background: var(--store-primary, #22c55e); }
 .peddi-storefront .peddi-product-card > div > div:last-child button:first-child { color: var(--store-on-primary, #fff); }
 .peddi-storefront .peddi-product-card > div > div:last-child button:last-child { width: 44px; background: white; border: 1px solid #e0e2e7; }
 .peddi-storefront .peddi-product-card > div > div:last-child svg { width: 22px; height: 22px; }
@@ -54,26 +54,26 @@
 .peddi-storefront .peddi-banner-copy { top: 50%; bottom: auto; transform: translateY(-50%); max-width: 70%; padding: 18px; }
 .peddi-storefront .peddi-banner-copy h3 { font-size: 23px; line-height: 1.1; }
 .peddi-storefront .peddi-banner-shade { background-image: linear-gradient(90deg, #fffffff0, #ffffffb0 35%, transparent 75%); }
-.peddi-storefront .peddi-banner-copy h3 { color: var(--store-primary, #f97316); text-shadow: none; filter: none; }
+.peddi-storefront .peddi-banner-copy h3 { color: var(--store-primary, #22c55e); text-shadow: none; filter: none; }
 .peddi-storefront .peddi-banner-copy p { color: #515968; }
 .peddi-storefront .peddi-banner-carousel > button { top: auto; bottom: 8px; transform: none; width: 32px; height: 32px; background: #11111120; }
 .peddi-storefront .peddi-banner-dots { left: 50%; right: auto; transform: translateX(-50%); }
 .peddi-storefront .peddi-banner-copy p { margin-top: 6px; max-width: 180px; }
-.peddi-banner-cta { margin-top: 10px; min-height: 40px; border-radius: var(--store-radius, 18px); padding: 8px 16px; background: var(--store-primary, #f97316); color: var(--store-on-primary, #fff); font-weight: 600; font-size: 13px; }
+.peddi-banner-cta { margin-top: 10px; min-height: 40px; border-radius: var(--store-radius, 18px); padding: 8px 16px; background: var(--store-primary, #22c55e); color: var(--store-on-primary, #fff); font-weight: 600; font-size: 13px; }
 .peddi-client-nav { max-width: 640px; margin: 0 auto; border: 1px solid #edeef1; border-radius: 18px 18px 0 0; padding-bottom: max(8px, env(safe-area-inset-bottom)); box-shadow: 0 -3px 16px #17233305; }
 .peddi-client-nav > div { height: 66px; }
 .peddi-client-nav-item { display: flex; flex-direction: column; gap: 4px; width: 20%; min-height: 52px; color: #535b6c; }
 .peddi-client-nav-item svg { color: #535b6c; width: 23px; height: 23px; }
-.peddi-client-nav-item.active, .peddi-client-nav-item.active svg { color: var(--store-primary, #f97316); }
-.peddi-client-nav-item.active svg { fill: color-mix(in srgb, var(--store-primary, #f97316), transparent 86%); }
+.peddi-client-nav-item.active, .peddi-client-nav-item.active svg { color: var(--store-primary, #22c55e); }
+.peddi-client-nav-item.active svg { fill: color-mix(in srgb, var(--store-primary, #22c55e), transparent 86%); }
 .peddi-client-nav-label { font-size: 10px; }
-.peddi-client-nav-item.cart > div { display: flex; align-items: center; justify-content: center; background: var(--store-primary, #f97316); width: 47px; height: 47px; border-radius: 50%; margin-top: -20px; box-shadow: 0 3px 10px color-mix(in srgb, var(--store-primary, #f97316), transparent 65%); }
+.peddi-client-nav-item.cart > div { display: flex; align-items: center; justify-content: center; background: var(--store-primary, #22c55e); width: 47px; height: 47px; border-radius: 50%; margin-top: -20px; box-shadow: 0 3px 10px color-mix(in srgb, var(--store-primary, #22c55e), transparent 65%); }
 .peddi-client-nav-item.cart svg { color: var(--store-on-primary, #fff); width: 27px; height: 27px; }
-.peddi-client-nav-item.cart > div > span { background: white; color: var(--store-primary, #f97316); border: 1px solid var(--store-primary, #f97316); width: 19px; height: 19px; }
+.peddi-client-nav-item.cart > div > span { background: white; color: var(--store-primary, #22c55e); border: 1px solid var(--store-primary, #22c55e); width: 19px; height: 19px; }
 .peddi-storefront .bg-primary { color: var(--store-on-primary, #fff); }
-.peddi-storefront :is(button, a):focus-visible { outline: 2px solid var(--store-primary, #f97316); outline-offset: 3px; }
-.peddi-storefront .peddi-promo-strip { border-color: color-mix(in srgb, var(--store-primary, #f97316), transparent 78%); background: color-mix(in srgb, var(--store-primary, #f97316), white 91%); }
-.peddi-storefront .peddi-promo-strip :is(svg, span) { color: var(--store-primary, #f97316); }
+.peddi-storefront :is(button, a):focus-visible { outline: 2px solid var(--store-primary, #22c55e); outline-offset: 3px; }
+.peddi-storefront .peddi-promo-strip { border-color: color-mix(in srgb, var(--store-primary, #22c55e), transparent 78%); background: color-mix(in srgb, var(--store-primary, #22c55e), white 91%); }
+.peddi-storefront .peddi-promo-strip :is(svg, span) { color: var(--store-primary, #22c55e); }
 .peddi-story-modal { bottom: calc(74px + env(safe-area-inset-bottom)); }
 .peddi-story-panel { max-height: calc(100dvh - 94px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); }
 .peddi-story-media { height: clamp(120px, 28dvh, 190px); }
