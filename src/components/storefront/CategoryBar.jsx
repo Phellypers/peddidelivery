@@ -1,4 +1,5 @@
 import React from 'react';
+import { getCategoryCover } from '@/lib/categoryCovers';
 
 export default function CategoryBar({ categories, activeCategory, onSelect }) {
   return (
@@ -20,8 +21,8 @@ export default function CategoryBar({ categories, activeCategory, onSelect }) {
             <button key={cat.id} onClick={() => onSelect(cat.id)} className="flex flex-col items-center gap-1.5 flex-shrink-0">
               <div className={`w-16 h-16 rounded-full p-0.5 ${isActive ? 'bg-gradient-to-tr from-orange-400 via-pink-500 to-purple-600' : 'bg-gray-200'}`}>
                 <div className="w-full h-full rounded-full bg-white flex items-center justify-center text-2xl border-2 border-white">
-                  {cat.image_url
-                    ? <img src={cat.image_url} alt={cat.name} className="w-full h-full rounded-full object-cover" />
+                  {getCategoryCover(cat)
+                    ? <img src={getCategoryCover(cat)} alt={cat.name} className="w-full h-full rounded-full object-cover" />
                     : cat.icon
                   }
                 </div>

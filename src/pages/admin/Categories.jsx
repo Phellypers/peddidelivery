@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Plus, Edit, Trash2, Loader2, X, ImageIcon, Eye, EyeOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { getCategoryCover, getTemporaryCategoryCover } from '@/lib/categoryCovers';
 
 export default function Categories() {
   const [categories, setCategories] = useState([]);
@@ -57,8 +58,8 @@ export default function Categories() {
           {categories.map(cat => (
             <div key={cat.id} className="bg-card rounded-2xl border border-border/50 overflow-hidden group">
               <div className="relative h-32 bg-gradient-to-br from-orange-100 to-orange-50">
-                {cat.image_url ? (
-                  <img src={cat.image_url} alt={cat.name} className="w-full h-full object-cover" />
+                {getCategoryCover(cat) ? (
+                  <img src={getCategoryCover(cat)} alt={cat.name} className="w-full h-full object-cover" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-4xl">
                     <ImageIcon size={40} className="text-gray-300" />
@@ -69,6 +70,9 @@ export default function Categories() {
                   <h3 className="font-heading font-bold text-white text-sm">{cat.name}</h3>
                 </div>
                 <div className="absolute top-2 right-2 flex gap-1.5">
+                  {getTemporaryCategoryCover(cat) && (
+                    <span className="bg-white/90 text-gray-700 text-[10px] font-bold px-2 py-0.5 rounded-full">Capa temporária</span>
+                  )}
                   {cat.is_featured && (
                     <span className="bg-yellow-400 text-yellow-900 text-[10px] font-bold px-2 py-0.5 rounded-full">Destaque</span>
                   )}
@@ -147,6 +151,7 @@ function CategoryForm({ category, onClose, onSave }) {
   });
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const temporaryCover = getTemporaryCategoryCover({ ...category, ...form });
 
   const set = (f, v) => setForm(p => ({ ...p, [f]: v }));
 
@@ -197,14 +202,15 @@ function CategoryForm({ category, onClose, onSave }) {
           <div>
             <label className={lbl}>Imagem da Categoria</label>
             <div className="relative h-36 bg-gray-100 rounded-xl overflow-hidden mb-2">
-              {form.image_url ? (
-                <img src={form.image_url} alt="" className="w-full h-full object-cover" />
+              {form.image_url || temporaryCover ? (
+                <img src={form.image_url || temporaryCover} alt="" className="w-full h-full object-cover" />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-gray-300">
                   <ImageIcon size={40} />
                 </div>
               )}
             </div>
+            {temporaryCover && <p className="mb-2 text-xs text-amber-700">Capa temporária de demonstração. Envie uma imagem para substituí-la.</p>}
             <label className="flex items-center justify-center gap-2 w-full py-2.5 border-2 border-dashed border-gray-200 rounded-xl text-sm text-gray-500 cursor-pointer hover:border-primary/50 hover:text-primary transition-colors">
               {uploading ? <Loader2 size={16} className="animate-spin" /> : <><ImageIcon size={16} /> Fazer upload da imagem</>}
               <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} disabled={uploading} />

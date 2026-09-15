@@ -1,4 +1,5 @@
 import React from 'react';
+import { getCategoryCover } from '@/lib/categoryCovers';
 import { X, Star, Tag, Flame, Settings, LogIn, Heart } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
@@ -83,8 +84,8 @@ export default function MenuDrawer({ open, onClose, categories, activeCategory, 
                       }`}
                     >
                       <span className="w-7 h-7 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
-                        {cat.image_url
-                          ? <img src={cat.image_url} alt={cat.name} className="w-full h-full object-cover" />
+                        {getCategoryCover(cat)
+                          ? <img src={getCategoryCover(cat)} alt={cat.name} className="w-full h-full object-cover" />
                           : <span className="w-full h-full flex items-center justify-center text-sm">📦</span>
                         }
                       </span>
