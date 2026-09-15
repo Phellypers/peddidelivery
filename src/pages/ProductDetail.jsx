@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { useCart } from '@/lib/CartContext';
 import { useWishlist } from '@/lib/WishlistContext';
@@ -12,6 +12,7 @@ import { motion } from 'framer-motion';
 import { useAuth } from '@/lib/AuthContext';
 import { emitLiveEvent } from '@/lib/liveSession';
 import { isProductAvailable } from '@/lib/productAvailability';
+import SafeBackButton from '@/components/navigation/SafeBackButton';
 
 export default function ProductDetail() {
   const { id } = useParams();
@@ -60,7 +61,7 @@ export default function ProductDetail() {
     return <div className="peddi-store-page min-h-screen flex items-center justify-center bg-background"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
   }
   if (!product) {
-    return <div className="peddi-store-page min-h-screen flex flex-col items-center justify-center bg-background"><p className="text-muted-foreground">Item não encontrado</p><Link to="/loja" className="text-primary mt-2">Voltar ao cardápio</Link></div>;
+    return <div className="peddi-store-page min-h-screen flex flex-col items-center justify-center bg-background"><p className="text-muted-foreground">Item não encontrado</p><SafeBackButton fallback="/loja" aria-label="Voltar ao cardápio" className="text-primary mt-2">Voltar ao cardápio</SafeBackButton></div>;
   }
 
   const hasPromo = product.promo_price && product.promo_price < product.price;
@@ -112,9 +113,9 @@ export default function ProductDetail() {
               />
             </div>
             <div className="absolute left-4 right-4 flex justify-between" style={{ top: 'calc(1rem + env(safe-area-inset-top))' }}>
-              <Link to="/loja" className="w-10 h-10 bg-card/80 backdrop-blur-sm rounded-full flex items-center justify-center shadow-sm">
+              <SafeBackButton fallback="/loja" aria-label="Voltar ao cardápio" className="w-10 h-10 bg-card/80 backdrop-blur-sm rounded-full flex items-center justify-center shadow-sm">
                 <ArrowLeft size={20} />
-              </Link>
+              </SafeBackButton>
               <button
                 onClick={() => toggleWishlist(product.id)}
                 className="w-10 h-10 bg-card/80 backdrop-blur-sm rounded-full flex items-center justify-center shadow-sm"

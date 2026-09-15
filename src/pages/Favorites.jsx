@@ -6,6 +6,7 @@ import { ArrowLeft, Heart } from 'lucide-react';
 import ProductCard from '@/components/storefront/ProductCard';
 import CartDrawer from '@/components/storefront/CartDrawer';
 import BottomNav from '@/components/storefront/BottomNav';
+import SafeBackButton from '@/components/navigation/SafeBackButton';
 
 export default function Favorites() {
   const { wishlist } = useWishlist();
@@ -25,9 +26,9 @@ export default function Favorites() {
       <CartDrawer />
       <div className="sticky top-0 z-30 bg-card/95 backdrop-blur-md border-b border-border">
         <div className="max-w-5xl mx-auto px-4 flex items-center h-14">
-          <Link to="/" className="p-2 -ml-2 hover:bg-accent rounded-full transition-colors">
+          <SafeBackButton fallback="/loja" aria-label="Voltar ao cardápio" className="p-2 -ml-2 hover:bg-accent rounded-full transition-colors">
             <ArrowLeft size={20} />
-          </Link>
+          </SafeBackButton>
           <h1 className="font-heading font-bold text-lg ml-2">Favoritos</h1>
         </div>
       </div>
@@ -36,7 +37,7 @@ export default function Favorites() {
           <div className="text-center py-16">
             <Heart size={48} className="text-muted-foreground/30 mx-auto mb-4" />
             <p className="text-muted-foreground">Nenhum favorito ainda</p>
-            <Link to="/" className="text-primary text-sm font-medium mt-2 inline-block">Explorar cardápio</Link>
+            <Link to="/loja" className="text-primary text-sm font-medium mt-2 inline-block">Explorar cardápio</Link>
           </div>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">

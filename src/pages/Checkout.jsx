@@ -7,6 +7,7 @@ import { ArrowLeft, CreditCard, Truck, Store, Tag, CheckCircle2, Loader2, AlertC
 import { motion } from 'framer-motion';
 import UpsellSection from '@/components/checkout/UpsellSection';
 import { emitLiveEvent } from '@/lib/liveSession';
+import SafeBackButton from '@/components/navigation/SafeBackButton';
 
 const paymentMethods = [
   { id: 'pix', label: 'Pix', icon: '💠', discount: true },
@@ -251,7 +252,7 @@ export default function Checkout() {
     return (
       <div className="peddi-store-page min-h-screen flex flex-col items-center justify-center bg-background px-4">
         <p className="text-muted-foreground mb-4">Seu carrinho está vazio</p>
-        <Link to="/loja" className="text-primary font-medium">Voltar ao cardápio</Link>
+        <SafeBackButton fallback="/loja" aria-label="Voltar ao cardápio" className="text-primary font-medium">Voltar ao cardápio</SafeBackButton>
       </div>
     );
   }
@@ -303,9 +304,9 @@ export default function Checkout() {
     <div className="peddi-store-page min-h-screen bg-background pb-8">
       <div className="sticky top-0 z-30 bg-card/95 backdrop-blur-md border-b border-border">
         <div className="max-w-2xl mx-auto px-4 flex items-center h-14">
-          <Link to="/loja" className="p-2 -ml-2 hover:bg-accent rounded-full transition-colors">
+          <SafeBackButton fallback="/loja" aria-label="Voltar ao cardápio" className="p-2 -ml-2 hover:bg-accent rounded-full transition-colors">
             <ArrowLeft size={20} />
-          </Link>
+          </SafeBackButton>
           <h1 className="font-heading font-bold text-lg ml-2">Finalizar Pedido</h1>
         </div>
       </div>

@@ -1,14 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
-import { useLocation, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Search as SearchIcon } from 'lucide-react';
 import ProductCard from '@/components/storefront/ProductCard';
 import CartDrawer from '@/components/storefront/CartDrawer';
 import BottomNav from '@/components/storefront/BottomNav';
+import { useSafeBack } from '@/components/navigation/SafeBackButton';
 
 export default function Search() {
-  const location = useLocation();
-  const navigate = useNavigate();
+  const goBackToStore = useSafeBack('/loja');
   const [query, setQuery] = useState('');
   const [products, setProducts] = useState([]);
   const [allProducts, setAllProducts] = useState([]);
@@ -26,11 +25,6 @@ export default function Search() {
       p.tags?.some(t => t.toLowerCase().includes(q))
     ));
   }, [query, allProducts]);
-
-  const goBackToStore = () => {
-    if (location.state?.from === '/loja') navigate(-1);
-    else navigate('/loja', { replace: true });
-  };
 
   return (
     <div className="min-h-screen bg-background pb-20">

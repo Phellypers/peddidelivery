@@ -47,6 +47,7 @@ import OrderTracking from '@/pages/OrderTracking';
 import OAuthConsent from '@/pages/OAuthConsent';
 import MobilePreview from '@/components/MobilePreview';
 import DemoNotice from '@/components/DemoNotice';
+import { AppNavigationTracker } from '@/components/navigation/SafeBackButton';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -114,6 +115,7 @@ function App() {
         <CartProvider>
           <WishlistProvider>
             <Router>
+              <AppNavigationTracker />
               <ScrollToTop />
               <DemoNotice />
               <Routes>

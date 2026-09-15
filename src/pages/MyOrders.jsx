@@ -6,6 +6,7 @@ import { ArrowLeft, Package, Loader2, ChevronDown, ChevronUp, Edit, XCircle } fr
 import { motion, AnimatePresence } from 'framer-motion';
 import EditOrderCustomerModal from '@/components/customer/EditOrderCustomerModal';
 import DelivererRatingModal from '@/components/customer/DelivererRatingModal';
+import SafeBackButton from '@/components/navigation/SafeBackButton';
 
 const EDITABLE_STATUSES = ['pending', 'confirmed'];
 
@@ -108,9 +109,9 @@ export default function MyOrders() {
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-lg mx-auto bg-white min-h-screen">
         <div className="sticky top-0 z-30 bg-white border-b border-gray-100 px-4 py-3 flex items-center gap-3">
-          <Link to="/perfil" className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors">
+          <SafeBackButton fallback="/perfil" aria-label="Voltar ao perfil" className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors">
             <ArrowLeft size={20} />
-          </Link>
+          </SafeBackButton>
           <h1 className="font-heading font-bold text-lg">Meus Pedidos</h1>
         </div>
 
@@ -120,7 +121,7 @@ export default function MyOrders() {
           <div className="text-center py-20 px-6 space-y-3">
             <Package size={48} className="text-gray-200 mx-auto" />
             <p className="text-gray-500 font-medium">Você ainda não fez nenhum pedido</p>
-            <Link to="/" className="inline-block text-sm text-primary font-semibold">Ver cardápio</Link>
+            <Link to="/loja" className="inline-block text-sm text-primary font-semibold">Ver cardápio</Link>
           </div>
         ) : (
           <div className="divide-y divide-gray-100">

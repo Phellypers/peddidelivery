@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/AuthContext';
 import { base44 } from '@/api/base44Client';
 import { ArrowLeft, Save, Loader2, User, MapPin } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import SafeBackButton from '@/components/navigation/SafeBackButton';
 
 const inp = "w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30";
 const lbl = "block text-xs font-semibold text-gray-500 mb-1";
@@ -57,9 +57,9 @@ export default function MyData() {
       <div className="max-w-lg mx-auto bg-white min-h-screen">
         {/* Header */}
         <div className="sticky top-0 z-10 bg-white border-b border-gray-100 px-4 flex items-center h-14">
-          <Link to="/perfil" className="p-2 -ml-2 hover:bg-gray-100 rounded-full transition-colors">
+          <SafeBackButton fallback="/perfil" aria-label="Voltar ao perfil" className="p-2 -ml-2 hover:bg-gray-100 rounded-full transition-colors">
             <ArrowLeft size={20} />
-          </Link>
+          </SafeBackButton>
           <h1 className="font-heading font-bold text-lg ml-2">Meus Dados</h1>
         </div>
 

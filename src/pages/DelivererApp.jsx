@@ -7,6 +7,7 @@ import DelivererChatTab from '@/components/deliverer/DelivererChatTab';
 import DeliveryChat from '@/components/delivery/DeliveryChat';
 import { motion, AnimatePresence } from 'framer-motion';
 import { startLocationTracking, stopLocationTracking, isTracking } from '@/lib/delivererLocation';
+import SafeBackButton from '@/components/navigation/SafeBackButton';
 
 const VEHICLE_OPTIONS = [
   { value: 'moto', label: '🏍️ Moto' },
@@ -356,9 +357,9 @@ export default function DelivererApp() {
         {/* Header */}
         <div className="bg-gradient-to-br from-primary to-emerald-400 p-5 text-white">
           <div className="flex items-center justify-between mb-3">
-            <Link to="/loja" className="w-9 h-9 bg-black/20 rounded-full flex items-center justify-center">
+            <SafeBackButton fallback="/loja" aria-label="Voltar ao cardápio" className="w-9 h-9 bg-black/20 rounded-full flex items-center justify-center">
               <ArrowLeft size={18} />
-            </Link>
+            </SafeBackButton>
             <span className="text-xs font-bold bg-white/20 px-3 py-1 rounded-full">Área do Entregador</span>
           </div>
           <div className="flex items-center gap-3">

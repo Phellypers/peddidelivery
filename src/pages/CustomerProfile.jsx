@@ -8,6 +8,7 @@ import FinancialReportModal from '@/components/customer/FinancialReportModal';
 import BottomSheetSelect from '@/components/ui/BottomSheetSelect';
 import { Trash2, AlertTriangle } from 'lucide-react';
 import { useWishlist } from '@/lib/WishlistContext';
+import SafeBackButton from '@/components/navigation/SafeBackButton';
 
 const MONTHS = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 
@@ -318,9 +319,9 @@ export default function CustomerProfile() {
                   : <div className="w-full h-full bg-gradient-to-br from-emerald-900 via-primary to-emerald-400" />
                 }
                 <div className="absolute inset-0 bg-gradient-to-t from-black/25 to-transparent" />
-                <Link to="/loja" aria-label="Voltar ao cardápio" className="absolute left-4 top-[max(1rem,env(safe-area-inset-top))] z-10 flex h-11 w-11 items-center justify-center rounded-full bg-black/35 text-white backdrop-blur-md transition-colors hover:bg-black/50">
+                <SafeBackButton fallback="/loja" aria-label="Voltar ao cardápio" className="absolute left-4 top-[max(1rem,env(safe-area-inset-top))] z-10 flex h-11 w-11 items-center justify-center rounded-full bg-black/35 text-white backdrop-blur-md transition-colors hover:bg-black/50">
                   <ArrowLeft size={21} />
-                </Link>
+                </SafeBackButton>
                 <button aria-label="Alterar foto de capa" onClick={() => setEditOpen(true)} className="absolute right-4 top-[max(1rem,env(safe-area-inset-top))] z-10 flex h-11 w-11 items-center justify-center rounded-full bg-black/35 text-white backdrop-blur-md transition-colors hover:bg-black/50">
                   <Camera size={19} />
                 </button>

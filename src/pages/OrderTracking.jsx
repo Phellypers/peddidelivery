@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Loader2, ArrowLeft, Bike, Star, Navigation } from 'lucide-react';
 import DeliveryChat from '@/components/delivery/DeliveryChat';
+import SafeBackButton from '@/components/navigation/SafeBackButton';
 
 const STATUS_LABELS = {
   pending: 'Recebido', confirmed: 'Confirmado', preparing: 'Em preparo',
@@ -67,7 +68,7 @@ export default function OrderTracking() {
       <div className="max-w-lg mx-auto bg-white min-h-screen">
         {/* Header */}
         <div className="sticky top-0 z-30 bg-white border-b border-gray-100 px-4 py-3 flex items-center gap-3">
-          <Link to="/meus-pedidos" className="p-1.5 rounded-lg hover:bg-gray-100"><ArrowLeft size={20} /></Link>
+          <SafeBackButton fallback="/meus-pedidos" aria-label="Voltar aos pedidos" className="p-1.5 rounded-lg hover:bg-gray-100"><ArrowLeft size={20} /></SafeBackButton>
           <div>
             <h1 className="font-heading font-bold text-lg">Acompanhar entrega</h1>
             <p className="text-xs text-gray-400">Pedido #{order.order_number}</p>
