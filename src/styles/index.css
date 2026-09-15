@@ -5,6 +5,11 @@
 @tailwind utilities;
 
 @layer base {
+  html {
+    color-scheme: light;
+    background: hsl(210 20% 98%);
+  }
+
   :root {
     --background: 210 20% 98%;
     --foreground: 0 0% 7%;
@@ -13,7 +18,7 @@
     --popover: 0 0% 100%;
     --popover-foreground: 220 20% 12%;
     --primary: 142 71% 45%;
-    --primary-foreground: 0 0% 100%;
+    --primary-foreground: 0 0% 7%;
     --secondary: 215 28% 17%;
     --secondary-foreground: 0 0% 100%;
     --muted: 220 14% 96%;
@@ -95,6 +100,13 @@
 
   body {
     @apply bg-background text-foreground font-body;
+    min-height: 100dvh;
+  }
+
+  /* O verde PEDDI pede texto escuro para manter contraste em telas móveis. */
+  .bg-primary.text-white,
+  .bg-green-500.text-white {
+    color: hsl(var(--primary-foreground)) !important;
   }
 
     .peddi-store-page {

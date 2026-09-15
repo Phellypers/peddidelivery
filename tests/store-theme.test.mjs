@@ -16,7 +16,7 @@ test('keeps valid merchant colors and allowed radius', () => {
 
 test('rejects invalid stored style values and chooses readable contrast', () => {
   const theme = getStoreTheme({ primary_color: 'url(bad)', menu_theme: { primary_color: 'red; display:none', text_color: '#123', background_color: '', radius: '999px' } });
-  assert.deepEqual(theme, { primary: '#22C55E', text: '#172033', background: '#F6F8F7', radius: '18px', onPrimary: '#FFFFFF', primaryHsl: '142 71% 45%' });
+  assert.deepEqual(theme, { primary: '#22C55E', text: '#172033', background: '#F6F8F7', radius: '18px', onPrimary: '#111111', primaryHsl: '142 71% 45%' });
   assert.equal(readableText('#FFFFFF'), '#111111');
   assert.equal(normalizeHex('#abcdef', '#000000'), '#ABCDEF');
   assert.equal(hexToHsl('#000000'), '0 0% 0%');
