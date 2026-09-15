@@ -9,6 +9,7 @@ import UpsellSection from '@/components/checkout/UpsellSection';
 import { emitLiveEvent } from '@/lib/liveSession';
 import SafeBackButton from '@/components/navigation/SafeBackButton';
 import { simulateExternalAction } from '@/lib/presentationDemo';
+import { getSplitPaymentStatus } from '@/lib/splitPayment';
 
 const paymentMethods = [
   { id: 'pix', label: 'Pix', icon: '💠', discount: true },
@@ -157,6 +158,8 @@ export default function Checkout() {
   }
 
   const total = subtotal - couponDiscount - pixDiscount - campaignDiscount + deliveryFee;
+  const splitPaymentStatus = getSplitPaymentStatus(total, form.splitAmounts);
+  const paymentIsValid = !form.splitPayment || splitPaymentStatus.isValid;
 
   const updateForm = (field, value) => {
     setForm(prev => ({ ...prev, [field]: value }));
@@ -180,6 +183,7 @@ export default function Checkout() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!paymentIsValid) return;
     setLoading(true);
     try {
     const orderNum = String(Date.now()).slice(-6);
@@ -210,6 +214,7 @@ export default function Checkout() {
       total,
       coupon_code: couponApplied ? form.couponCode : '',
       payment_method: form.splitPayment ? 'split' : form.paymentMethod,
+      split_payments: form.splitPayment ? form.splitAmounts : {},
       payment_status: 'pending',
       change_for: form.paymentMethod === 'cash' && !form.splitPayment ? (form.changeFor || 0) : 0,
       delivery_method: form.deliveryMethod,
@@ -448,15 +453,13 @@ export default function Checkout() {
                   </div>
                 </div>
               ))}
-              {(() => {
-                const splitTotal = Object.values(form.splitAmounts).reduce((s, v) => s + (v || 0), 0);
-                const diff = total - splitTotal;
-                return diff !== 0 ? (
-                  <p className={`text-xs font-medium ${diff > 0 ? 'text-amber-600' : 'text-red-500'}`}>
-                    {diff > 0 ? `Faltam R$ ${diff.toFixed(2)}` : `Excedeu R$ ${Math.abs(diff).toFixed(2)}`}
+              {!splitPaymentStatus.isValid ? (
+                  <p className={`text-xs font-medium ${splitPaymentStatus.differenceCents > 0 ? 'text-amber-600' : 'text-red-500'}`}>
+                    {splitPaymentStatus.differenceCents > 0
+                      ? `Faltam R$ ${splitPaymentStatus.difference.toFixed(2)}`
+                      : `Excedeu R$ ${Math.abs(splitPaymentStatus.difference).toFixed(2)}`}
                   </p>
-                ) : <p className="text-xs text-green-600 font-medium">✓ Valores conferem</p>;
-              })()}
+                ) : <p className="text-xs text-green-600 font-medium">✓ Saldo R$ 0,00 — valores conferem</p>}
             </div>
           )}
         </Section>
@@ -548,7 +551,7 @@ export default function Checkout() {
 
         <button
           type="submit"
-          disabled={loading || !form.name || !form.phone || cityNotFound}
+          disabled={loading || !form.name || !form.phone || cityNotFound || !paymentIsValid}
           className="w-full bg-primary text-primary-foreground py-4 rounded-2xl font-heading font-bold text-base hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
         >
           {loading ? <Loader2 className="animate-spin" size={20} /> : 'Finalizar Pedido'}
