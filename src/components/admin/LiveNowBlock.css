@@ -15,14 +15,14 @@
 .peddi-live-panel .peddi-live-funnel { padding: 10px 12px 0; border-radius: 22px; background: linear-gradient(#ecf7ff, #fff 25%); }
 .peddi-live-panel .peddi-live-stage { width: var(--stage-width); margin-left: auto; margin-right: auto; }
 .peddi-live-panel .peddi-live-stage.is-active { position: relative; overflow: hidden; }
-.peddi-live-panel .peddi-live-stage.is-active::after { content: ''; position: absolute; inset: -45% -20%; pointer-events: none; opacity: .18; background: radial-gradient(ellipse at center, transparent 52%, currentColor 53%, transparent 59%); color: var(--stage-wave, #22c55e); animation: peddi-stage-wave 3.2s ease-out infinite; }
+.peddi-live-panel .peddi-live-stage.is-active::after { content: ''; position: absolute; inset: 7px 4%; z-index: 1; pointer-events: none; border: 2px solid var(--stage-wave, #22c55e); border-radius: 18px; opacity: 0; box-shadow: 0 0 0 0 color-mix(in srgb, var(--stage-wave, #22c55e), transparent 55%); animation: peddi-stage-wave 2.4s ease-out infinite; }
 .peddi-live-panel [data-funnel-stage="navegando"] { --stage-wave: #3b82f6; }
 .peddi-live-panel [data-funnel-stage="interessado"] { --stage-wave: #f59e0b; }
 .peddi-live-panel [data-funnel-stage="carrinho"] { --stage-wave: #f97316; }
 .peddi-live-panel [data-funnel-stage="checkout"] { --stage-wave: #a855f7; }
 .peddi-live-panel [data-funnel-stage="concluida"] { --stage-wave: #22c55e; }
 .peddi-live-panel [data-funnel-stage="abandonou"] { --stage-wave: #ef4444; }
-@keyframes peddi-stage-wave { 0% { transform: scale(.72); opacity: 0; } 25% { opacity: .7; } 100% { transform: scale(1.18); opacity: 0; } }
+@keyframes peddi-stage-wave { 0% { transform: scale(.96); opacity: 0; box-shadow: 0 0 0 0 color-mix(in srgb, var(--stage-wave, #22c55e), transparent 55%); } 20% { opacity: .72; } 75% { opacity: .24; } 100% { transform: scale(1.03); opacity: 0; box-shadow: 0 0 0 12px color-mix(in srgb, var(--stage-wave, #22c55e), transparent 100%); } }
 @media (prefers-reduced-motion: reduce) { .peddi-live-panel .peddi-live-stage.is-active::after { animation: none; opacity: .12; } }
 .peddi-live-panel .peddi-live-stage-button { position: relative; isolation: isolate; padding: 15px 30px; min-height: 94px; gap: 20px; color: var(--stage-ink); }
 .peddi-live-panel .peddi-live-stage-button::before { content: ''; position: absolute; inset: 0; z-index: -1; border-radius: 18px; background: linear-gradient(110deg, var(--stage-from), var(--stage-to)); clip-path: polygon(0 0, 100% 0, 96% 100%, 4% 100%); }
