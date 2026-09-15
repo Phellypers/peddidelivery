@@ -22,6 +22,7 @@ export default function StoreSettings() {
           name: '', description: '', phone: '', whatsapp: '', address: '',
           city: '', state: '', business_type: 'menu', opening_hours: '',
           primary_color: '#F97316', logo_url: '', banner_url: '',
+          menu_theme: { primary_color: '#16A34A', text_color: '#172033', background_color: '#F6F8F7', radius: '18px' },
           pix_enabled: true, card_enabled: true, cash_enabled: true,
           delivery_enabled: true, pickup_enabled: true,
           flat_delivery_fee: 5, min_order_value: 0, free_shipping_above: 0,
@@ -149,6 +150,31 @@ export default function StoreSettings() {
             <input type="file" accept="image/*" className="hidden" onChange={e => handleUpload('banner', e)} />
           </label>
           <input value={form.banner_url} onChange={e => set('banner_url', e.target.value)} placeholder="Ou cole a URL do banner" className={inp + ' mt-2'} />
+        </div>
+
+        <div className="border-t border-gray-100 pt-4 space-y-3">
+          <div>
+            <h3 className="text-sm font-semibold text-gray-900">Aparência do cardápio</h3>
+            <p className="mt-1 text-xs text-gray-400">Escolha como seus clientes verão o cardápio, os textos e os botões de compra.</p>
+          </div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            {[
+              ['primary_color', 'Cor dos botões', '#16A34A'],
+              ['text_color', 'Cor dos textos', '#172033'],
+              ['background_color', 'Cor de fundo', '#F6F8F7'],
+            ].map(([field, label, fallback]) => (
+              <label key={field} className="flex items-center gap-2 rounded-xl border border-gray-200 bg-gray-50 p-2.5 text-xs font-semibold text-gray-600">
+                <input type="color" value={form.menu_theme?.[field] || fallback} onChange={e => set('menu_theme', { ...(form.menu_theme || {}), [field]: e.target.value })} className="h-9 w-10 cursor-pointer rounded-lg border-0 bg-transparent p-0" />
+                <span>{label}</span>
+              </label>
+            ))}
+          </div>
+          <label className={lbl}>Curvatura dos cards e botões</label>
+          <select value={form.menu_theme?.radius || '18px'} onChange={e => set('menu_theme', { ...(form.menu_theme || {}), radius: e.target.value })} className={inp}>
+            <option value="10px">Sutil</option>
+            <option value="18px">Arredondado</option>
+            <option value="26px">Bem curvo</option>
+          </select>
         </div>
       </div>
 

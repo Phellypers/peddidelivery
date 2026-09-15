@@ -103,7 +103,12 @@ export default function Home() {
   };
 
   return (
-    <div className="peddi-storefront min-h-screen bg-gray-50 pb-24" {...bind}>
+    <div className="peddi-storefront min-h-screen bg-gray-50 pb-24" style={{
+      '--store-primary': store?.menu_theme?.primary_color || store?.primary_color || '#16A34A',
+      '--store-text': store?.menu_theme?.text_color || '#172033',
+      '--store-background': store?.menu_theme?.background_color || '#F6F8F7',
+      '--store-radius': store?.menu_theme?.radius || '18px',
+    }} {...bind}>
       {/* Pull-to-refresh indicator */}
       {(pullDistance > 0 || refreshing) && (
         <div className="flex items-center justify-center overflow-hidden" style={{ height: refreshing ? 40 : pullDistance }}>

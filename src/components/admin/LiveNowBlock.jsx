@@ -262,7 +262,7 @@ export default function LiveNowBlock() {
             const denominator = historical ? conversions + abandonments : activeCount;
             const percentage = denominator ? Math.round(count / denominator * 100) : 0;
             const stageSessions = computedSessions.filter(s => s.effectiveStage === stage.key);
-            return <div key={stage.key} data-funnel-stage={stage.key} className="peddi-live-stage rounded-xl">
+            return <div key={stage.key} data-funnel-stage={stage.key} className={`peddi-live-stage rounded-xl ${count > 0 ? 'is-active' : ''}`}>
               <button onClick={() => setExpandedStage(isExpanded ? null : stage.key)} aria-expanded={isExpanded} className="peddi-live-stage-button flex w-full min-w-0 items-center gap-3 rounded-xl p-3 text-left transition-colors">
                 <span className={`peddi-live-stage-icon flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${stage.bg}`}><Icon size={28} className={stage.color} /></span>
                 <div className="min-w-0 flex-1">

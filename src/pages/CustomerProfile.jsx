@@ -262,7 +262,7 @@ export default function CustomerProfile() {
               className="w-full flex items-center justify-center gap-2 py-3.5 bg-primary text-white rounded-2xl font-bold text-sm hover:bg-primary/90 transition-colors">
               <LogIn size={18} /> Entrar / Cadastrar
             </button>
-            <Link to="/" className="text-sm text-primary font-medium">← Voltar ao cardápio</Link>
+            <Link to="/loja" className="text-sm text-primary font-medium">← Voltar ao cardápio</Link>
           </div>
         ) : (
           <>
@@ -274,7 +274,7 @@ export default function CustomerProfile() {
                   ? <img src={profile.cover_url} alt="" className="w-full h-full object-cover" />
                   : <div className="w-full h-full bg-gradient-to-br from-primary to-emerald-400" />
                 }
-                <Link to="/" className="absolute top-3 left-3 w-9 h-9 bg-black/30 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-black/40 transition-colors z-10">
+                <Link to="/loja" className="absolute top-3 left-3 w-9 h-9 bg-black/30 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-black/40 transition-colors z-10">
                   <ArrowLeft size={18} />
                 </Link>
                 <button onClick={() => setEditOpen(true)} className="absolute top-3 right-3 w-9 h-9 bg-black/30 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-black/40 transition-colors z-10">
@@ -467,7 +467,7 @@ export default function CustomerProfile() {
             )}
 
             <div className="pb-20 text-center">
-              <Link to="/" className="text-sm text-primary font-medium">← Voltar ao cardápio</Link>
+              <Link to="/loja" className="text-sm text-primary font-medium">← Voltar ao cardápio</Link>
             </div>
           </>
         )}
