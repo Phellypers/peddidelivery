@@ -55,8 +55,23 @@ app.post('/api/v1/auth/refresh', async (request, response) => {
 });
 
 app.get('/api/v1/me', requireAuth, async (request: AuthRequest, response) => {
-  const result = await query('SELECT id, email, name, role, business_id AS "businessId", store_id AS "storeId" FROM users WHERE id = $1', [request.auth!.userId]);
+  const result = await query('SELECT id, email, name, role, business_id AS "businessId", store_id AS "storeId", preferences FROM users WHERE id = $1', [request.auth!.userId]);
   response.json({ user: { ...result.rows[0], ...(request.auth?.demoMode ? { demoMode: request.auth.demoMode } : {}) } });
+});
+
+app.patch('/api/v1/me/preferences', requireAuth, blockPresentationDemoWrites, async (request: AuthRequest, response) => {
+  const managerOnboardingCompleted = request.body?.manager_onboarding_completed;
+  if (typeof managerOnboardingCompleted !== 'boolean') {
+    return response.status(400).json({ error: 'Preferência de onboarding inválida.' });
+  }
+  const result = await query(
+    `UPDATE users
+     SET preferences = preferences || $2::jsonb
+     WHERE id = $1
+     RETURNING preferences`,
+    [request.auth!.userId, JSON.stringify({ manager_onboarding_completed: managerOnboardingCompleted })],
+  );
+  response.json({ preferences: result.rows[0]?.preferences ?? {} });
 });
 
 app.get('/api/v1/stores/:storeId/catalog', async (request, response) => {

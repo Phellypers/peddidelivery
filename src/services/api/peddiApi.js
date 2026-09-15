@@ -58,6 +58,11 @@ export const peddiApi = {
   isConfigured: true,
   login: (email, password) => request('/api/v1/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
   me: (token) => request('/api/v1/me', { headers: { Authorization: `Bearer ${token}` } }),
+  updatePreferences: (preferences) => request('/api/v1/me/preferences', {
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${localStorage.getItem('peddi_access_token') || ''}` },
+    body: JSON.stringify(preferences),
+  }),
   orders: (token) => request('/api/v1/orders', { headers: { Authorization: `Bearer ${token}` } }),
   stores: () => request('/api/v1/stores'),
   catalog: (storeId) => request(`/api/v1/stores/${storeId}/catalog`),

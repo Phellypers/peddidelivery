@@ -3,6 +3,7 @@ import { Link, Outlet, useLocation } from 'react-router-dom';
 import { LayoutDashboard, Package, ShoppingCart, Tag, FolderOpen, Settings, Menu, X, ChevronLeft, Bike, Users, Megaphone, Image, Monitor, Wallet, UtensilsCrossed, MapPin, MessageSquare, MessageCircle, Boxes } from 'lucide-react';
 import NewOrderNotifier from '@/components/admin/NewOrderNotifier';
 import ChatBadge from '@/components/admin/ChatBadge';
+import ManagerOnboarding from '@/components/admin/ManagerOnboarding';
 
 const navItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/admin' },
@@ -53,6 +54,7 @@ export default function AdminLayout() {
             return (
               <Link
                 key={item.path}
+                data-manager-tour={item.path === '/admin' ? 'dashboard' : item.path === '/admin/pedidos' ? 'orders' : item.path === '/admin/catalogo' ? 'products' : item.path === '/admin/marketing' ? 'marketing' : item.path === '/admin/financeiro' ? 'finance' : undefined}
                 to={item.path}
                 onClick={() => setSidebarOpen(false)}
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
@@ -90,6 +92,7 @@ export default function AdminLayout() {
         </main>
       </div>
       <NewOrderNotifier />
+      <ManagerOnboarding onTourVisibilityChange={setSidebarOpen} />
     </div>
   );
 }
