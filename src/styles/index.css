@@ -216,6 +216,10 @@
 [data-peddi-sidepanel] { max-height: 100dvh; overflow-y: auto; overscroll-behavior: contain; padding-bottom: max(24px, env(safe-area-inset-bottom)); }
 .peddi-modal-header { position: sticky; top: 0; z-index: 2; background: white; }
 .peddi-modal-footer { position: sticky; bottom: 0; z-index: 2; background: white; box-shadow: 0 -4px 16px #11111105; }
+[data-peddi-modal="product"] { padding: 0; overflow: hidden; }
+[data-peddi-modal="product"] > .peddi-product-form { max-height: 100dvh; overflow: hidden; border-radius: 0; }
+.peddi-product-tabs { scrollbar-width: thin; scrollbar-color: hsl(var(--border)) transparent; }
+.peddi-product-form-content { overscroll-behavior: contain; scrollbar-width: thin; }
 [data-peddi-modal] button[type=submit] { min-height: 44px; }
 body:has([data-peddi-modal], [data-peddi-dialog]) [data-peddi-preview-toggle] { display: none; }
 
@@ -229,8 +233,9 @@ body:has([data-peddi-modal], [data-peddi-dialog]) [data-peddi-preview-toggle] { 
   [data-peddi-modal] > :first-child { margin-top: 0; margin-bottom: 0; padding-left: 16px; padding-right: 16px; }
   [data-peddi-dialog] { padding: 20px 16px; }
   .peddi-modal-header, .peddi-modal-footer { padding-left: 0; padding-right: 0; }
-  .peddi-product-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); padding-left: 0; padding-right: 0; gap: 0; }
-  .peddi-product-tabs button { padding: 10px 4px; font-size: 12px; min-height: 44px; }
+  .peddi-product-tabs { display: flex; padding-left: 12px; padding-right: 12px; gap: 4px; }
+  .peddi-product-tabs button { padding: 10px 12px; font-size: 12px; min-height: 44px; }
+  .peddi-product-form-content .grid-cols-2 { grid-template-columns: minmax(0, 1fr); }
   [data-peddi-modal] :is(.grid, .flex) > :is(div, form, section) { min-width: 0; }
   [data-peddi-modal] :is(button, label, p) { overflow-wrap: anywhere; }
 }

@@ -39,6 +39,18 @@ export default function ProductForm({ product, categories, onClose, onSave }) {
   const [ingredientError, setIngredientError] = useState('');
   const [sessionExpired, setSessionExpired] = useState(false);
   const [uploadingImg, setUploadingImg] = useState(false);
+  const activeTabIndex = TABS.findIndex(item => item.id === tab);
+
+  useEffect(() => {
+    const priorOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const handleKeyDown = event => { if (event.key === 'Escape' && !saving && !uploadingImg) onClose(); };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.style.overflow = priorOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [onClose, saving, uploadingImg]);
 
   const [form, setForm] = useState(() => {
     const draft = sessionStorage.getItem('peddi_product_draft');
@@ -233,33 +245,44 @@ export default function ProductForm({ product, categories, onClose, onSave }) {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      data-peddi-modal="" className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 backdrop-blur-sm overflow-y-auto py-6 px-4"
+      data-peddi-modal="product" className="fixed inset-0 z-50 flex items-stretch justify-center bg-black/50 backdrop-blur-sm sm:items-center sm:p-4"
     >
       <motion.div
         initial={{ y: 30, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         exit={{ y: 30, opacity: 0 }}
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl border border-gray-100"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="product-form-title"
+        className="peddi-product-form flex h-[100dvh] w-full flex-col overflow-hidden bg-white shadow-2xl sm:h-[min(900px,calc(100dvh-32px))] sm:max-w-4xl sm:rounded-3xl sm:border sm:border-gray-100"
       >
         {/* Header */}
-        <div className="peddi-modal-header flex items-center justify-between px-6 py-4 border-b border-gray-100">
-          <div>
-            <h2 className="font-heading font-bold text-lg text-gray-900">{product ? 'Editar Produto' : 'Novo Produto'}</h2>
-            <p className="text-xs text-gray-400 mt-0.5">Preencha todas as informações do produto</p>
+        <div className="peddi-modal-header flex flex-shrink-0 items-center justify-between gap-3 border-b border-gray-100 px-4 py-3 sm:px-6 sm:py-4">
+          <div className="min-w-0">
+            <h2 id="product-form-title" className="truncate font-heading text-lg font-bold text-gray-900 sm:text-xl">{product ? 'Editar Produto' : 'Novo Produto'}</h2>
+            <p className="mt-0.5 truncate text-xs text-gray-500">{product?.name || 'Cadastre as informações para publicar no cardápio'}</p>
           </div>
-          <button aria-label="Fechar cadastro de produto" onClick={onClose} className="p-3 hover:bg-gray-100 rounded-xl transition-colors">
-            <X size={18} className="text-gray-500" />
-          </button>
+          <div className="flex flex-shrink-0 items-center gap-2">
+            <span className="hidden rounded-full bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary sm:inline">Etapa {activeTabIndex + 1} de {TABS.length}</span>
+            <button type="button" aria-label="Fechar cadastro de produto" onClick={onClose} className="flex h-11 w-11 items-center justify-center rounded-xl text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900">
+              <X size={20} />
+            </button>
+          </div>
         </div>
 
+        <div className="h-1 flex-shrink-0 bg-gray-100"><div className="h-full bg-primary transition-[width] duration-300" style={{ width: `${((activeTabIndex + 1) / TABS.length) * 100}%` }} /></div>
+
         {/* Tabs */}
-        <div className="peddi-product-tabs flex flex-wrap border-b border-gray-100 px-4 gap-1">
+        <div role="tablist" aria-label="Seções do produto" className="peddi-product-tabs flex flex-shrink-0 gap-1 overflow-x-auto border-b border-gray-100 px-3 sm:px-5">
           {TABS.map(t => (
             <button
               key={t.id}
               type="button"
+              role="tab"
+              aria-selected={tab === t.id}
+              aria-controls={`product-panel-${t.id}`}
               onClick={() => setTab(t.id)}
-              className={`flex-shrink-0 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+              className={`flex-shrink-0 whitespace-nowrap px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
                 tab === t.id
                   ? 'border-primary text-primary'
                   : 'border-transparent text-gray-500 hover:text-gray-800'
@@ -270,10 +293,10 @@ export default function ProductForm({ product, categories, onClose, onSave }) {
           ))}
         </div>
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
           {error && <p role="alert" className="px-6 pt-4 text-sm text-red-600">{error}</p>}
           {sessionExpired && <a href="/login?returnTo=/admin/catalogo" className="block px-6 py-2 text-sm text-primary underline">Entrar novamente e recuperar este cadastro</a>}
-          <div className="p-6 space-y-5 max-h-[60vh] overflow-y-auto">
+          <div id={`product-panel-${tab}`} role="tabpanel" className="peddi-product-form-content min-h-0 flex-1 space-y-5 overflow-y-auto p-4 sm:p-6">
 
             {/* ── TAB: Informações ── */}
             {tab === 'basic' && (
@@ -748,11 +771,11 @@ export default function ProductForm({ product, categories, onClose, onSave }) {
           </div>
 
           {/* Footer */}
-          <div className="peddi-modal-footer flex gap-3 px-6 py-4 border-t border-gray-100">
-            <button type="button" onClick={onClose} className="flex-1 py-2.5 rounded-xl text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors">
+          <div className="peddi-modal-footer flex flex-shrink-0 gap-3 border-t border-gray-100 px-4 py-3 sm:px-6 sm:py-4">
+            <button type="button" onClick={onClose} className="min-h-12 flex-1 rounded-xl bg-gray-100 px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-200 sm:flex-none">
               Cancelar
             </button>
-            <button type="submit" disabled={saving || uploadingImg} className="flex-1 py-2.5 rounded-xl text-sm font-bold bg-primary text-white hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
+            <button type="submit" disabled={saving || uploadingImg} className="flex min-h-12 flex-[1.5] items-center justify-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-white transition-colors hover:bg-primary/90 disabled:opacity-50 sm:ml-auto sm:flex-none">
               {saving && <Loader2 size={15} className="animate-spin" />}
               {saving ? 'Salvando...' : product ? 'Salvar alterações' : 'Criar produto'}
             </button>

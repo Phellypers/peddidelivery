@@ -3,6 +3,27 @@ import { productService, loadAdminCatalog } from '@/services/api/catalog';
 import { Plus, Search, MoreVertical, Edit, Trash2, Copy, Eye, EyeOff, Star, Loader2, Pause, Play, CheckSquare, Square, Grid2X2 } from 'lucide-react';
 import { AnimatePresence } from 'framer-motion';
 import ProductForm from '@/components/admin/ProductForm';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+
+function ProductActions({ product, onEdit, onDuplicate, onPause, onPublish, onDelete, compact = false }) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button aria-label={`Ações de ${product.name}`} className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-xl border border-transparent text-muted-foreground transition-colors hover:border-border hover:bg-accent hover:text-foreground">
+          <MoreVertical size={18} />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" collisionPadding={12} className="z-[100] w-52 rounded-xl p-1.5 shadow-xl">
+        <DropdownMenuItem onSelect={onEdit} className="min-h-11 cursor-pointer rounded-lg px-3"><Edit /> Editar produto</DropdownMenuItem>
+        <DropdownMenuItem onSelect={onDuplicate} className="min-h-11 cursor-pointer rounded-lg px-3"><Copy /> Duplicar</DropdownMenuItem>
+        <DropdownMenuItem onSelect={onPause} className="min-h-11 cursor-pointer rounded-lg px-3">{product.is_paused ? <><Play /> Reativar vendas</> : <><Pause /> Pausar vendas</>}</DropdownMenuItem>
+        {!compact && <DropdownMenuItem onSelect={onPublish} className="min-h-11 cursor-pointer rounded-lg px-3">{product.is_published ? <><EyeOff /> Ocultar da loja</> : <><Eye /> Publicar na loja</>}</DropdownMenuItem>}
+        <DropdownMenuItem onSelect={onDelete} className="min-h-11 cursor-pointer rounded-lg px-3 text-destructive focus:bg-destructive/10 focus:text-destructive"><Trash2 /> Excluir produto</DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
 
 export default function Catalog() {
   const [products, setProducts] = useState([]);
@@ -12,7 +33,7 @@ export default function Catalog() {
   const [filterCat, setFilterCat] = useState('');
   const [editingProduct, setEditingProduct] = useState(null);
   const [showForm, setShowForm] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(null);
+  const [deleteCandidate, setDeleteCandidate] = useState(null);
   const [selected, setSelected] = useState([]);
   const [error, setError] = useState('');
 
@@ -50,7 +71,6 @@ export default function Catalog() {
     setError('');
     try {
       await operation();
-      setMenuOpen(null);
       await loadData();
     } catch (err) {
       setError(err.message || 'Não foi possível atualizar o catálogo.');
@@ -133,20 +153,12 @@ export default function Catalog() {
                   <img src={product.images?.[0] || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=160'} alt="" className="h-24 w-24 flex-shrink-0 rounded-2xl object-cover" />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-start gap-2">
-                      <button onClick={() => { setEditingProduct(product); setShowForm(true); setMenuOpen(null); }} className="min-w-0 text-left text-base font-bold leading-5 text-foreground hover:text-primary">
+                      <button onClick={() => { setEditingProduct(product); setShowForm(true); }} className="min-w-0 text-left text-base font-bold leading-5 text-foreground hover:text-primary">
                         <span className="line-clamp-2">{product.name}</span>
                       </button>
                       {product.is_featured && <Star size={16} className="mt-0.5 flex-shrink-0 fill-amber-400 text-amber-400" />}
-                      <div className="relative ml-auto flex-shrink-0">
-                        <button aria-label={`Ações de ${product.name}`} onClick={() => setMenuOpen(menuOpen === product.id ? null : product.id)} className="-mr-2 -mt-2 rounded-lg p-2 hover:bg-accent"><MoreVertical size={18} /></button>
-                        {menuOpen === product.id && (
-                          <div className="absolute right-0 top-8 z-10 w-40 rounded-xl border border-border bg-card py-1 shadow-lg">
-                            <button onClick={() => { setEditingProduct(product); setShowForm(true); setMenuOpen(null); }} className="flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-accent"><Edit size={14} /> Editar</button>
-                            <button onClick={() => duplicateProduct(product)} className="flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-accent"><Copy size={14} /> Duplicar</button>
-                            <button onClick={() => togglePause(product)} className="flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-accent">{product.is_paused ? <><Play size={14} /> Reativar</> : <><Pause size={14} /> Pausar</>}</button>
-                            <button onClick={() => deleteProduct(product)} className="flex w-full items-center gap-2 px-3 py-2 text-sm text-destructive hover:bg-destructive/10"><Trash2 size={14} /> Excluir</button>
-                          </div>
-                        )}
+                      <div className="-mr-2 -mt-2 ml-auto flex-shrink-0">
+                        <ProductActions product={product} compact onEdit={() => { setEditingProduct(product); setShowForm(true); }} onDuplicate={() => duplicateProduct(product)} onPause={() => togglePause(product)} onPublish={() => togglePublish(product)} onDelete={() => setDeleteCandidate(product)} />
                       </div>
                     </div>
                     <p className="mt-1 line-clamp-2 text-sm leading-5 text-muted-foreground">{product.description || 'Sem descrição cadastrada.'}</p>
@@ -198,7 +210,7 @@ export default function Catalog() {
                         <div className="flex items-center gap-3">
                           <img src={product.images?.[0] || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=80'} alt={product.name} className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
                           <div className="min-w-0">
-                            <button onClick={() => { setEditingProduct(product); setShowForm(true); setMenuOpen(null); }} className="font-medium text-foreground truncate flex items-center gap-1 text-left hover:text-primary transition-colors">
+                            <button onClick={() => { setEditingProduct(product); setShowForm(true); }} className="font-medium text-foreground truncate flex items-center gap-1 text-left hover:text-primary transition-colors">
                               {product.name}
                               {product.is_featured && <Star size={12} className="fill-amber-400 text-amber-400 flex-shrink-0" />}
                               {product.is_paused && <span className="text-[9px] font-bold text-white bg-orange-500 rounded-full px-1.5 py-0.5 flex-shrink-0">PAUSADO</span>}
@@ -237,29 +249,9 @@ export default function Catalog() {
                         </button>
                       </td>
                       <td className="py-3 px-4 text-right">
-                        <div className="relative inline-block">
-                          <button onClick={() => setMenuOpen(menuOpen === product.id ? null : product.id)} className="p-2 hover:bg-accent rounded-lg transition-colors">
-                            <MoreVertical size={16} />
-                          </button>
-                          {menuOpen === product.id && (
-                            <div className="absolute right-0 top-full mt-1 w-40 bg-card rounded-xl shadow-lg border border-border py-1 z-10">
-                              <button onClick={() => { setEditingProduct(product); setShowForm(true); setMenuOpen(null); }} className="flex items-center gap-2 w-full px-3 py-2 text-sm hover:bg-accent transition-colors">
-                                <Edit size={14} /> Editar
-                              </button>
-                              <button onClick={() => duplicateProduct(product)} className="flex items-center gap-2 w-full px-3 py-2 text-sm hover:bg-accent transition-colors">
-                                <Copy size={14} /> Duplicar
-                              </button>
-                              <button onClick={() => togglePause(product)} className="flex items-center gap-2 w-full px-3 py-2 text-sm hover:bg-accent transition-colors">
-                                {product.is_paused ? <><Play size={14} /> Reativar</> : <><Pause size={14} /> Pausar</>}
-                              </button>
-                              <button onClick={() => togglePublish(product)} className="flex items-center gap-2 w-full px-3 py-2 text-sm hover:bg-accent transition-colors">
-                                {product.is_published ? <><EyeOff size={14} /> Despublicar</> : <><Eye size={14} /> Publicar</>}
-                              </button>
-                              <button onClick={() => deleteProduct(product)} className="flex items-center gap-2 w-full px-3 py-2 text-sm text-destructive hover:bg-destructive/10 transition-colors">
-                                <Trash2 size={14} /> Excluir
-                              </button>
-                            </div>
-                          )}
+                        <div className="inline-flex items-center gap-1">
+                          <button onClick={() => { setEditingProduct(product); setShowForm(true); }} className="inline-flex min-h-10 items-center gap-2 rounded-xl px-3 text-sm font-semibold text-primary transition-colors hover:bg-primary/10"><Edit size={15} /> Editar</button>
+                          <ProductActions product={product} onEdit={() => { setEditingProduct(product); setShowForm(true); }} onDuplicate={() => duplicateProduct(product)} onPause={() => togglePause(product)} onPublish={() => togglePublish(product)} onDelete={() => setDeleteCandidate(product)} />
                         </div>
                       </td>
                     </tr>
@@ -284,6 +276,19 @@ export default function Catalog() {
           />
         )}
       </AnimatePresence>
+
+      <AlertDialog open={Boolean(deleteCandidate)} onOpenChange={open => { if (!open) setDeleteCandidate(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir produto?</AlertDialogTitle>
+            <AlertDialogDescription>“{deleteCandidate?.name}” será removido do catálogo. Esta ação não pode ser desfeita.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Manter produto</AlertDialogCancel>
+            <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={() => { const product = deleteCandidate; setDeleteCandidate(null); deleteProduct(product); }}>Excluir produto</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
