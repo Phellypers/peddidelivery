@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
-import { Link } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Search as SearchIcon } from 'lucide-react';
 import ProductCard from '@/components/storefront/ProductCard';
 import CartDrawer from '@/components/storefront/CartDrawer';
 import BottomNav from '@/components/storefront/BottomNav';
 
 export default function Search() {
+  const location = useLocation();
+  const navigate = useNavigate();
   const [query, setQuery] = useState('');
   const [products, setProducts] = useState([]);
   const [allProducts, setAllProducts] = useState([]);
@@ -25,14 +27,19 @@ export default function Search() {
     ));
   }, [query, allProducts]);
 
+  const goBackToStore = () => {
+    if (location.state?.from === '/loja') navigate(-1);
+    else navigate('/loja', { replace: true });
+  };
+
   return (
     <div className="min-h-screen bg-background pb-20">
       <CartDrawer />
       <div className="sticky top-0 z-30 bg-card/95 backdrop-blur-md border-b border-border">
         <div className="max-w-5xl mx-auto px-4 flex items-center h-14 gap-3">
-          <Link to="/" className="p-2 -ml-2 hover:bg-accent rounded-full transition-colors">
+          <button type="button" aria-label="Voltar ao cardápio" onClick={goBackToStore} className="p-2 -ml-2 hover:bg-accent rounded-full transition-colors">
             <ArrowLeft size={20} />
-          </Link>
+          </button>
           <div className="relative flex-1">
             <SearchIcon size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
             <input

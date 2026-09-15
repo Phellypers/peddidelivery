@@ -23,7 +23,10 @@ export default function BottomNav() {
           const isActive = item.path && location.pathname === item.path;
           const Icon = item.icon;
           const Wrapper = item.action ? 'button' : Link;
-          const props = item.action ? { onClick: item.action } : { to: item.path };
+          const props = item.action ? { onClick: item.action } : {
+            to: item.path,
+            ...(item.path === '/buscar' ? { state: { from: location.pathname } } : {}),
+          };
 
           return (
             <Wrapper
