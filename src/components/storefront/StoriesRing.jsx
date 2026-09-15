@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Plus, Upload, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { base44 } from '@/api/base44Client';
+import { createPortal } from 'react-dom';
 
 const STORY_DURATION_MS = 24 * 60 * 60 * 1000;
 
@@ -63,6 +64,8 @@ function StoryViewer({ stories, startIndex, onClose }) {
 // Admin story uploader — accepts photo or video
 function StoryUploader({ stories, onSave, onClose }) {
   const [uploading, setUploading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
   const [text, setText] = useState('');
   const [mediaUrl, setMediaUrl] = useState('');
   const [mediaType, setMediaType] = useState('');
@@ -70,75 +73,110 @@ function StoryUploader({ stories, onSave, onClose }) {
   const handleUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    setError('');
     setUploading(true);
-    const { file_url } = await base44.integrations.Core.UploadFile({ file });
-    setMediaUrl(file_url);
-    setMediaType(file.type.startsWith('video/') ? 'video' : 'image');
-    setUploading(false);
+    try {
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      setMediaUrl(file_url);
+      setMediaType(file.type.startsWith('video/') ? 'video' : 'image');
+    } catch (uploadError) {
+      setError(uploadError instanceof Error ? uploadError.message : 'Não foi possível enviar o arquivo.');
+    } finally {
+      setUploading(false);
+    }
   };
 
   const handleAdd = async () => {
-    if (!mediaUrl) return;
+    if (!mediaUrl || saving) return;
+    setError('');
+    setSaving(true);
     const newStory = {
       image_url: mediaType === 'image' ? mediaUrl : '',
       video_url: mediaType === 'video' ? mediaUrl : '',
       text,
       created_at: new Date().toISOString(),
     };
-    onSave([...stories, newStory]);
-    onClose();
+    try {
+      await onSave([...stories, newStory]);
+      onClose();
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : 'Não foi possível publicar o story.');
+    } finally {
+      setSaving(false);
+    }
   };
 
-  return (
+  useEffect(() => {
+    const priorOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const handleKeyDown = event => { if (event.key === 'Escape' && !uploading && !saving) onClose(); };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.style.overflow = priorOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [onClose, saving, uploading]);
+
+  return createPortal(
     <motion.div
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[60] bg-black/60 flex items-end justify-center"
-      onClick={onClose}
+      data-peddi-story-modal=""
+      className="peddi-story-modal fixed left-0 right-0 top-0 z-[100] flex items-end justify-center overflow-hidden bg-black/60 p-3 backdrop-blur-sm sm:items-center sm:p-5"
+      onClick={() => { if (!uploading && !saving) onClose(); }}
     >
       <motion.div
-        initial={{ y: 100 }} animate={{ y: 0 }} exit={{ y: 100 }}
+        initial={{ y: 24 }} animate={{ y: 0 }} exit={{ y: 24 }}
         onClick={e => e.stopPropagation()}
-        className="bg-white w-full max-w-sm rounded-t-3xl p-5 space-y-4"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="new-story-title"
+        className="peddi-story-panel flex w-full max-w-md flex-col overflow-hidden rounded-3xl bg-white shadow-2xl"
       >
-        <div className="flex items-center justify-between">
-          <h3 className="font-heading font-bold text-gray-900">Novo Story</h3>
-          <button onClick={onClose}><X size={18} className="text-gray-400" /></button>
+        <div className="flex flex-shrink-0 items-center justify-between border-b border-gray-100 px-5 py-4">
+          <div>
+            <h3 id="new-story-title" className="font-heading font-bold text-gray-900">Novo Story</h3>
+            <p className="mt-0.5 text-xs text-gray-500">Compartilhe uma foto ou vídeo por 24 horas</p>
+          </div>
+          <button type="button" aria-label="Fechar novo story" onClick={onClose} disabled={uploading || saving} className="flex h-11 w-11 items-center justify-center rounded-xl text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 disabled:opacity-40"><X size={20} /></button>
         </div>
 
-        <div className="h-40 bg-gray-100 rounded-2xl overflow-hidden relative">
-          {mediaUrl
-            ? (mediaType === 'video'
-                ? <video src={mediaUrl} className="w-full h-full object-cover" muted playsInline autoPlay loop />
-                : <img src={mediaUrl} alt="" className="w-full h-full object-cover" />)
-            : <label className="w-full h-full flex flex-col items-center justify-center cursor-pointer gap-2 text-gray-400">
-                {uploading
-                  ? <Loader2 size={28} className="animate-spin text-primary" />
-                  : <><Upload size={28} /><span className="text-sm">Foto ou vídeo</span></>
-                }
-                <input type="file" accept="image/*,video/*" className="hidden" onChange={handleUpload} disabled={uploading} />
-              </label>
-          }
-          {mediaUrl && (
-            <button onClick={() => { setMediaUrl(''); setMediaType(''); }} className="absolute top-2 right-2 bg-black/50 text-white rounded-full p-1"><X size={14} /></button>
-          )}
-        </div>
+        <form onSubmit={event => { event.preventDefault(); handleAdd(); }} className="flex min-h-0 flex-1 flex-col">
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-5 py-4">
+            <div className="peddi-story-media relative overflow-hidden rounded-2xl bg-gray-100">
+              {mediaUrl
+                ? (mediaType === 'video'
+                    ? <video src={mediaUrl} className="h-full w-full object-cover" muted playsInline autoPlay loop />
+                    : <img src={mediaUrl} alt="Prévia do story" className="h-full w-full object-cover" />)
+                : <label className="flex h-full w-full cursor-pointer flex-col items-center justify-center gap-2 text-gray-400 transition-colors hover:bg-gray-200/60 hover:text-primary">
+                    {uploading
+                      ? <><Loader2 size={28} className="animate-spin text-primary" /><span className="text-sm">Enviando arquivo...</span></>
+                      : <><Upload size={28} /><span className="text-sm font-medium">Foto ou vídeo</span><span className="text-xs">Toque para escolher</span></>
+                    }
+                    <input type="file" accept="image/*,video/*" className="hidden" onChange={handleUpload} disabled={uploading || saving} />
+                  </label>
+              }
+              {mediaUrl && <button type="button" aria-label="Remover mídia" onClick={() => { setMediaUrl(''); setMediaType(''); }} className="absolute right-2 top-2 flex h-10 w-10 items-center justify-center rounded-full bg-black/60 text-white"><X size={17} /></button>}
+            </div>
 
-        <input
-          value={text}
-          onChange={e => setText(e.target.value)}
-          placeholder="Texto do story (opcional)"
-          className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-        />
+            <label className="block">
+              <span className="mb-1.5 block text-xs font-semibold text-gray-600">Texto do story <span className="font-normal text-gray-400">(opcional)</span></span>
+              <textarea value={text} onChange={e => setText(e.target.value)} rows={2} maxLength={180} placeholder="Escreva uma mensagem para seus clientes" className="min-h-20 w-full resize-none rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-primary/30" />
+              <span className="mt-1 block text-right text-[11px] text-gray-400">{text.length}/180</span>
+            </label>
+            {error && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
+          </div>
 
-        <button
-          onClick={handleAdd}
-          disabled={!mediaUrl}
-          className="w-full py-3 bg-primary text-white rounded-xl font-bold text-sm disabled:opacity-40"
-        >
-          Publicar Story
-        </button>
+          <div className="flex-shrink-0 border-t border-gray-100 bg-white px-5 py-4">
+            <button type="submit" disabled={!mediaUrl || uploading || saving} className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-40">
+              {saving && <Loader2 size={18} className="animate-spin" />}
+              {saving ? 'Publicando...' : 'Publicar Story'}
+            </button>
+            {!mediaUrl && <p className="mt-2 text-center text-xs text-gray-400">Adicione uma foto ou vídeo para publicar</p>}
+          </div>
+        </form>
       </motion.div>
-    </motion.div>
+    </motion.div>,
+    document.body,
   );
 }
 
@@ -200,6 +238,8 @@ export default function StoriesRing({ store, isAdmin, onUpdateStore }) {
         {/* Admin: add story button */}
         {isAdmin && (
           <button
+            type="button"
+            aria-label="Criar novo story"
             onClick={() => setUploaderOpen(true)}
             className="absolute -bottom-1 -right-1 w-7 h-7 bg-primary text-white rounded-full flex items-center justify-center shadow-lg border-2 border-white"
           >

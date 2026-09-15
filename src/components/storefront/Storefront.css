@@ -66,6 +66,9 @@
 .peddi-storefront :is(button, a):focus-visible { outline: 2px solid var(--store-primary, #f97316); outline-offset: 3px; }
 .peddi-storefront .peddi-promo-strip { border-color: color-mix(in srgb, var(--store-primary, #f97316), transparent 78%); background: color-mix(in srgb, var(--store-primary, #f97316), white 91%); }
 .peddi-storefront .peddi-promo-strip :is(svg, span) { color: var(--store-primary, #f97316); }
+.peddi-story-modal { bottom: calc(74px + env(safe-area-inset-bottom)); }
+.peddi-story-panel { max-height: calc(100dvh - 94px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); }
+.peddi-story-media { height: clamp(120px, 28dvh, 190px); }
 @media (min-width: 540px) {
   .peddi-store-orange { height: 200px; padding: 28px; }
   .peddi-store-orange::after { top: 128px; }
