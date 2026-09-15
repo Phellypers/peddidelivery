@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Plus, Trash2, Upload, Loader2, ToggleLeft, ToggleRight, Link, Save } from 'lucide-react';
+import { ensureBannerIds, getBannerProductIds, withBannerProductIds } from '@/lib/bannerProducts';
 
 export default function Banners() {
   const [store, setStore] = useState(null);
@@ -17,7 +18,7 @@ export default function Banners() {
       const s = stores[0];
       setStore(s);
       setProducts(prods);
-      setBanners(s?.banners || []);
+      setBanners(ensureBannerIds(s?.banners || []));
     });
   }, []);
 
@@ -41,11 +42,21 @@ export default function Banners() {
   };
 
   const addBanner = () => {
-    setBanners(prev => [...prev, { image_url: '', title: '', product_id: '', is_active: true }]);
+    setBanners(prev => [...prev, { id: crypto.randomUUID(), image_url: '', title: '', product_id: '', product_ids: [], is_active: true }]);
   };
 
   const update = (index, key, val) => {
     setBanners(prev => prev.map((b, i) => i === index ? { ...b, [key]: val } : b));
+  };
+
+  const toggleProduct = (index, productId) => {
+    setBanners(prev => prev.map((banner, i) => {
+      if (i !== index) return banner;
+      const linked = getBannerProductIds(banner);
+      return withBannerProductIds(banner, linked.includes(productId)
+        ? linked.filter(id => id !== productId)
+        : [...linked, productId]);
+    }));
   };
 
   const remove = (index) => {
@@ -130,17 +141,23 @@ export default function Banners() {
               className="w-full px-3 py-2.5 bg-muted rounded-xl text-sm border-0 focus:outline-none focus:ring-2 focus:ring-primary/20"
             />
 
-            {/* Product link */}
+            {/* Product links */}
             <div>
-              <label className="text-xs text-muted-foreground mb-1 block flex items-center gap-1"><Link size={11} /> Produto vinculado (ao clicar no banner)</label>
-              <select
-                value={banner.product_id || ''}
-                onChange={e => update(index, 'product_id', e.target.value)}
-                className="w-full px-3 py-2.5 bg-muted rounded-xl text-sm border-0 focus:outline-none focus:ring-2 focus:ring-primary/20"
-              >
-                <option value="">— Sem produto vinculado —</option>
-                {products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-              </select>
+              <label className="mb-2 flex items-center gap-1 text-xs text-muted-foreground"><Link size={11} /> Produtos da campanha</label>
+              <p className="mb-3 text-xs text-muted-foreground">Ao clicar neste banner, o cliente verá todos os produtos selecionados.</p>
+              <div className="grid max-h-56 grid-cols-1 gap-2 overflow-y-auto rounded-xl border border-border/60 bg-muted/40 p-2 sm:grid-cols-2">
+                {products.map(product => {
+                  const selected = getBannerProductIds(banner).includes(product.id);
+                  return (
+                    <label key={product.id} className={`flex min-h-11 cursor-pointer items-center gap-3 rounded-lg border px-3 py-2 text-sm transition-colors ${selected ? 'border-primary bg-primary/10 text-foreground' : 'border-transparent bg-white text-muted-foreground hover:border-primary/30'}`}>
+                      <input type="checkbox" checked={selected} onChange={() => toggleProduct(index, product.id)} className="h-4 w-4 accent-primary" />
+                      <span className="min-w-0 truncate">{product.name}</span>
+                    </label>
+                  );
+                })}
+                {products.length === 0 && <p className="p-3 text-xs text-muted-foreground">Nenhum produto publicado disponível.</p>}
+              </div>
+              <p className="mt-2 text-xs font-medium text-primary">{getBannerProductIds(banner).length} produto(s) vinculado(s)</p>
             </div>
           </div>
         ))}

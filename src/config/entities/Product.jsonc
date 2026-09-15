@@ -32,6 +32,12 @@
         "type": "string"
       }
     },
+    "banner_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
     "badge_label": {
       "type": "string"
     },

@@ -4,6 +4,7 @@ import { productService, ingredientService } from '@/services/api/catalog';
 import { calculateRecipeItemCost, calculateRecipeCost, UNITS, UNIT_LABELS } from '@/lib/recipeCost';
 import { X, Plus, Trash2, Loader2, ImageIcon } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { ensureBannerIds, getBannerProductIds, withBannerProductIds } from '@/lib/bannerProducts';
 
 const TABS = [
   { id: 'basic', label: 'Informações' },
@@ -11,6 +12,7 @@ const TABS = [
   { id: 'images', label: 'Fotos' },
   { id: 'variations', label: 'Variações' },
   { id: 'addons', label: 'Complementos' },
+  { id: 'campaigns', label: 'Campanhas' },
   { id: 'availability', label: 'Disponibilidade' },
   { id: 'custom_fields', label: 'Campos extras' },
   { id: 'recipe', label: 'Ficha Técnica' },
@@ -82,6 +84,7 @@ export default function ProductForm({ product, categories, onClose, onSave }) {
     // Addons
     addons: product?.addons || [],
     // Stock / extras
+    banner_ids: product?.banner_ids || [],
     stock: product?.stock ?? 999,
     sku: product?.sku || '',
     prep_time_min: product?.prep_time_min || '',
@@ -101,6 +104,24 @@ export default function ProductForm({ product, categories, onClose, onSave }) {
     recipe: product?.recipe || [],
     };
   });
+
+  const [campaignStore, setCampaignStore] = useState(null);
+  const [campaignBanners, setCampaignBanners] = useState([]);
+  useEffect(() => {
+    base44.entities.Store.list().then(stores => {
+      const currentStore = stores[0];
+      if (!currentStore) return;
+      const normalized = ensureBannerIds(currentStore.banners || []);
+      setCampaignStore({ ...currentStore, banners: normalized });
+      setCampaignBanners(normalized.filter(banner => banner.is_active));
+      if (product?.id) {
+        const linkedIds = normalized
+          .filter(banner => banner.is_active && getBannerProductIds(banner).includes(product.id))
+          .map(banner => banner.id);
+        setForm(previous => ({ ...previous, banner_ids: linkedIds }));
+      }
+    }).catch(() => setCampaignBanners([]));
+  }, [product?.id]);
 
   const set = (field, value) => setForm(p => ({ ...p, [field]: value }));
   const availabilityByDay = form.availability_by_day || Object.fromEntries(WEEK_DAYS.map(day => [day.id, {
@@ -219,10 +240,23 @@ export default function ProductForm({ product, categories, onClose, onSave }) {
       availability_by_day: availabilityByDay,
       custom_fields: form.custom_fields,
     };
+    let savedProduct;
     if (product) {
-      await productService.update(product.id, data);
+      savedProduct = await productService.update(product.id, data);
     } else {
-      await productService.create(data);
+      savedProduct = await productService.create(data);
+    }
+    if (campaignStore && savedProduct?.id) {
+      const selected = new Set(form.banner_ids || []);
+      const updatedBanners = campaignStore.banners.map(banner => {
+        if (!banner.is_active) return banner;
+        const linked = getBannerProductIds(banner);
+        const next = selected.has(banner.id)
+          ? [...linked, savedProduct.id]
+          : linked.filter(id => id !== savedProduct.id);
+        return withBannerProductIds(banner, next);
+      });
+      await base44.entities.Store.update(campaignStore.id, { banners: updatedBanners });
     }
     sessionStorage.removeItem('peddi_product_draft');
     await onSave();
@@ -597,6 +631,44 @@ export default function ProductForm({ product, categories, onClose, onSave }) {
                 {form.addons.length > 0 && (
                   <p className="text-xs text-gray-400 text-center">{form.addons.length} complemento(s) cadastrado(s)</p>
                 )}
+              </div>
+            )}
+
+            {/* ── TAB: Campanhas ── */}
+            {tab === 'campaigns' && (
+              <div className="space-y-4">
+                <div>
+                  <h3 className="font-heading text-base font-bold text-gray-900">Banners promocionais</h3>
+                  <p className="mt-1 text-sm text-gray-500">Selecione as campanhas ativas nas quais este produto deve aparecer.</p>
+                </div>
+                <div className="space-y-2">
+                  {campaignBanners.map(banner => {
+                    const selected = form.banner_ids?.includes(banner.id);
+                    return (
+                      <label key={banner.id} className={`flex min-h-14 cursor-pointer items-center gap-3 rounded-xl border p-3 transition-colors ${selected ? 'border-primary bg-primary/10' : 'border-gray-200 bg-white hover:border-primary/40'}`}>
+                        <input
+                          type="checkbox"
+                          checked={selected}
+                          onChange={() => set('banner_ids', selected
+                            ? form.banner_ids.filter(id => id !== banner.id)
+                            : [...(form.banner_ids || []), banner.id])}
+                          className="h-5 w-5 flex-shrink-0 accent-primary"
+                        />
+                        {banner.image_url && <img src={banner.image_url} alt="" className="h-11 w-20 flex-shrink-0 rounded-lg object-cover" />}
+                        <span className="min-w-0">
+                          <span className="block truncate text-sm font-semibold text-gray-900">{banner.title || 'Banner sem título'}</span>
+                          <span className="block text-xs text-gray-500">Campanha ativa</span>
+                        </span>
+                      </label>
+                    );
+                  })}
+                  {campaignBanners.length === 0 && (
+                    <div className="rounded-xl border border-dashed border-gray-300 px-4 py-8 text-center">
+                      <p className="text-sm font-medium text-gray-700">Nenhum banner promocional ativo</p>
+                      <p className="mt-1 text-xs text-gray-500">Crie ou ative um banner na área Banners para vinculá-lo ao produto.</p>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 

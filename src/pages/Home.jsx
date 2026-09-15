@@ -21,6 +21,7 @@ import { loadPublicCatalog } from '@/services/api/peddiApi';
 import BottomNav from '@/components/storefront/BottomNav';
 import '@/components/storefront/Storefront.css';
 import { getStoreTheme } from '@/lib/storeTheme';
+import { getBannerProductIds } from '@/lib/bannerProducts';
 
 const CAT_BADGE_COLORS = {
   red: 'bg-red-500', green: 'bg-green-500', orange: 'bg-orange-500',
@@ -42,6 +43,7 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState('');
   const [chatOpen, setChatOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [activeBanner, setActiveBanner] = useState(null);
 
   const { user } = useAuth();
   const isAdmin = ['admin','manager','peddi_admin'].includes(user?.role);
@@ -71,6 +73,9 @@ export default function Home() {
       result = products.filter(p => p.promo_price && p.promo_price < p.price);
     } else if (activeCategory === '__featured__') {
       result = products.filter(p => p.is_featured);
+    } else if (activeBanner) {
+      const linkedIds = new Set(getBannerProductIds(activeBanner));
+      result = products.filter(product => linkedIds.has(product.id));
     } else if (activeCategory) {
       result = result.filter(p => p.category_ids?.includes(activeCategory));
     }
@@ -84,7 +89,7 @@ export default function Home() {
       );
     }
     return result;
-  }, [products, activeCategory, searchQuery]);
+  }, [products, activeCategory, activeBanner, searchQuery]);
 
   if (loading) {
     return (
@@ -98,10 +103,24 @@ export default function Home() {
   const theme = getStoreTheme(store);
 
   const getSectionLabel = () => {
+    if (activeBanner) return activeBanner.title || 'Campanha promocional';
     if (activeCategory && SPECIAL_SECTIONS[activeCategory]) return SPECIAL_SECTIONS[activeCategory];
     if (activeCategory) return categories.find(c => c.id === activeCategory)?.name || '';
     if (searchQuery) return `Resultados para "${searchQuery}"`;
     return 'Todos os Produtos';
+  };
+
+  const showBannerCampaign = banner => {
+    setActiveBanner(banner);
+    setActiveCategory(null);
+    setSearchQuery('');
+    window.requestAnimationFrame(() => document.getElementById('cardapio-produtos')?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+  };
+
+  const clearProductFilter = () => {
+    setActiveBanner(null);
+    setActiveCategory(null);
+    setSearchQuery('');
   };
 
   return (
@@ -152,10 +171,10 @@ export default function Home() {
 
         <div className="peddi-store-categories overflow-x-auto scrollbar-hide">
           <div className="flex gap-3 px-4 py-4">
-            <button type="button" aria-pressed={!activeCategory} onClick={() => setActiveCategory(null)} className={`peddi-store-category ${!activeCategory ? 'active' : ''}`}>
+            <button type="button" aria-pressed={!activeCategory && !activeBanner} onClick={clearProductFilter} className={`peddi-store-category ${!activeCategory && !activeBanner ? 'active' : ''}`}>
               <span className="peddi-store-category-image">{store?.logo_url ? <img src={store.logo_url} alt="" /> : <House size={32} />}</span><span>Todos</span>
             </button>
-            {featuredCats.map(cat => <button type="button" key={cat.id} aria-pressed={activeCategory === cat.id} onClick={() => setActiveCategory(activeCategory === cat.id ? null : cat.id)} className={`peddi-store-category ${activeCategory === cat.id ? 'active' : ''}`}>
+            {featuredCats.map(cat => <button type="button" key={cat.id} aria-pressed={activeCategory === cat.id} onClick={() => { setActiveBanner(null); setActiveCategory(activeCategory === cat.id ? null : cat.id); }} className={`peddi-store-category ${activeCategory === cat.id ? 'active' : ''}`}>
               <span className="peddi-store-category-image">{cat.image_url ? <img src={cat.image_url} alt="" /> : <span className="text-3xl">{cat.icon || <House size={28} />}</span>}</span>
               {cat.badge_label && <span className={`peddi-store-category-badge ${CAT_BADGE_COLORS[cat.badge_color] || CAT_BADGE_COLORS.orange}`}>{cat.badge_label}</span>}
               <span>{cat.name}</span>
@@ -171,7 +190,7 @@ export default function Home() {
         {!searchQuery && !activeCategory && (
           <div className="border-b border-gray-100 px-3 py-3">
             <div className="rounded-2xl overflow-hidden">
-              <PromoBannerCarousel banners={store?.banners} />
+              <PromoBannerCarousel banners={store?.banners} onSelectBanner={showBannerCampaign} />
             </div>
           </div>
         )}
@@ -180,7 +199,7 @@ export default function Home() {
         <div id="cardapio-produtos" className="flex items-center justify-between px-4 pt-4 pb-2">
           <h2 className="font-heading font-bold text-base text-gray-900">{getSectionLabel()}</h2>
           {(
-            <button onClick={() => { setActiveCategory(null); setSearchQuery(''); }} className="text-xs text-primary font-medium">
+            <button onClick={clearProductFilter} className="text-xs text-primary font-medium">
               Ver todos
             </button>
           )}

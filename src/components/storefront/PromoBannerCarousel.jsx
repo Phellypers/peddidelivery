@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { getBannerProductIds } from '@/lib/bannerProducts';
 
 // Default banners shown when no store banners configured
 const DEFAULT_BANNERS = [
@@ -31,13 +31,12 @@ const DEFAULT_BANNERS = [
   },
 ];
 
-export default function PromoBannerCarousel({ banners }) {
+export default function PromoBannerCarousel({ banners, onSelectBanner }) {
   // Use store banners (active only) if available, otherwise fall back to defaults
   const activeBanners = banners?.filter(b => b.is_active && b.image_url);
   const slides = (activeBanners && activeBanners.length > 0) ? activeBanners : DEFAULT_BANNERS;
   const [current, setCurrent] = useState(0);
   const timerRef = useRef(null);
-  const navigate = useNavigate();
 
   const next = () => setCurrent(c => (c + 1) % slides.length);
   const prev = () => setCurrent(c => (c - 1 + slides.length) % slides.length);
@@ -52,6 +51,10 @@ export default function PromoBannerCarousel({ banners }) {
     timerRef.current = setInterval(next, 4000);
   };
 
+  const selectCurrentBanner = () => {
+    if (getBannerProductIds(slides[current]).length) onSelectBanner?.(slides[current], current);
+  };
+
   return (
     <div className="peddi-banner-carousel relative w-full overflow-hidden rounded-none" style={{ aspectRatio: '16/7' }}>
       <AnimatePresence mode="wait">
@@ -61,13 +64,13 @@ export default function PromoBannerCarousel({ banners }) {
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: -60 }}
           transition={{ duration: 0.35 }}
-          className="absolute inset-0"
+          className={`absolute inset-0 ${getBannerProductIds(slides[current]).length ? 'cursor-pointer' : ''}`}
+          onClick={selectCurrentBanner}
         >
           <img
             src={slides[current].image_url || slides[current].image}
             alt={slides[current].title || ''}
-            className={`w-full h-full object-cover ${slides[current].product_id ? 'cursor-pointer' : ''}`}
-            onClick={() => slides[current].product_id && navigate(`/item/${slides[current].product_id}`)}
+            className="h-full w-full object-cover"
           />
           <div className={`peddi-banner-shade absolute inset-0 bg-gradient-to-r ${slides[current].color || 'from-black/60'} to-transparent`} />
           <div className="peddi-banner-copy absolute bottom-0 left-0 p-4">
@@ -80,8 +83,8 @@ export default function PromoBannerCarousel({ banners }) {
             {slides[current].subtitle && (
               <p className="text-white/90 text-xs mt-0.5">{slides[current].subtitle}</p>
             )}
-            {slides[current].product_id && <button type="button" onClick={() => navigate(`/item/${slides[current].product_id}`)} className="peddi-banner-cta">Peça já!</button>}
-            {!slides[current].product_id && <a href="#cardapio-produtos" className="peddi-banner-cta inline-block">Peça já!</a>}
+            {getBannerProductIds(slides[current]).length > 0 && <button type="button" className="peddi-banner-cta">Ver campanha</button>}
+            {getBannerProductIds(slides[current]).length === 0 && <a href="#cardapio-produtos" className="peddi-banner-cta inline-block">Peça já!</a>}
           </div>
         </motion.div>
       </AnimatePresence>
