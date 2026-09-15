@@ -20,6 +20,7 @@ import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { loadPublicCatalog } from '@/services/api/peddiApi';
 import BottomNav from '@/components/storefront/BottomNav';
 import '@/components/storefront/Storefront.css';
+import { getStoreTheme } from '@/lib/storeTheme';
 
 const CAT_BADGE_COLORS = {
   red: 'bg-red-500', green: 'bg-green-500', orange: 'bg-orange-500',
@@ -94,6 +95,7 @@ export default function Home() {
   }
 
   const featuredCats = categories.filter(c => c.is_featured && c.is_active);
+  const theme = getStoreTheme(store);
 
   const getSectionLabel = () => {
     if (activeCategory && SPECIAL_SECTIONS[activeCategory]) return SPECIAL_SECTIONS[activeCategory];
@@ -103,11 +105,14 @@ export default function Home() {
   };
 
   return (
-    <div className="peddi-storefront min-h-screen bg-gray-50 pb-24" style={{
-      '--store-primary': store?.menu_theme?.primary_color || store?.primary_color || '#16A34A',
-      '--store-text': store?.menu_theme?.text_color || '#172033',
-      '--store-background': store?.menu_theme?.background_color || '#F6F8F7',
-      '--store-radius': store?.menu_theme?.radius || '18px',
+    <div className="peddi-storefront min-h-screen pb-24" style={{
+      '--store-primary': theme.primary,
+      '--store-on-primary': theme.onPrimary,
+      '--store-text': theme.text,
+      '--store-background': theme.background,
+      '--store-radius': theme.radius,
+      '--primary': theme.primaryHsl,
+      '--ring': theme.primaryHsl,
     }} {...bind}>
       {/* Pull-to-refresh indicator */}
       {(pullDistance > 0 || refreshing) && (

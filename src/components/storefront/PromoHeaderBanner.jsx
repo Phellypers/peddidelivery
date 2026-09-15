@@ -22,7 +22,7 @@ export default function PromoHeaderBanner() {
   const display = [...messages, ...messages];
 
   return (
-    <div className="bg-gradient-to-r from-primary/10 to-primary/5 border-b border-primary/20 py-2 overflow-hidden">
+    <div className="peddi-promo-strip border-b py-2 overflow-hidden">
       <div className="flex items-center gap-2 px-4">
         <Megaphone size={13} className="text-primary flex-shrink-0" />
         <div className="flex-1 overflow-hidden">

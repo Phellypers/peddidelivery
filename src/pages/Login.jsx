@@ -4,7 +4,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { LogIn, Mail, Lock, Loader2 } from "lucide-react";
+import { LogIn, Mail, Lock, Loader2, Eye, EyeOff } from "lucide-react";
 import AuthLayout from "@/components/AuthLayout";
 import GoogleIcon from "@/components/GoogleIcon";
 import { safeReturnTo } from "@/lib/authReturnTo";
@@ -15,6 +15,7 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -110,14 +111,25 @@ export default function Login() {
             <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden="true" />
             <Input
               id="password"
-              type="password"
+              type={showPassword ? "text" : "password"}
               autoComplete="current-password"
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="pl-10 h-12"
+              className="pl-10 pr-12 h-12"
               required
             />
+            <button
+              type="button"
+              aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+              aria-controls="password"
+              aria-pressed={showPassword}
+              title={showPassword ? "Ocultar senha" : "Mostrar senha"}
+              onClick={() => setShowPassword(current => !current)}
+              className="absolute right-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30"
+            >
+              {showPassword ? <EyeOff className="h-5 w-5" aria-hidden="true" /> : <Eye className="h-5 w-5" aria-hidden="true" />}
+            </button>
           </div>
         </div>
         <Button type="submit" className="w-full h-12 font-medium" disabled={loading}>

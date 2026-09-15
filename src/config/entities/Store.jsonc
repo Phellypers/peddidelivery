@@ -91,6 +91,31 @@
       "type": "string",
       "default": "#0F172A"
     },
+    "menu_theme": {
+      "type": "object",
+      "properties": {
+        "primary_color": {
+          "type": "string",
+          "pattern": "^#[0-9A-Fa-f]{6}$",
+          "default": "#F97316"
+        },
+        "text_color": {
+          "type": "string",
+          "pattern": "^#[0-9A-Fa-f]{6}$",
+          "default": "#172033"
+        },
+        "background_color": {
+          "type": "string",
+          "pattern": "^#[0-9A-Fa-f]{6}$",
+          "default": "#F6F8F7"
+        },
+        "radius": {
+          "type": "string",
+          "enum": ["10px", "18px", "26px"],
+          "default": "18px"
+        }
+      }
+    },
     "min_order_value": {
       "type": "number",
       "default": 0
