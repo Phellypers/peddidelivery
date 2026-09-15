@@ -63,6 +63,17 @@
     "promo_price": {
       "type": "number"
     },
+    "previous_price": {
+      "type": "number"
+    },
+    "price_reduced_at": {
+      "type": "string"
+    },
+    "price_drop_badge_style": {
+      "type": "string",
+      "enum": ["text", "percentage", "off"],
+      "default": "text"
+    },
     "price_on_request": {
       "type": "boolean",
       "default": false

@@ -76,6 +76,7 @@ export default function ProductForm({ product, categories, onClose, onSave }) {
     price: product?.price || '',
     cost: product?.cost || '',
     promo_price: product?.promo_price || '',
+    price_drop_badge_style: product?.price_drop_badge_style || 'text',
     price_on_request: product?.price_on_request || false,
     // Images
     images: product?.images || [],
@@ -419,6 +420,15 @@ export default function ProductForm({ product, categories, onClose, onSave }) {
                     💰 Desconto de <strong>{Math.round((1 - parseFloat(form.promo_price) / parseFloat(form.price)) * 100)}%</strong> será exibido na loja
                   </div>
                 )}
+                <div>
+                  <label className={label}>Etiqueta ao reduzir o preço</label>
+                  <select value={form.price_drop_badge_style || 'text'} onChange={e => set('price_drop_badge_style', e.target.value)} className={input}>
+                    <option value="text">Mostrar “Baixou o preço”</option>
+                    <option value="percentage">Mostrar percentual, como “-10%”</option>
+                    <option value="off">Não mostrar etiqueta</option>
+                  </select>
+                  <p className="mt-1 text-xs text-gray-400">Aparece somente quando o preço normal ficar menor que o valor salvo anteriormente.</p>
+                </div>
                 {form.price && parseFloat(form.cost) > 0 && (() => {
                   const sellPrice = form.promo_price ? parseFloat(form.promo_price) : parseFloat(form.price);
                   const cost = parseFloat(form.cost);

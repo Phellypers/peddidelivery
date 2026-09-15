@@ -11,6 +11,7 @@ import { useWishlist } from '@/lib/WishlistContext';
 import SafeBackButton from '@/components/navigation/SafeBackButton';
 import { isProductAvailable } from '@/lib/productAvailability';
 import ProductRating from '@/components/storefront/ProductRating';
+import { getPriceDropBadge } from '@/lib/productHighlights';
 
 const MONTHS = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 
@@ -27,16 +28,20 @@ function CatalogRecommendationCard({ product }) {
     && Number(product.stock ?? 999) > 0
     && isProductAvailable(product);
   const image = product.images?.[0];
+  const priceDropBadge = getPriceDropBadge(product);
 
   return (
     <Link data-catalog-product-id={product.id} to={`/item/${product.id}`} className="w-36 flex-shrink-0 overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition-transform active:scale-[0.98]">
       {image && (
         <div className="relative h-28 w-full overflow-hidden bg-gray-50">
           <img src={image} alt={product.name} className="h-full w-full object-cover" loading="lazy" />
-          {discount > 0 && <span className="absolute left-2 top-2 rounded-full bg-red-500 px-2 py-1 text-[10px] font-bold text-white">-{discount}%</span>}
+          {priceDropBadge
+            ? <span className="absolute left-2 top-2 rounded-full bg-emerald-600 px-2 py-1 text-[10px] font-bold text-white">{priceDropBadge}</span>
+            : discount > 0 && <span className="absolute left-2 top-2 rounded-full bg-red-500 px-2 py-1 text-[10px] font-bold text-white">-{discount}%</span>}
         </div>
       )}
       <div className="p-2.5">
+        {!image && priceDropBadge && <span className="mb-2 inline-flex rounded-full bg-emerald-600 px-2 py-1 text-[10px] font-bold text-white">{priceDropBadge}</span>}
         <p className="line-clamp-2 min-h-8 text-xs font-bold leading-4 text-gray-900">{product.name}</p>
         <ProductRating product={product} showNew className="mt-1" />
         <div className="mt-1.5 flex min-h-8 flex-col justify-end">

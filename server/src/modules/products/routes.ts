@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { query } from '../../db/client.js';
 import { requireAuth, requireRoles, type AuthRequest } from '../../auth/middleware.js';
+import { getPriceReductionUpdate } from '../../../../src/lib/productHighlights.js';
 
 export const catalogRouter = Router();
 catalogRouter.use(requireAuth, requireRoles('manager', 'peddi_admin'));
@@ -23,6 +24,7 @@ const productSchema = z.object({
   category_ids: z.array(z.string().uuid()).default([]),
   is_published: z.boolean().default(true), is_paused: z.boolean().default(false),
   promo_price: number.nullable().optional(),
+  price_drop_badge_style: z.enum(['text', 'percentage', 'off']).default('text'),
   availability_by_day: weeklySchedule.optional(),
   recipe: z.array(z.object({ ingredient_id: z.string().uuid(), quantity: number.positive(),
     unit: z.enum(['unidade', 'pacote', 'grama', 'quilo', 'ml', 'litro']),
@@ -79,6 +81,7 @@ async function saveProduct(request: AuthRequest, response: import('express').Res
     ? 'Revise os horários: preencha início e fim de cada dia ativo, ou deixe ambos vazios para o dia todo.'
     : 'Revise nome, preços, estoque e insumos da ficha técnica.' });
   const data = parsed.data;
+  Object.assign(data, getPriceReductionUpdate(previous.price, data.price, request.method === 'POST'));
   if (data.availability_by_day) {
     data.available_days = Object.entries(data.availability_by_day).filter(([, day]) => day.enabled).map(([day]) => day);
     data.availability_start = '';

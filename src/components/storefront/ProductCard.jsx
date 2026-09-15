@@ -4,6 +4,7 @@ import { useCart } from '@/lib/CartContext';
 import { useWishlist } from '@/lib/WishlistContext';
 import { Link, useNavigate } from 'react-router-dom';
 import ProductRating from '@/components/storefront/ProductRating';
+import { getPriceDropBadge } from '@/lib/productHighlights';
 
 const BADGE_COLORS = {
   red: 'bg-red-500',
@@ -23,6 +24,7 @@ export default function ProductCard({ product }) {
   const displayPrice = hasPromo ? product.promo_price : product.price;
   const discountPct = hasPromo ? Math.round((1 - product.promo_price / product.price) * 100) : null;
   const badgeColor = BADGE_COLORS[product.badge_color] || BADGE_COLORS.red;
+  const priceDropBadge = getPriceDropBadge(product);
 
   return (
     <div data-product-id={product.id} className="peddi-product-card bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 flex flex-col">
@@ -35,17 +37,14 @@ export default function ProductCard({ product }) {
           />
         </div>
 
-        {product.badge_label && (
-          <span className={`absolute top-2 left-2 ${badgeColor} text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm`}>
-            {product.badge_label}
-          </span>
-        )}
-
-        {!product.badge_label && discountPct && (
-          <span className="absolute top-2 left-2 bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
-            -{discountPct}%
-          </span>
-        )}
+        <span className="absolute left-2 top-2 flex max-w-[calc(100%-3rem)] flex-col items-start gap-1">
+          {priceDropBadge && <span className="rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-bold text-white shadow-sm">{priceDropBadge}</span>}
+          {product.badge_label
+            ? <span className={`${badgeColor} rounded-full px-2 py-0.5 text-[10px] font-bold text-white shadow-sm`}>{product.badge_label}</span>
+            : !priceDropBadge && discountPct
+              ? <span className="rounded-full bg-red-500 px-2 py-0.5 text-[10px] font-bold text-white shadow-sm">-{discountPct}%</span>
+              : null}
+        </span>
 
         <button
           aria-label={`${wishlisted ? 'Remover' : 'Adicionar'} ${product.name} ${wishlisted ? 'dos' : 'aos'} favoritos`}

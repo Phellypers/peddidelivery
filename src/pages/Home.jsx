@@ -3,6 +3,7 @@ import CartDrawer from '@/components/storefront/CartDrawer';
 import ChatWidget from '@/components/storefront/ChatWidget';
 import ProductCard from '@/components/storefront/ProductCard';
 import { getCategoryCover } from '@/lib/categoryCovers';
+import { hasRecentProduct } from '@/lib/productHighlights';
 import PromoBannerCarousel from '@/components/storefront/PromoBannerCarousel';
 import PromoHeaderBanner from '@/components/storefront/PromoHeaderBanner';
 import MenuDrawer from '@/components/storefront/MenuDrawer';
@@ -175,8 +176,9 @@ export default function Home() {
             <button type="button" aria-pressed={!activeCategory && !activeBanner} onClick={clearProductFilter} className={`peddi-store-category ${!activeCategory && !activeBanner ? 'active' : ''}`}>
               <span className="peddi-store-category-image">{store?.logo_url ? <img src={store.logo_url} alt="" /> : <House size={32} />}</span><span>Todos</span>
             </button>
-            {featuredCats.map(cat => <button type="button" key={cat.id} aria-pressed={activeCategory === cat.id} onClick={() => { setActiveBanner(null); setActiveCategory(activeCategory === cat.id ? null : cat.id); }} className={`peddi-store-category ${activeCategory === cat.id ? 'active' : ''}`}>
+            {featuredCats.map(cat => <button type="button" key={cat.id} aria-pressed={activeCategory === cat.id} onClick={() => { setActiveBanner(null); setActiveCategory(activeCategory === cat.id ? null : cat.id); }} className={`peddi-store-category ${activeCategory === cat.id ? 'active' : ''} ${hasRecentProduct(cat.id, products) ? 'has-new-product' : ''}`}>
               <span className="peddi-store-category-image">{getCategoryCover(cat) ? <img src={getCategoryCover(cat)} alt="" /> : <span className="text-3xl">{cat.icon || <House size={28} />}</span>}</span>
+              {hasRecentProduct(cat.id, products) && <span className="sr-only">Novos produtos nesta categoria</span>}
               {cat.badge_label && <span className={`peddi-store-category-badge ${CAT_BADGE_COLORS[cat.badge_color] || CAT_BADGE_COLORS.orange}`}>{cat.badge_label}</span>}
               <span>{cat.name}</span>
             </button>)}
