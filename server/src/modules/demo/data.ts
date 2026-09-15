@@ -101,6 +101,13 @@ export async function readEntities(entity: string, request: AuthRequest) {
       const result = await query('SELECT id,email,name,role,active FROM users WHERE store_id=$1', [tenant]);
       return result.rows.filter(row => manager || row.id === request.auth!.userId).map(row => ({ ...row,full_name:row.name }));
     }
+    case 'CustomerProfile': {
+      const result = await query(`SELECT a.* FROM app_records a
+        WHERE a.entity_name='CustomerProfile' AND a.store_id=$1
+          AND NOT EXISTS (SELECT 1 FROM couriers c WHERE c.store_id=$1
+            AND (c.user_id=a.owner_id OR c.user_id::text=a.data->>'user_id'))`, [tenant]);
+      return result.rows.filter(row => row.data.role !== 'courier' && row.data.user_role !== 'courier').map(recordView);
+    }
     default: {
       const result = await query('SELECT * FROM app_records WHERE entity_name=$1 AND store_id=$2', [entity,tenant]);
       const ownConversations = new Set(result.rows.filter(row => request.auth ? row.owner_id === request.auth.userId : row.visitor_id === request.headers['x-peddi-visitor']).map(row => row.data.conversation_id));

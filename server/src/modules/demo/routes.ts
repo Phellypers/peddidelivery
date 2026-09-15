@@ -43,6 +43,10 @@ demoRouter.use(async (request:AuthRequest,response,next)=>{
   }
   next();
 });
+demoRouter.delete('/live-sessions/history', requireAuth, requireRoles('manager', 'peddi_admin'), async (request:AuthRequest, response) => {
+  const result = await query("DELETE FROM app_records WHERE store_id=$1 AND entity_name='LiveSession'", [storeId(request)]);
+  response.json({ deleted: result.rowCount ?? 0 });
+});
 const publicReads=new Set(['Product','Category','Store','City','Campaign','Coupon','PromoMessage','UpsellGroup','Review','ReviewComment','Order','ChatMessage','LiveSession','SupportTicket']);
 const publicWrites=new Set(['Order','LiveSession','ChatMessage','SupportTicket','Review','ReviewComment']);
 const customerWrites=new Set(['Order','LiveSession','ChatMessage','SupportTicket','Review','ReviewComment','CustomerProfile','Deliverer','DelivererRating','Notification','User']);

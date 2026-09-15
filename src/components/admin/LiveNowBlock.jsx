@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { base44 } from '@/api/base44Client';
+import { peddiApi } from '@/services/api/peddiApi';
 import { sendWhatsAppMessage } from '@/lib/whatsappDispatch';
-import { Eye, ShoppingCart, CreditCard, CheckCircle2, UserX, Radio, Clock, ShoppingBag, Send, Check, Loader2, User, Users, RefreshCw, BarChart3, Percent } from 'lucide-react';
+import { Eye, ShoppingCart, CreditCard, CheckCircle2, UserX, Radio, Clock, ShoppingBag, Send, Check, Loader2, User, Users, RefreshCw, BarChart3, Percent, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { summarizeLiveSessions } from '@/lib/liveFunnel';
 import './LiveNowBlock.css';
@@ -52,6 +53,7 @@ export default function LiveNowBlock() {
   const [error, setError] = useState(false);
   const [sendingTo, setSendingTo] = useState(null);
   const [sentTo, setSentTo] = useState(new Set());
+  const [clearing, setClearing] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -65,6 +67,7 @@ export default function LiveNowBlock() {
       // Auto-dispatch recovery for abandoned carts (multicanal)
       const funnelConfig = stores[0]?.funnel_automation || {};
       if (funnelConfig.auto_dispatch_enabled) {
+        const now = Date.now();
         const channels = funnelConfig.dispatch_channels || ['app'];
         const beforeExpiryHours = funnelConfig.dispatch_before_expiry_hours || 20;
         const dispatchAfterMs = (24 - beforeExpiryHours) * 60 * 60 * 1000;
@@ -151,6 +154,23 @@ export default function LiveNowBlock() {
     setSendingTo(null);
   };
 
+  const clearHistory = async () => {
+    if (!window.confirm('Limpar todo o histórico do funil desta loja? Pedidos não serão apagados.')) return;
+    setClearing(true);
+    try {
+      await peddiApi.request('/api/v1/demo/live-sessions/history', {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${localStorage.getItem('peddi_access_token') || ''}` },
+      });
+      setSessions([]);
+      setSentTo(new Set());
+    } catch (_) {
+      setError(true);
+    } finally {
+      setClearing(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="bg-card rounded-2xl border border-border/50 p-5">
@@ -222,7 +242,13 @@ export default function LiveNowBlock() {
           </div>
           <p className="mt-1 text-xs text-gray-500">Acompanhe o movimento do seu cardápio.</p>
         </div>
-        <div className="peddi-live-total"><div className="peddi-live-total-top"><Users size={32} /><AnimatedNumber value={activeCount} /><span className="peddi-live-badge">● Tempo real</span></div><span>{activeCount === 1 ? 'pessoa' : 'pessoas'} no seu cardápio agora</span></div>
+        <div className="flex items-start gap-3">
+          <div className="peddi-live-total"><div className="peddi-live-total-top"><Users size={32} /><AnimatedNumber value={activeCount} /><span className="peddi-live-badge">● Tempo real</span></div><span>{activeCount === 1 ? 'pessoa' : 'pessoas'} no seu cardápio agora</span></div>
+          <button type="button" onClick={clearHistory} disabled={clearing} className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50">
+            {clearing ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
+            Limpar histórico
+          </button>
+        </div>
         <div className="peddi-live-refresh"><RefreshCw size={22} /><div>atualiza sozinho<small>Dados atualizados automaticamente</small></div></div>
       </header>
       {error && <p role="alert" className="mb-4 text-sm text-red-600">Não foi possível carregar o funil. Recarregue para tentar novamente.</p>}
