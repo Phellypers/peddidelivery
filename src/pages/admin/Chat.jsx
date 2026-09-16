@@ -1,14 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
-import { Loader2, MessageCircle, Send, Search, Bike, History } from 'lucide-react';
+import { Loader2, MessageCircle, Send, Search, Bike, History, ArrowLeft, SlidersHorizontal, Info } from 'lucide-react';
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog';
+import BottomNav from '@/components/storefront/BottomNav';
+import { buildConversations, filterConversations, matchesChatTab, remainingChatDays, chatReasons, chatLabels } from '@/lib/chatConversations';
+import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const TICKET_STATUS = {
   open: { label: 'Aberto', color: 'bg-amber-100 text-amber-700' },
   in_progress: { label: 'Em atendimento', color: 'bg-blue-100 text-blue-700' },
   resolved: { label: 'Resolvido', color: 'bg-green-100 text-green-700' },
-  closed: { label: 'Fechado', color: 'bg-gray-100 text-gray-500' },
+  closed: { label: 'Encerrada', color: 'bg-gray-100 text-gray-500' },
 };
 
 const REASON_LABELS = {
@@ -19,6 +22,8 @@ const REASON_LABELS = {
   other: 'Outros',
 };
 
+async function readAll(entity) {const rows=[];for(let skip=0;;skip+=500){const page=await entity.list('-created_date',500,skip);rows.push(...page);if(page.length<500)return rows;}}
+
 export default function Chat() {
   const [confirmClose, setConfirmClose] = useState(false);
   const [closing, setClosing] = useState(false);
@@ -26,21 +31,26 @@ export default function Chat() {
   const [messages, setMessages] = useState([]);
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedConv, setSelectedConv] = useState(null);
+  const [params, setParams] = useSearchParams();
+  const selectedConv = params.get('conv');
+  const selectedRef=useRef(selectedConv);selectedRef.current=selectedConv;
+  const setSelectedConv = id => setParams(prev => {const next=new URLSearchParams(prev);if(id)next.set('conv',id);else {next.delete('conv');next.delete('name');}return next;});
+  const [filterTab,setFilterTab] = useState('all');
+  const [filters,setFilters] = useState({reason:'',status:'',from:'',to:''});
+  const [showFilters,setShowFilters] = useState(false);
   const [reply, setReply] = useState('');
   const [sending, setSending] = useState(false);
   const [search, setSearch] = useState('');
-  const [chatTab, setChatTab] = useState('customers');
+  const [chatTab, setChatTab] = useState(selectedConv?.startsWith('deliverer_')?'deliverers':'customers');
   const [showHistory, setShowHistory] = useState(false);
   const scrollRef = useRef(null);
   const urlParams = new URLSearchParams(window.location.search);
-  const convParam = urlParams.get('conv');
   const nameParam = urlParams.get('name');
 
   const load = async () => {
     const [all, tix] = await Promise.all([
-      base44.entities.ChatMessage.list('-created_date', 500),
-      base44.entities.SupportTicket.list('-created_date', 200).catch(() => []),
+      readAll(base44.entities.ChatMessage),
+      readAll(base44.entities.SupportTicket),
     ]);
     setMessages(all);
     setTickets(tix);
@@ -48,52 +58,40 @@ export default function Chat() {
   };
 
   useEffect(() => {
-    load();
-    if (convParam) setSelectedConv(convParam);
+    load().catch(error=>{setChatError(error.message);setLoading(false);});
+
     const unsub = base44.entities.ChatMessage.subscribe((event) => {
       if (event.type === 'create') {
-        setMessages(prev => [event.data, ...prev]);
-        if (selectedConv && event.data.conversation_id === selectedConv) {
+        setMessages(prev => [event.data, ...prev.filter(m=>m.id!==event.id)]);
+        if (selectedRef.current && event.data.conversation_id === selectedRef.current) {
+          void markRead(selectedRef.current);
           setTimeout(() => { scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' }); }, 100);
         }
-      }
+      } else {setMessages(prev=>event.type==='delete'?prev.filter(m=>m.id!==event.id):[event.data,...prev.filter(m=>m.id!==event.id)]);}
     });
-    const unsubTickets = base44.entities.SupportTicket.subscribe(() => { load(); });
+    const unsubTickets = base44.entities.SupportTicket.subscribe(event => {setTickets(prev=>event.type==='delete'?prev.filter(t=>t.id!==event.id):[event.data,...prev.filter(t=>t.id!==event.id)]);if(event.type==='delete')setMessages(prev=>prev.filter(m=>m.conversation_id!==event.id));});
     return () => { unsub(); unsubTickets(); };
-  }, [selectedConv]);
+  }, []);
 
-  // Group by conversation_id
-  const conversations = {};
-  messages.forEach(m => {
-    if (!conversations[m.conversation_id]) {
-      conversations[m.conversation_id] = { id: m.conversation_id, name: m.customer_name, email: m.customer_email, messages: [], unread: 0 };
-    }
-    conversations[m.conversation_id].messages.push(m);
-    if ((m.sender_type === 'customer' || m.sender_type === 'deliverer') && !m.is_read_by_store) conversations[m.conversation_id].unread++;
-  });
-
-  const ticketMap = {};
-  tickets.forEach(t => { ticketMap[t.id] = t; });
-
-  const convList = Object.values(conversations).sort((a, b) => {
-    const aLast = a.messages[0]?.created_date || '';
-    const bLast = b.messages[0]?.created_date || '';
-    return bLast.localeCompare(aLast);
-  });
-
-  const tabFilteredConvs = convList.filter(c => {
-    const isDeliverer = c.id.startsWith('deliverer_');
-    return chatTab === 'deliverers' ? isDeliverer : !isDeliverer;
-  });
-  const filteredConvs = tabFilteredConvs.filter(c => !search || c.name?.toLowerCase().includes(search.toLowerCase()) || c.email?.toLowerCase().includes(search.toLowerCase()));
-
+  const convList = buildConversations(messages,tickets);
+  const conversations = Object.fromEntries(convList.map(c=>[c.id,c]));
+  const ticketMap = Object.fromEntries(tickets.map(t=>[t.id,t]));
+  const tabFilteredConvs = filterConversations(convList,{...filters,search,tab:chatTab});
+  const filteredConvs = tabFilteredConvs.filter(c=>matchesChatTab(c,filterTab));
   const currentConv = conversations[selectedConv];
-  const currentMessages = currentConv?.messages?.sort((a, b) => (a.created_date || '').localeCompare(b.created_date || '')) || [];
-  const currentTicket = selectedConv ? ticketMap[selectedConv] : null;
-  const customerTickets = currentConv?.email ? tickets.filter(t => t.customer_email === currentConv.email) : [];
+  const currentMessages = currentConv?.messages || [];
+  const currentTicket = ticketMap[selectedConv];
+  const customerTickets = currentConv?.email ? tickets.filter(t=>t.customer_email===currentConv.email) : [];
+  const markRead = async id => {
+    try {
+      await base44.entities.ChatMessage.updateMany({conversation_id:id,sender_type:id.startsWith('deliverer_')?'deliverer':'customer',is_read_by_store:false},{$set:{is_read_by_store:true}});
+      setMessages(prev=>prev.map(m=>m.conversation_id===id&&m.sender_type!=='store'?{...m,is_read_by_store:true}:m));
+    } catch(error) {setChatError(error.message);}
+  };
+  useEffect(()=>{if(selectedConv&&!loading)void markRead(selectedConv);setReply('');},[selectedConv,loading]);
 
   const sendReply = async () => {
-    if (!reply.trim() || !selectedConv || currentTicket?.status === 'closed') return;
+    if (!reply.trim() || !selectedConv || sending || !currentConv || currentTicket?.status === 'closed') return;
     setSending(true);
     setChatError('');
     try {
@@ -116,6 +114,7 @@ export default function Chat() {
       { $set: { is_read_by_store: true } }
     );
     setReply('');
+    if(currentTicket && currentTicket.status!=='closed') await base44.entities.SupportTicket.update(currentTicket.id,{status:'in_progress'});
     load();
     } catch(error) { setChatError(error.message); load(); } finally { setSending(false); }
   };
@@ -123,12 +122,7 @@ export default function Chat() {
   const openConv = async (convId) => {
     setSelectedConv(convId);
     setShowHistory(false);
-    const isDeliverer = convId.startsWith('deliverer_');
-    await base44.entities.ChatMessage.updateMany(
-      { conversation_id: convId, sender_type: isDeliverer ? 'deliverer' : 'customer', is_read_by_store: false },
-      { $set: { is_read_by_store: true } }
-    );
-    setTimeout(() => load(), 300);
+    await markRead(convId);
   };
 
   const updateTicketStatus = async (ticketId, newStatus) => {
@@ -150,7 +144,7 @@ export default function Chat() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 text-[#111111] pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-0">
       <AlertDialog open={confirmClose} onOpenChange={value => {if(!closing)setConfirmClose(value);}}>
         <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Finalizar atendimento?</AlertDialogTitle>
           <AlertDialogDescription>Deseja finalizar este atendimento? O protocolo será encerrado e seu histórico será excluído permanentemente após 30 dias.</AlertDialogDescription>
@@ -159,13 +153,13 @@ export default function Chat() {
         </AlertDialogFooter>{chatError && <p role="alert" className="text-sm text-red-600">{chatError}</p>}</AlertDialogContent>
       </AlertDialog>
 
-      <div>
+      <div className={selectedConv ? 'hidden md:block' : ''}>
         <h1 className="font-heading font-bold text-2xl text-foreground">Chat</h1>
-        <p className="text-sm text-muted-foreground mt-1">{convList.length} conversas · {convList.reduce((s, c) => s + c.unread, 0)} não lidas</p>
+        <p className="text-sm text-muted-foreground mt-1">{convList.filter(c=>(c.id.startsWith('deliverer_')?'deliverers':'customers')===chatTab).length} conversas · {convList.filter(c=>(c.id.startsWith('deliverer_')?'deliverers':'customers')===chatTab&&c.unread>0).length} não lidas</p>
       </div>
 
       {/* Tabs: Clientes / Entregadores */}
-      <div className="flex gap-1 bg-muted p-1 rounded-2xl w-fit">
+      <div className={`${selectedConv ? 'hidden md:flex' : 'flex'} gap-1 bg-gray-100 p-1 rounded-2xl w-full md:w-fit`}>
         {[
           { id: 'customers', label: 'Clientes', icon: MessageCircle },
           { id: 'deliverers', label: 'Entregadores', icon: Bike },
@@ -177,8 +171,8 @@ export default function Chat() {
           });
           const tabUnread = tabConvs.reduce((s, c) => s + c.unread, 0);
           return (
-            <button key={t.id} onClick={() => { setChatTab(t.id); setSelectedConv(null); }}
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${chatTab === t.id ? 'bg-white text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>
+            <button key={t.id} onClick={() => { setChatTab(t.id);setFilterTab('all'); setSelectedConv(null); }}
+              className={`flex items-center gap-1.5 min-h-11 flex-1 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${chatTab === t.id ? 'bg-white text-green-600 shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>
               <Icon size={15} /> {t.label}
               {tabUnread > 0 && <span className="bg-red-500 text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">{tabUnread}</span>}
             </button>
@@ -186,38 +180,42 @@ export default function Chat() {
         })}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-[600px]">
+      <div className={`${selectedConv?'hidden md:flex':'flex'} flex-wrap gap-2`}>
+        {[['all','Todas'],['unread','Não lidas'],['in_progress','Em atendimento'],['closed','Encerradas']].map(([key,label])=><button key={key} aria-pressed={filterTab===key} onClick={()=>setFilterTab(key)} className={`min-h-11 rounded-xl px-3 text-sm ${filterTab===key?'bg-[#22C55E] text-white':'bg-gray-100 text-gray-600'}`}>{label} <span className="ml-2 rounded-full bg-black/5 px-2 py-1 text-xs">{tabFilteredConvs.filter(c=>matchesChatTab(c,key)).length}</span></button>)}
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-[minmax(280px,0.85fr)_minmax(0,1.6fr)] gap-4 md:h-[min(720px,calc(100dvh-260px))] md:min-h-[450px]">
         {/* Conversation list */}
-        <div className="md:col-span-1 bg-card rounded-2xl border border-border/50 flex flex-col overflow-hidden">
+        <div className={`${selectedConv ? 'hidden md:flex' : 'flex'} min-h-0 min-w-0 bg-white rounded-2xl border border-gray-200 flex-col overflow-hidden`}>
           <div className="p-3 border-b border-border/30">
             <div className="relative">
               <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-              <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar..." className="w-full pl-9 pr-3 py-2 bg-muted rounded-lg text-sm focus:outline-none" />
+              <input value={search} onChange={e => setSearch(e.target.value)} aria-label="Buscar por nome ou protocolo" placeholder="Buscar por nome ou protocolo..." className="w-full min-h-11 pl-9 pr-12 py-2 bg-gray-50 rounded-xl text-sm focus:outline-none" />
+              <button aria-label="Filtros adicionais" aria-expanded={showFilters} onClick={()=>setShowFilters(v=>!v)} className="absolute right-1 top-0 flex h-11 w-11 items-center justify-center text-gray-500"><SlidersHorizontal size={18}/></button>
             </div>
+            {showFilters && <div className="mt-3 grid grid-cols-2 gap-2">
+              <label className="text-xs text-gray-500">Motivo<select value={filters.reason} onChange={e=>setFilters(p=>({...p,reason:e.target.value}))} className="mt-1 min-h-11 w-full rounded-xl border bg-white px-2 text-sm"><option value="">Todos</option>{Object.entries(chatReasons).map(([k,v])=><option key={k} value={k}>{v}</option>)}</select></label>
+              <label className="text-xs text-gray-500">Status<select value={filters.status} onChange={e=>setFilters(p=>({...p,status:e.target.value}))} className="mt-1 min-h-11 w-full rounded-xl border bg-white px-2 text-sm"><option value="">Todos</option>{Object.entries(chatLabels).map(([k,v])=><option key={k} value={k}>{v}</option>)}</select></label>
+              {['from','to'].map(key=><label key={key} className="min-w-0 text-xs text-gray-500">{key==='from'?'De':'Até'}<input type="date" value={filters[key]} onChange={e=>setFilters(p=>({...p,[key]:e.target.value}))} className="mt-1 min-h-11 min-w-0 w-full rounded-xl border bg-white px-2 text-sm"/></label>)}
+              <button onClick={()=>{setFilters({reason:'',status:'',from:'',to:''});setSearch('');setFilterTab('all');}} className="col-span-2 min-h-11 text-sm font-semibold text-green-600">Limpar filtros</button>
+            </div>}
           </div>
-          <div className="flex-1 overflow-y-auto">
+          <div className="min-h-0 flex-1 overflow-y-auto">
             {filteredConvs.length === 0 ? (
               <p className="text-center text-sm text-muted-foreground py-8">Nenhuma conversa</p>
             ) : filteredConvs.map(c => {
               const ticket = ticketMap[c.id];
               return (
                 <button key={c.id} onClick={() => openConv(c.id)}
-                  className={`w-full text-left p-3 border-b border-border/20 transition-colors ${selectedConv === c.id ? 'bg-primary/5' : 'hover:bg-accent/30'}`}>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      {c.id.startsWith('deliverer_') && <Bike size={13} className="text-blue-500 flex-shrink-0" />}
-                      <p className="text-sm font-semibold truncate">{c.name || c.email}</p>
+                  className={`w-full text-left p-4 border-b border-gray-100 transition-colors ${selectedConv === c.id ? 'bg-green-50 ring-1 ring-inset ring-green-400' : c.unread ? 'bg-green-50/60' : 'hover:bg-gray-50'}`}>
+                  <div className="flex items-start gap-3">
+                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-green-100 text-sm font-semibold text-green-600">{(c.name||c.email||'?').split(' ').slice(0,2).map(p=>p[0]).join('').toUpperCase()}</span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-2"><p className="truncate text-sm font-bold">{c.name||c.email||'Usuário'}</p><time className="shrink-0 text-[11px] text-gray-500">{c.date && new Date(c.date).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}</time></div>
+                      <p className={`mt-1 truncate text-sm ${c.unread?'font-semibold text-gray-900':'text-gray-600'}`}>{c.last?.message||'Atendimento iniciado'}</p>
+                      <p className="mt-1 break-words text-xs text-gray-500">{ticket?.protocol||'Sem protocolo'} · {c.reason}</p>
+                      <div className="mt-2 flex items-center justify-between"><span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${{unread:'bg-red-50 text-red-600',in_progress:'bg-blue-50 text-blue-600',waiting:'bg-amber-50 text-amber-700',closed:'bg-gray-100 text-gray-600'}[c.status]}`}>{chatLabels[c.status]}</span>{c.unread>0&&<span aria-label={`${c.unread} mensagens não lidas`} className="rounded-full bg-[#22C55E] px-2 py-0.5 text-xs font-bold text-white">{c.unread}</span>}</div>
                     </div>
-                    {c.unread > 0 && <span className="bg-red-500 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0">{c.unread}</span>}
                   </div>
-                  {ticket && (
-                    <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                      <span className="text-[9px] font-mono font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded">{ticket.protocol}</span>
-                      <span className="text-[9px] text-muted-foreground">{REASON_LABELS[ticket.reason] || ticket.reason_label}</span>
-                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${TICKET_STATUS[ticket.status]?.color}`}>{TICKET_STATUS[ticket.status]?.label}</span>
-                    </div>
-                  )}
-                  <p className="text-xs text-muted-foreground truncate mt-0.5">{c.messages[0]?.message}</p>
                 </button>
               );
             })}
@@ -225,28 +223,31 @@ export default function Chat() {
         </div>
 
         {/* Messages */}
-        <div className="md:col-span-2 bg-card rounded-2xl border border-border/50 flex flex-col overflow-hidden">
-          {!selectedConv ? (
+        <div className={`${selectedConv ? 'flex h-[calc(100dvh-170px-env(safe-area-inset-bottom))] min-h-[360px]' : 'hidden md:flex'} min-w-0 md:h-auto md:min-h-0 bg-white rounded-2xl border border-gray-200 flex-col overflow-hidden`}>
+          {!selectedConv || !currentConv ? (
             <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground">
               <MessageCircle size={40} className="opacity-30 mb-3" />
-              <p className="text-sm">Selecione uma conversa</p>
+              <p className="text-sm">{selectedConv?'Atendimento indisponível ou histórico excluído.':'Selecione uma conversa'}</p>{selectedConv&&<button onClick={()=>setSelectedConv(null)} className="min-h-11 text-green-600 md:hidden">Voltar à lista</button>}
             </div>
           ) : (
             <>
-              <div className="p-3 border-b border-border/30">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-semibold text-sm">{currentConv?.name || nameParam || 'Nova conversa'}</p>
-                    <p className="text-xs text-muted-foreground">{currentConv?.email || (selectedConv?.startsWith('deliverer_') ? 'Entregador' : '')}</p>
+              <div className="shrink-0 p-4 border-b border-gray-100">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <button aria-label="Voltar às conversas" onClick={()=>setSelectedConv(null)} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl md:hidden"><ArrowLeft size={22}/></button>
+                  <span className="hidden h-12 w-12 shrink-0 items-center justify-center rounded-full bg-green-100 font-semibold text-green-600 md:flex">{(currentConv.name||currentConv.email||'?').split(' ').slice(0,2).map(p=>p[0]).join('').toUpperCase()}</span>
+                  <div className="min-w-0 flex-1">
+                    <p className="break-words font-semibold text-base">{currentConv?.name || nameParam || 'Nova conversa'}</p>
+                    <p className="break-all text-xs text-muted-foreground">{currentConv?.email || (selectedConv?.startsWith('deliverer_') ? 'Entregador' : '')}</p>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className={`rounded-full px-2 py-1 text-xs font-semibold ${{unread:'bg-red-50 text-red-600',in_progress:'bg-blue-50 text-blue-600',waiting:'bg-amber-50 text-amber-700',closed:'bg-gray-100 text-gray-600'}[currentConv.status]}`}>{chatLabels[currentConv.status]}</span>
                     {currentTicket && (
                       <>
                         <select disabled={currentTicket.status === 'closed' || closing} value={currentTicket.status} onChange={e => updateTicketStatus(currentTicket.id, e.target.value)}
-                          className={`text-[10px] font-bold px-2 py-1 rounded-full border-0 cursor-pointer ${TICKET_STATUS[currentTicket.status]?.color}`}>
+                          className={`min-h-11 text-xs font-bold px-2 py-1 rounded-xl border-0 cursor-pointer ${TICKET_STATUS[currentTicket.status]?.color}`}>
                           {Object.entries(TICKET_STATUS).filter(([k]) => k !== 'closed' || currentTicket.status === 'closed').map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
                         </select>
-                        {currentTicket.status !== 'closed' && <button onClick={() => setConfirmClose(true)} className="rounded-xl border border-border px-3 py-2 text-xs font-semibold">Finalizar atendimento</button>}
+                        {currentTicket.status !== 'closed' && <button onClick={() => setConfirmClose(true)} className="min-h-11 rounded-xl border border-[#22C55E] px-3 py-2 text-xs font-semibold text-green-600">Finalizar atendimento</button>}
                         {chatTab === 'customers' && customerTickets.length > 1 && (
                           <button onClick={() => setShowHistory(v => !v)} className={`p-1.5 rounded-lg transition-colors ${showHistory ? 'bg-primary/10 text-primary' : 'hover:bg-accent text-muted-foreground'}`} title="Histórico de protocolos">
                             <History size={15} />
@@ -257,9 +258,9 @@ export default function Chat() {
                   </div>
                 </div>
                 {currentTicket && (
-                  <div className="flex items-center gap-2 mt-1.5">
-                    <span className="text-[10px] font-mono font-bold text-primary bg-primary/10 px-2 py-0.5 rounded">{currentTicket.protocol}</span>
-                    <span className="text-[10px] text-muted-foreground">{REASON_LABELS[currentTicket.reason] || currentTicket.reason_label}</span>
+                  <div className="flex flex-wrap items-center gap-2 mt-3">
+                    <span className="text-xs font-mono font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded">{currentTicket.protocol}</span>
+                    <span className="text-xs text-muted-foreground">Motivo: {REASON_LABELS[currentTicket.reason] || currentTicket.reason_label}</span>
                   </div>
                 )}
               </div>
@@ -292,22 +293,24 @@ export default function Chat() {
                 )}
               </AnimatePresence>
 
-              <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-2">
+              <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto p-4 space-y-2">
                 {currentMessages.map(m => (
                   <div key={m.id} className={`flex ${m.sender_type === 'store' ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`max-w-[75%] px-3 py-2 rounded-2xl text-sm ${m.sender_type === 'store' ? 'bg-primary text-white' : 'bg-muted text-foreground'}`}>
+                    <div className={`max-w-[75%] whitespace-pre-wrap break-words px-4 py-3 rounded-2xl text-sm leading-relaxed ${m.sender_type === 'store' ? 'bg-green-100 text-[#111111]' : 'bg-gray-100 text-[#111111]'}`}>
                       {m.message}
-                      <p className={`text-[9px] mt-0.5 ${m.sender_type === 'store' ? 'text-white/60' : 'text-muted-foreground'}`}>{new Date(m.created_date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</p>
+                      <p className={`text-[9px] mt-0.5 ${m.sender_type === 'store' ? 'text-gray-500' : 'text-gray-500'}`}>{new Date(m.created_date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</p>
                     </div>
                   </div>
                 ))}
+              {currentTicket?.status === 'closed' && <p className="shrink-0 border-t bg-gray-50 p-3 text-xs leading-relaxed text-gray-600">Atendimento encerrado. Este histórico será excluído permanentemente 30 dias após o encerramento.<br/>Encerrado em {currentTicket.closed_at ? new Date(currentTicket.closed_at).toLocaleString('pt-BR') : 'Data indisponível'}.<br/>{remainingChatDays(currentTicket)} dias restantes para exclusão.</p>}
               </div>
-              {currentTicket?.status === 'closed' && <p className="border-t p-3 text-sm text-muted-foreground">Atendimento encerrado. Histórico disponível por 30 dias após o encerramento.</p>}
+
               {chatError && <p role="alert" className="p-3 text-sm text-red-600">{chatError}</p>}
-              <div className="p-3 border-t border-border/30 flex gap-2">
+              <div className="mx-4 mb-3 flex shrink-0 items-center gap-2 rounded-xl bg-gray-50 p-3 text-xs text-gray-500"><Info size={16} className="shrink-0"/>Históricos encerrados são excluídos após 30 dias.</div>
+              <div className="shrink-0 p-3 border-t border-gray-100 flex gap-2">
                 <input disabled={currentTicket?.status === 'closed'} value={reply} onChange={e => setReply(e.target.value)} placeholder="Digite sua mensagem..." onKeyDown={e => { if (e.key === 'Enter') sendReply(); }}
-                  className="flex-1 px-3 py-2 bg-muted rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" />
-                <button onClick={sendReply} disabled={sending || !reply.trim() || currentTicket?.status === 'closed'} className="px-4 py-2 bg-primary text-white rounded-xl text-sm font-bold disabled:opacity-50 flex items-center gap-1">
+                  className="min-w-0 min-h-12 flex-1 px-3 py-2 bg-gray-50 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                <button onClick={sendReply} disabled={sending || !reply.trim() || currentTicket?.status === 'closed'} className="min-h-12 px-4 py-2 bg-[#22C55E] text-white rounded-xl text-sm font-bold disabled:opacity-50 flex items-center gap-1">
                   {sending ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />}
                 </button>
               </div>
@@ -315,6 +318,7 @@ export default function Chat() {
           )}
         </div>
       </div>
+      <div className="md:hidden"><BottomNav/></div>
     </div>
   );
 }
