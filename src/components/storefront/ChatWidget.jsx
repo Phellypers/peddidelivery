@@ -1,3 +1,4 @@
+/* eslint no-undef: "error" */
 import React, { useState, useEffect, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
@@ -60,7 +61,7 @@ export default function ChatWidget({ externalOpen = false, onExternalClose, hide
 
   // Check for existing active ticket on mount
   useEffect(() => {
-    if (!isAuthenticated || !userá.email) return;
+    if (!isAuthenticated || !user?.email) return;
     base44.entities.SupportTicket.filter({ customer_email: user.email }, '-created_date', 200)
       .then(tickets => {
         setTicketHistory(tickets);
@@ -108,9 +109,9 @@ export default function ChatWidget({ externalOpen = false, onExternalClose, hide
     try {
       const created = await base44.entities.SupportTicket.create({
         protocol,
-        customer_name: userá.full_name || userá.email,
-        customer_email: userá.email,
-        customer_user_id: userá.id,
+        customer_name: user?.full_name || user?.email,
+        customer_email: user?.email,
+        customer_user_id: user?.id,
         reason: reasonId,
         reason_label: REASON_LABELS[reasonId],
         status: 'open',
@@ -119,8 +120,8 @@ export default function ChatWidget({ externalOpen = false, onExternalClose, hide
       setStep('chat');
       await base44.entities.ChatMessage.create({
         conversation_id: created.id,
-        customer_name: userá.full_name || userá.email,
-        customer_email: userá.email,
+        customer_name: user?.full_name || user?.email,
+        customer_email: user?.email,
         sender_type: 'customer',
         message: `📋 Protocolo ${protocol}\nMotivo: ${REASON_LABELS[reasonId]}`,
         is_read_by_store: false,
@@ -136,8 +137,8 @@ export default function ChatWidget({ externalOpen = false, onExternalClose, hide
     try {
     await base44.entities.ChatMessage.create({
       conversation_id: conversationId,
-      customer_name: userá.full_name || userá.email,
-      customer_email: userá.email,
+      customer_name: user?.full_name || user?.email,
+      customer_email: user?.email,
       sender_type: 'customer',
       message: text,
       is_read_by_store: false,
