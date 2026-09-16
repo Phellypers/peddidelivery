@@ -15,7 +15,7 @@ export default function CategoryBar({ categories, activeCategory, onSelect }) {
           <span className={`text-[11px] font-medium truncate max-w-[64px] ${!activeCategory ? 'text-gray-900' : 'text-gray-500'}`}>Todos</span>
         </button>
 
-        {categories?.filter(c => c.is_featured && c.is_active)?.map(cat => {
+        {categories?.filter(c => c.is_active !== false).sort((a,b) => Number(Boolean(b.is_featured)) - Number(Boolean(a.is_featured)) || Number(a.sort_order || 0) - Number(b.sort_order || 0))?.map(cat => {
           const isActive = activeCategory === cat.id;
           return (
             <button key={cat.id} onClick={() => onSelect(cat.id)} className="flex flex-col items-center gap-1.5 flex-shrink-0">

@@ -101,7 +101,7 @@ export default function Home() {
     );
   }
 
-  const featuredCats = categories.filter(c => c.is_featured && c.is_active);
+  const visibleCategories = categories.filter(c => c.is_active !== false).sort((a,b) => Number(Boolean(b.is_featured)) - Number(Boolean(a.is_featured)) || Number(a.sort_order || 0) - Number(b.sort_order || 0));
   const theme = getStoreTheme(store);
 
   const getSectionLabel = () => {
@@ -176,7 +176,7 @@ export default function Home() {
             <button type="button" aria-pressed={!activeCategory && !activeBanner} onClick={clearProductFilter} className={`peddi-store-category ${!activeCategory && !activeBanner ? 'active' : ''}`}>
               <span className="peddi-store-category-image">{store?.logo_url ? <img src={store.logo_url} alt="" /> : <House size={32} />}</span><span>Todos</span>
             </button>
-            {featuredCats.map(cat => <button type="button" key={cat.id} aria-pressed={activeCategory === cat.id} onClick={() => { setActiveBanner(null); setActiveCategory(activeCategory === cat.id ? null : cat.id); }} className={`peddi-store-category ${activeCategory === cat.id ? 'active' : ''} ${hasRecentProduct(cat.id, products) ? 'has-new-product' : ''}`}>
+            {visibleCategories.map(cat => <button type="button" key={cat.id} aria-pressed={activeCategory === cat.id} onClick={() => { setActiveBanner(null); setActiveCategory(activeCategory === cat.id ? null : cat.id); }} className={`peddi-store-category ${activeCategory === cat.id ? 'active' : ''} ${hasRecentProduct(cat.id, products) ? 'has-new-product' : ''}`}>
               <span className="peddi-store-category-image">{getCategoryCover(cat) ? <img src={getCategoryCover(cat)} alt="" /> : <span className="text-3xl">{cat.icon || <House size={28} />}</span>}</span>
               {hasRecentProduct(cat.id, products) && <span className="sr-only">Novos produtos nesta categoria</span>}
               {cat.badge_label && <span className={`peddi-store-category-badge ${CAT_BADGE_COLORS[cat.badge_color] || CAT_BADGE_COLORS.orange}`}>{cat.badge_label}</span>}
