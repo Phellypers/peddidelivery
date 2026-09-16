@@ -79,10 +79,19 @@ app.get('/api/v1/stores/:storeId/catalog', async (request, response) => {
   if (!store.rowCount) return response.status(404).json({ error: 'Estabelecimento nao encontrado.' });
   const [categories, products] = await Promise.all([
     query('SELECT id, name, details FROM categories WHERE store_id = $1 AND active = true ORDER BY name', [request.params.storeId]),
-    query("SELECT * FROM products WHERE store_id = $1 AND active = true AND deleted_at IS NULL AND COALESCE((details->>'is_paused')::boolean, false) = false ORDER BY name", [request.params.storeId]),
+    query(`SELECT p.*, COALESCE(s.orders_count, 0) AS orders_count
+      FROM products p
+      LEFT JOIN (
+        SELECT i.product_id, count(DISTINCT i.order_id) AS orders_count
+        FROM order_items i JOIN orders o ON o.id = i.order_id
+        WHERE o.store_id = $1 AND o.status <> 'cancelled'
+        GROUP BY i.product_id
+      ) s ON s.product_id = p.id
+      WHERE p.store_id = $1 AND p.active = true AND p.deleted_at IS NULL
+      AND COALESCE((p.details->>'is_paused')::boolean, false) = false ORDER BY p.name`, [request.params.storeId]),
   ]);
   const { details, ...storeFields } = store.rows[0];
-  response.json({ store: { ...details,...storeFields }, categories: categories.rows.map(({details,...row})=>({...details,...row})), products: products.rows.map(row => ({ ...productView(row), categoryId: row.category_id, stockQuantity: Number(row.stock_quantity) })) });
+  response.json({ store: { ...details,...storeFields }, categories: categories.rows.map(({details,...row})=>({...details,...row})), products: products.rows.map(row => ({ ...productView(row), categoryId: row.category_id, stockQuantity: Number(row.stock_quantity), orders_count: Number(row.orders_count) })) });
 });
 
 app.get('/api/v1/stores', async (_request, response) => {
