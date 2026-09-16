@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Loader2, MessageCircle, Send, Search, Bike, History } from 'lucide-react';
+import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const TICKET_STATUS = {
@@ -19,6 +20,9 @@ const REASON_LABELS = {
 };
 
 export default function Chat() {
+  const [confirmClose, setConfirmClose] = useState(false);
+  const [closing, setClosing] = useState(false);
+  const [chatError, setChatError] = useState('');
   const [messages, setMessages] = useState([]);
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -54,7 +58,8 @@ export default function Chat() {
         }
       }
     });
-    return () => unsub();
+    const unsubTickets = base44.entities.SupportTicket.subscribe(() => { load(); });
+    return () => { unsub(); unsubTickets(); };
   }, [selectedConv]);
 
   // Group by conversation_id
@@ -88,8 +93,10 @@ export default function Chat() {
   const customerTickets = currentConv?.email ? tickets.filter(t => t.customer_email === currentConv.email) : [];
 
   const sendReply = async () => {
-    if (!reply.trim() || !selectedConv) return;
+    if (!reply.trim() || !selectedConv || currentTicket?.status === 'closed') return;
     setSending(true);
+    setChatError('');
+    try {
     const conv = conversations[selectedConv];
     const name = conv?.name || nameParam || 'Conversa';
     const isDeliverer = selectedConv.startsWith('deliverer_');
@@ -109,8 +116,8 @@ export default function Chat() {
       { $set: { is_read_by_store: true } }
     );
     setReply('');
-    setSending(false);
     load();
+    } catch(error) { setChatError(error.message); load(); } finally { setSending(false); }
   };
 
   const openConv = async (convId) => {
@@ -125,11 +132,13 @@ export default function Chat() {
   };
 
   const updateTicketStatus = async (ticketId, newStatus) => {
-    await base44.entities.SupportTicket.update(ticketId, {
-      status: newStatus,
-      closed_at: newStatus === 'closed' ? new Date().toISOString() : null,
-    });
-    load();
+    setChatError('');setClosing(true);
+    try {
+      await base44.entities.SupportTicket.update(ticketId, {status:newStatus,
+        ...(newStatus==='closed'?{closed_at:new Date().toISOString(),delete_after:new Date(Date.now()+30*86400000).toISOString()}: {})});
+      setConfirmClose(false);await load();
+    } catch(error) {setChatError(error.message);} finally {setClosing(false);}
+
   };
 
   useEffect(() => {
@@ -142,6 +151,14 @@ export default function Chat() {
 
   return (
     <div className="space-y-4">
+      <AlertDialog open={confirmClose} onOpenChange={value => {if(!closing)setConfirmClose(value);}}>
+        <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Finalizar atendimento?</AlertDialogTitle>
+          <AlertDialogDescription>Deseja finalizar este atendimento? O protocolo será encerrado e seu histórico será excluído permanentemente após 30 dias.</AlertDialogDescription>
+        </AlertDialogHeader><AlertDialogFooter><AlertDialogCancel disabled={closing}>Cancelar</AlertDialogCancel>
+          <AlertDialogAction disabled={closing} onClick={event => {event.preventDefault();updateTicketStatus(currentTicket.id,'closed');}}> {closing?'Finalizando...':'Finalizar atendimento'}</AlertDialogAction>
+        </AlertDialogFooter>{chatError && <p role="alert" className="text-sm text-red-600">{chatError}</p>}</AlertDialogContent>
+      </AlertDialog>
+
       <div>
         <h1 className="font-heading font-bold text-2xl text-foreground">Chat</h1>
         <p className="text-sm text-muted-foreground mt-1">{convList.length} conversas · {convList.reduce((s, c) => s + c.unread, 0)} não lidas</p>
@@ -225,10 +242,11 @@ export default function Chat() {
                   <div className="flex items-center gap-2">
                     {currentTicket && (
                       <>
-                        <select value={currentTicket.status} onChange={e => updateTicketStatus(currentTicket.id, e.target.value)}
+                        <select disabled={currentTicket.status === 'closed' || closing} value={currentTicket.status} onChange={e => updateTicketStatus(currentTicket.id, e.target.value)}
                           className={`text-[10px] font-bold px-2 py-1 rounded-full border-0 cursor-pointer ${TICKET_STATUS[currentTicket.status]?.color}`}>
-                          {Object.entries(TICKET_STATUS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+                          {Object.entries(TICKET_STATUS).filter(([k]) => k !== 'closed' || currentTicket.status === 'closed').map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
                         </select>
+                        {currentTicket.status !== 'closed' && <button onClick={() => setConfirmClose(true)} className="rounded-xl border border-border px-3 py-2 text-xs font-semibold">Finalizar atendimento</button>}
                         {chatTab === 'customers' && customerTickets.length > 1 && (
                           <button onClick={() => setShowHistory(v => !v)} className={`p-1.5 rounded-lg transition-colors ${showHistory ? 'bg-primary/10 text-primary' : 'hover:bg-accent text-muted-foreground'}`} title="Histórico de protocolos">
                             <History size={15} />
@@ -284,10 +302,12 @@ export default function Chat() {
                   </div>
                 ))}
               </div>
+              {currentTicket?.status === 'closed' && <p className="border-t p-3 text-sm text-muted-foreground">Atendimento encerrado. Histórico disponível por 30 dias após o encerramento.</p>}
+              {chatError && <p role="alert" className="p-3 text-sm text-red-600">{chatError}</p>}
               <div className="p-3 border-t border-border/30 flex gap-2">
-                <input value={reply} onChange={e => setReply(e.target.value)} placeholder="Digite sua mensagem..." onKeyDown={e => { if (e.key === 'Enter') sendReply(); }}
+                <input disabled={currentTicket?.status === 'closed'} value={reply} onChange={e => setReply(e.target.value)} placeholder="Digite sua mensagem..." onKeyDown={e => { if (e.key === 'Enter') sendReply(); }}
                   className="flex-1 px-3 py-2 bg-muted rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" />
-                <button onClick={sendReply} disabled={sending || !reply.trim()} className="px-4 py-2 bg-primary text-white rounded-xl text-sm font-bold disabled:opacity-50 flex items-center gap-1">
+                <button onClick={sendReply} disabled={sending || !reply.trim() || currentTicket?.status === 'closed'} className="px-4 py-2 bg-primary text-white rounded-xl text-sm font-bold disabled:opacity-50 flex items-center gap-1">
                   {sending ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />}
                 </button>
               </div>

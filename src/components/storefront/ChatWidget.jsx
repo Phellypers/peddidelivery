@@ -35,11 +35,13 @@ export default function ChatWidget({ externalOpen = false, onExternalClose, hide
   useEffect(() => { if (externalOpen) setOpen(true); }, [externalOpen]);
   const closeChat = () => { setOpen(false); onExternalClose?.(); };
   const [step, setStep] = useState('reason'); // reason | chat
+  const [ticketHistory, setTicketHistory] = useState([]);
   const [ticket, setTicket] = useState(null);
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
+  const [chatError, setChatError] = useState('');
   const [starting, setStarting] = useState(false);
   const scrollRef = useRef(null);
   const dragControls = useDragControls();
@@ -58,10 +60,11 @@ export default function ChatWidget({ externalOpen = false, onExternalClose, hide
 
   // Check for existing active ticket on mount
   useEffect(() => {
-    if (!isAuthenticated || !user?.email) return;
-    base44.entities.SupportTicket.filter({ customer_email: user.email }, '-created_date', 10)
+    if (!isAuthenticated || !userá.email) return;
+    base44.entities.SupportTicket.filter({ customer_email: user.email }, '-created_date', 200)
       .then(tickets => {
-        const active = tickets.find(t => t.status === 'open' || t.status === 'in_progress');
+        setTicketHistory(tickets);
+        const active = tickets.find(t => t.status !== 'closed') || tickets[0];
         if (active) {
           setTicket(active);
           setStep('chat');
@@ -81,7 +84,13 @@ export default function ChatWidget({ externalOpen = false, onExternalClose, hide
         setTimeout(() => { scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' }); }, 100);
       }
     });
-    return () => unsub();
+    const unsubTickets = base44.entities.SupportTicket.subscribe(event => {
+      setTicketHistory(prev => event.type === 'delete' ? prev.filter(t => t.id !== event.id) : [event.data, ...prev.filter(t => t.id !== event.id)]);
+      if(event.id !== conversationId) return;
+      if(event.type === 'delete') {setTicket(null);setMessages([]);setStep('reason');}
+      else setTicket(event.data);
+    });
+    return () => {unsub();unsubTickets();};
   }, [open, conversationId]);
 
   const loadMessages = async () => {
@@ -94,48 +103,48 @@ export default function ChatWidget({ externalOpen = false, onExternalClose, hide
   };
 
   const startTicket = async (reasonId) => {
-    setStarting(true);
+    setStarting(true);setChatError('');setMessages([]);
     const protocol = generateProtocol();
     try {
       const created = await base44.entities.SupportTicket.create({
         protocol,
-        customer_name: user?.full_name || user?.email,
-        customer_email: user?.email,
-        customer_user_id: user?.id,
+        customer_name: userá.full_name || userá.email,
+        customer_email: userá.email,
+        customer_user_id: userá.id,
         reason: reasonId,
         reason_label: REASON_LABELS[reasonId],
         status: 'open',
       });
-      setTicket(created);
+      setTicket(created);setTicketHistory(prev => [created,...prev]);
       setStep('chat');
       await base44.entities.ChatMessage.create({
         conversation_id: created.id,
-        customer_name: user?.full_name || user?.email,
-        customer_email: user?.email,
+        customer_name: userá.full_name || userá.email,
+        customer_email: userá.email,
         sender_type: 'customer',
         message: `📋 Protocolo ${protocol}\nMotivo: ${REASON_LABELS[reasonId]}`,
         is_read_by_store: false,
         is_read_by_customer: true,
       });
-      loadMessages();
-    } catch (_) {}
+    } catch (error) {setChatError(error.message);}
     setStarting(false);
   };
 
   const send = async () => {
-    if (!text.trim() || !conversationId) return;
-    setSending(true);
+    if (!text.trim() || !conversationId || ticket?.status === 'closed') return;
+    setSending(true);setChatError('');
+    try {
     await base44.entities.ChatMessage.create({
       conversation_id: conversationId,
-      customer_name: user?.full_name || user?.email,
-      customer_email: user?.email,
+      customer_name: userá.full_name || userá.email,
+      customer_email: userá.email,
       sender_type: 'customer',
       message: text,
       is_read_by_store: false,
       is_read_by_customer: true,
     });
     setText('');
-    setSending(false);
+    } catch(error) {setChatError(error.message); const latest=await base44.entities.SupportTicket.get(conversationId);if(latest)setTicket(latest);} finally {setSending(false);}
   };
 
   if (!isAuthenticated || !user) return null;
@@ -181,6 +190,14 @@ export default function ChatWidget({ externalOpen = false, onExternalClose, hide
                   <button type="button" aria-label="Fechar chat" onClick={closeChat} className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl text-[#6B7280] transition-colors hover:bg-[#F3F4F6] hover:text-[#111111]"><X size={22} /></button>
                 </header>
 
+                {ticketHistory.length > 0 && <div className="flex-shrink-0 border-b border-[#E5E7EB] px-4 py-2">
+                  <label className="text-xs text-[#6B7280]" htmlFor="chat-history">Histórico de atendimentos</label>
+                  <select id="chat-history" value={ticket?.id || ''} onChange={event => {const selected=ticketHistory.find(t=>t.id===event.target.value);if(selected){setTicket(selected);setMessages([]);setStep('chat');}}} className="mt-1 min-h-10 w-full rounded-xl border border-[#E5E7EB] bg-white px-2 text-sm">
+                    <option value="">Novo atendimento</option>
+                    {ticketHistory.map(t => <option key={t.id} value={t.id}>{t.protocol} {t.status==='closed'?'(Encerrado)':''}</option>)}
+                  </select>
+                </div>}
+                {chatError && <p role="alert" className="px-4 py-2 text-sm text-red-600">{chatError}</p>}
                 {step === 'reason' ? (
                   <div className="min-h-0 flex-1 overflow-y-auto bg-white p-4 sm:p-5">
                     <div className="mb-4 rounded-2xl bg-[#ECFDF3] p-4">
@@ -223,13 +240,16 @@ export default function ChatWidget({ externalOpen = false, onExternalClose, hide
                         </div>
                       ))}
                     </div>
-                    <form onSubmit={event => { event.preventDefault(); send(); }} className="flex flex-shrink-0 items-center gap-2 border-t border-[#E5E7EB] bg-white px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 sm:px-4">
+                    {ticket?.status === 'closed' ? <div className="flex-shrink-0 border-t border-[#E5E7EB] bg-white p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+                      <p className="text-sm text-[#6B7280]">Este atendimento foi encerrado pelo estabelecimento. O histórico ficará disponível por 30 dias e, depois desse período, será excluído permanentemente.</p>
+                      <button type="button" onClick={() => {setStep('reason');setTicket(null);setMessages([]);setText('');}} className="mt-3 min-h-11 w-full rounded-xl bg-[#22C55E] px-4 font-semibold text-white">Iniciar novo atendimento</button>
+                    </div> : <form onSubmit={event => { event.preventDefault(); send(); }} className="flex flex-shrink-0 items-center gap-2 border-t border-[#E5E7EB] bg-white px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 sm:px-4">
                       <input value={text} onChange={event => setText(event.target.value)} placeholder="Mensagem..." aria-label="Mensagem"
                         className="min-h-12 min-w-0 flex-1 rounded-2xl border border-[#D1D5DB] bg-white px-4 text-base text-[#111111] outline-none placeholder:text-[#9CA3AF] focus:border-[#22C55E] focus:ring-2 focus:ring-[#22C55E]/20" />
                       <button type="submit" aria-label="Enviar mensagem" disabled={sending || !text.trim()} className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl bg-[#22C55E] text-white transition-colors hover:bg-[#16A34A] disabled:opacity-40">
                         {sending ? <Loader2 size={18} className="animate-spin" /> : <Send size={19} />}
                       </button>
-                    </form>
+                    </form>}
                   </>
                 )}
               </motion.section>

@@ -83,6 +83,19 @@ async function saveEntity(request:AuthRequest,response:express.Response){
     data.user_id=request.auth!.userId;
     if(entity==='CustomerProfile') data.email=request.auth!.email;
   }
+  if(entity==='SupportTicket' && !isManager(request)) {
+    if(id) return response.status(403).json({error:'Somente o gestor pode alterar o atendimento.'});
+    data.status='open';delete data.closed_at;delete data.delete_after;
+    data.customer_email=request.auth?.email || '';data.customer_user_id=request.auth?.userId || '';
+  }
+  if(entity==='ChatMessage' && !String(data.conversation_id || '').startsWith('deliverer_')) {
+    const ticket=(await readEntities('SupportTicket',request)).find(row=>row.id===data.conversation_id);
+    if(!ticket) return response.status(403).json({error:'Sem acesso ao protocolo.'});
+    if(!id && ticket.status==='closed') return response.status(409).json({error:'Atendimento encerrado. Inicie um novo protocolo.'});
+    if(id && ['message','conversation_id'].some(key=>request.body[key]!==undefined && request.body[key]!==prior?.[key]))
+      return response.status(403).json({error:'Mensagens enviadas não podem ser alteradas.'});
+    if(!id) data.sender_type=isManager(request)?'store':'customer';
+  }
   switch(entity){
     case 'Deliverer': {
       try { response.status(id?200:201).json(await saveCourier(pool!,tenant,data,id as string|undefined)); }
@@ -168,6 +181,7 @@ demoRouter.delete('/entities/:entity/:id',async(request:AuthRequest,response)=>{
   const prior=(await readEntities(entity,request)).find(row=>row.id===id);
   if(!prior)return response.status(404).json({error:'Registro não encontrado.'});
   if (!isManager(request) && ['Order','Store','Category'].includes(entity)) return response.status(403).json({error:'Perfil sem permissão.'});
+  if(['SupportTicket','ChatMessage'].includes(entity)) return response.status(403).json({error:'O histórico é excluído automaticamente após 30 dias do encerramento.'});
   if(entity==='Category')await query('UPDATE categories SET active=false,details=details||\'{"deleted":true}\'::jsonb WHERE id=$1 AND store_id=$2',[id,tenant]);
   else if(entity==='User')await query('UPDATE users SET active=false WHERE id=$1 AND store_id=$2',[id,tenant]);
   else if(entity==='Order'){
