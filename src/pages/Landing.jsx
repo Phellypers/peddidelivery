@@ -4,6 +4,7 @@ import { base44 } from '@/api/base44Client';
 import { Loader2, Store, ShoppingBag, Bike, BarChart3, MessageCircle, Heart, ArrowRight, Lock, Mail, X } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
+import LandingHeroCarousel from '@/components/landing/LandingHeroCarousel';
 
 const SEGMENTS = [
   'Restaurante / Lanchonete', 'Açaí / Sorveteria', 'Pizzaria', 'Mercado / Sacolão',
@@ -86,16 +87,17 @@ export default function Landing() {
       </nav>
 
       {/* ── Hero ── */}
-      <section className="mx-auto max-w-6xl rounded-b-[2.5rem] bg-gradient-to-b from-green-50 via-white to-white px-5 pb-16 pt-16 text-center">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+      <section className="mx-auto max-w-6xl rounded-b-[2.5rem] bg-gradient-to-b from-green-50 via-white to-white px-5 pb-14 pt-10 sm:pt-14">
+        <div className="grid items-center gap-8 lg:grid-cols-[0.92fr_1.08fr] lg:gap-5">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center lg:text-left">
           <span className="inline-block text-xs font-bold text-primary bg-primary/10 px-3 py-1 rounded-full mb-4"> Plataforma de Delivery & PDV</span>
-          <h1 className="font-heading font-extrabold text-4xl md:text-5xl text-gray-900 leading-tight max-w-2xl mx-auto">
+          <h1 className="font-heading font-extrabold text-4xl md:text-5xl text-gray-900 leading-tight max-w-2xl mx-auto lg:mx-0">
             Sua loja online em <span className="text-primary">minutos</span>, não em dias.
           </h1>
-          <p className="text-gray-500 text-lg mt-4 max-w-xl mx-auto">
+          <p className="text-gray-500 text-lg mt-4 max-w-xl mx-auto lg:mx-0">
             Cardápio digital, pedidos em tempo real, PDV completo, entregadores com rastreio e marketing automático. Tudo em um só lugar.
           </p>
-          <div className="flex flex-col sm:flex-row gap-3 justify-center mt-8">
+          <div className="flex flex-col sm:flex-row gap-3 justify-center mt-8 lg:justify-start">
             <button onClick={() => setShowForm(true)} className="bg-primary text-white px-8 py-3.5 rounded-2xl font-bold text-sm hover:bg-primary/90 transition-colors flex items-center justify-center gap-2">
               Criar minha loja grátis <ArrowRight size={16} />
             </button>
@@ -104,6 +106,10 @@ export default function Landing() {
             </Link>
           </div>
         </motion.div>
+        <motion.div initial={{ opacity: 0, x: 24 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.15 }}>
+          <LandingHeroCarousel />
+        </motion.div>
+        </div>
       </section>
 
       {/* ── Features grid ── */}
