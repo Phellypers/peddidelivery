@@ -223,7 +223,7 @@ export default function Chat() {
         </div>
 
         {/* Messages */}
-        <div className={`${selectedConv ? 'flex h-[calc(100dvh-170px-env(safe-area-inset-bottom))] min-h-[360px]' : 'hidden md:flex'} min-w-0 md:h-auto md:min-h-0 bg-white rounded-2xl border border-gray-200 flex-col overflow-hidden`}>
+        <div className={`${selectedConv ? 'fixed left-4 right-4 top-[72px] bottom-[calc(94px+env(safe-area-inset-bottom))] z-30 flex' : 'hidden md:flex'} min-w-0 md:static md:z-auto md:h-auto md:min-h-0 bg-white rounded-2xl border border-gray-200 flex-col overflow-hidden`}>
           {!selectedConv || !currentConv ? (
             <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground">
               <MessageCircle size={40} className="opacity-30 mb-3" />
@@ -232,21 +232,21 @@ export default function Chat() {
           ) : (
             <>
               <div className="shrink-0 p-4 border-b border-gray-100">
-                <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="grid grid-cols-[44px_minmax(0,1fr)] items-center gap-x-3 gap-y-2 md:flex md:flex-wrap">
                   <button aria-label="Voltar às conversas" onClick={()=>setSelectedConv(null)} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl md:hidden"><ArrowLeft size={22}/></button>
                   <span className="hidden h-12 w-12 shrink-0 items-center justify-center rounded-full bg-green-100 font-semibold text-green-600 md:flex">{(currentConv.name||currentConv.email||'?').split(' ').slice(0,2).map(p=>p[0]).join('').toUpperCase()}</span>
                   <div className="min-w-0 flex-1">
-                    <p className="break-words font-semibold text-base">{currentConv?.name || nameParam || 'Nova conversa'}</p>
-                    <p className="break-all text-xs text-muted-foreground">{currentConv?.email || (selectedConv?.startsWith('deliverer_') ? 'Entregador' : '')}</p>
+                    <p title={currentConv?.name || nameParam} className="truncate font-semibold text-base">{currentConv?.name || nameParam || 'Nova conversa'}</p>
+                    <p title={currentConv?.email} className="truncate text-xs text-muted-foreground">{currentConv?.email || (selectedConv?.startsWith('deliverer_') ? 'Entregador' : '')}</p>
                   </div>
-                  <div className="flex flex-wrap items-center gap-2">
+                  <div className="col-span-2 flex min-w-0 flex-wrap items-center gap-2 md:ml-auto">
                     <span className={`rounded-full px-2 py-1 text-xs font-semibold ${{unread:'bg-red-50 text-red-600',in_progress:'bg-blue-50 text-blue-600',waiting:'bg-amber-50 text-amber-700',closed:'bg-gray-100 text-gray-600'}[currentConv.status]}`}>{chatLabels[currentConv.status]}</span>
                     {currentTicket && (
                       <>
-                        <select disabled={currentTicket.status === 'closed' || closing} value={currentTicket.status} onChange={e => updateTicketStatus(currentTicket.id, e.target.value)}
+                        {currentTicket.status !== 'closed' && <select aria-label="Status do atendimento" disabled={closing} value={currentTicket.status} onChange={e => updateTicketStatus(currentTicket.id, e.target.value)}
                           className={`min-h-11 text-xs font-bold px-2 py-1 rounded-xl border-0 cursor-pointer ${TICKET_STATUS[currentTicket.status]?.color}`}>
                           {Object.entries(TICKET_STATUS).filter(([k]) => k !== 'closed' || currentTicket.status === 'closed').map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
-                        </select>
+                        </select>}
                         {currentTicket.status !== 'closed' && <button onClick={() => setConfirmClose(true)} className="min-h-11 rounded-xl border border-[#22C55E] px-3 py-2 text-xs font-semibold text-green-600">Finalizar atendimento</button>}
                         {chatTab === 'customers' && customerTickets.length > 1 && (
                           <button onClick={() => setShowHistory(v => !v)} className={`p-1.5 rounded-lg transition-colors ${showHistory ? 'bg-primary/10 text-primary' : 'hover:bg-accent text-muted-foreground'}`} title="Histórico de protocolos">
@@ -259,7 +259,7 @@ export default function Chat() {
                 </div>
                 {currentTicket && (
                   <div className="flex flex-wrap items-center gap-2 mt-3">
-                    <span className="text-xs font-mono font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded">{currentTicket.protocol}</span>
+                    <span className="max-w-full truncate text-xs font-mono font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded">{currentTicket.protocol}</span>
                     <span className="text-xs text-muted-foreground">Motivo: {REASON_LABELS[currentTicket.reason] || currentTicket.reason_label}</span>
                   </div>
                 )}
@@ -306,8 +306,8 @@ export default function Chat() {
               </div>
 
               {chatError && <p role="alert" className="p-3 text-sm text-red-600">{chatError}</p>}
-              <div className="mx-4 mb-3 flex shrink-0 items-center gap-2 rounded-xl bg-gray-50 p-3 text-xs text-gray-500"><Info size={16} className="shrink-0"/>Históricos encerrados são excluídos após 30 dias.</div>
-              <div className="shrink-0 p-3 border-t border-gray-100 flex gap-2">
+              <div className="mx-4 mb-3 hidden md:flex shrink-0 items-center gap-2 rounded-xl bg-gray-50 p-3 text-xs text-gray-500"><Info size={16} className="shrink-0"/>Históricos encerrados são excluídos após 30 dias.</div>
+              <div className="shrink-0 bg-white p-3 border-t border-gray-100 flex gap-2">
                 <input disabled={currentTicket?.status === 'closed'} value={reply} onChange={e => setReply(e.target.value)} placeholder="Digite sua mensagem..." onKeyDown={e => { if (e.key === 'Enter') sendReply(); }}
                   className="min-w-0 min-h-12 flex-1 px-3 py-2 bg-gray-50 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-primary/20" />
                 <button onClick={sendReply} disabled={sending || !reply.trim() || currentTicket?.status === 'closed'} className="min-h-12 px-4 py-2 bg-[#22C55E] text-white rounded-xl text-sm font-bold disabled:opacity-50 flex items-center gap-1">
