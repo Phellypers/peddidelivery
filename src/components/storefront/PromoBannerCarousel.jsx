@@ -72,8 +72,9 @@ export default function PromoBannerCarousel({ banners, onSelectBanner }) {
       className="peddi-promo-track scrollbar-hide">
       {slides.map((banner,index) => {
         const linked = getBannerProductIds(banner).length > 0;
-        return <a key={banner.id || index} href="#cardapio-produtos" className={`peddi-promo-slide ${slides.length === 1 ? 'single' : ''}`}
-          aria-label={banner.title || `Banner ${index + 1}`} onClick={event => {if(linked) {event.preventDefault();onSelectBanner?.(banner,index);}}}>
+        const campaignPath = `/loja/campanha/${encodeURIComponent(banner.id || `index-${banners?.indexOf(banner) ?? index}`)}`;
+        return <a key={banner.id || index} href={campaignPath} className={`peddi-promo-slide ${slides.length === 1 ? 'single' : ''}`}
+          aria-label={banner.title || `Banner ${index + 1}`} onClick={event => {if(onSelectBanner) {event.preventDefault();onSelectBanner(banner,index);}}}>
           <img src={banner.image_url || banner.image} alt={banner.title || ''} className="h-full w-full object-cover" draggable="false" loading={index === 0 ? 'eager' : 'lazy'}/>
           {(banner.title || banner.subtitle || banner.badge) && <><div className="peddi-promo-shade"/><div className="peddi-promo-copy">
             {banner.badge && <span className="peddi-promo-badge">{banner.badge}</span>}

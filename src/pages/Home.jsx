@@ -15,7 +15,7 @@ import BirthdayPromoNotifier from '@/components/storefront/BirthdayPromoNotifier
 import AbandonedCartNotifier from '@/components/storefront/AbandonedCartNotifier';
 import { Loader2, Search, AlignJustify, Heart, MapPin, MessageCircle, House, Bell } from 'lucide-react';
 import NotificationBell from '@/components/storefront/NotificationBell';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '@/lib/AuthContext';
 import { emitLiveEvent } from '@/lib/liveSession';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
@@ -37,6 +37,8 @@ const SPECIAL_SECTIONS = {
 };
 
 export default function Home() {
+  const navigate = useNavigate();
+  const { bannerId } = useParams();
   const [store, setStore] = useState(null);
   const [categories, setCategories] = useState([]);
   const [products, setProducts] = useState([]);
@@ -65,11 +67,16 @@ export default function Home() {
   }, [loadData]);
 
   const { pullDistance, refreshing, bind } = usePullToRefresh(loadData);
+  const campaignBanner = bannerId ? (store?.banners || []).find((banner, index) =>
+    banner.is_active && String(banner.id || `index-${index}`) === bannerId) : null;
 
   const filteredProducts = useMemo(() => {
     let result = products;
 
-    if (activeCategory === '__most_ordered__') {
+    if (bannerId) {
+      const linkedIds = new Set(getBannerProductIds(campaignBanner || {}));
+      result = products.filter(product => linkedIds.has(product.id));
+    } else if (activeCategory === '__most_ordered__') {
       result = products.filter(product => Number(product.orders_count || 0) > 0)
         .sort((a, b) => Number(b.orders_count || 0) - Number(a.orders_count || 0)).slice(0, 12);
     } else if (activeCategory === '__promotions__') {
@@ -85,7 +92,7 @@ export default function Home() {
       result = result.filter(p => p.category_ids?.includes(activeCategory));
     }
 
-    if (searchQuery) {
+    if (searchQuery && !bannerId) {
       const q = searchQuery.toLowerCase();
       result = result.filter(p =>
         p.name?.toLowerCase().includes(q) ||
@@ -94,7 +101,7 @@ export default function Home() {
       );
     }
     return result;
-  }, [products, store, activeCategory, activeBanner, searchQuery]);
+  }, [products, store, activeCategory, activeBanner, searchQuery, bannerId, campaignBanner]);
 
   if (loading) {
     return (
@@ -116,10 +123,9 @@ export default function Home() {
   };
 
   const showBannerCampaign = banner => {
-    setActiveBanner(banner);
-    setActiveCategory(null);
-    setSearchQuery('');
-    window.requestAnimationFrame(() => document.getElementById('cardapio-produtos')?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+    const index = (store?.banners || []).indexOf(banner);
+    navigate(`/loja/campanha/${encodeURIComponent(banner.id || `index-${index}`)}`);
+    window.scrollTo({ top: 0, behavior: 'instant' });
   };
 
   const clearProductFilter = () => {
@@ -133,6 +139,23 @@ export default function Home() {
     setActiveCategory(category);
     window.requestAnimationFrame(() => document.getElementById('cardapio-produtos')?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
   };
+
+  if (bannerId) return (
+    <div className="peddi-storefront min-h-screen bg-white pb-28" style={{ '--store-primary': theme.primary, '--store-on-primary': theme.onPrimary, '--primary': theme.primaryHsl, '--ring': theme.primaryHsl }}>
+      <CartDrawer />
+      <main className="mx-auto min-h-screen max-w-2xl bg-white">
+        <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-gray-100 bg-white/95 px-4 py-3 backdrop-blur">
+          <Link to="/loja" aria-label="Voltar ao cardápio" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-gray-700 hover:bg-gray-100"><span aria-hidden="true">←</span></Link>
+          <div className="min-w-0"><p className="text-xs text-gray-500">{store?.name}</p><h1 className="break-words font-heading text-lg font-bold text-gray-900">{campaignBanner?.title || 'Campanha promocional'}</h1></div>
+        </header>
+        {campaignBanner?.subtitle && <p className="px-4 pt-4 text-sm text-gray-500">{campaignBanner.subtitle}</p>}
+        <p className="px-4 py-4 text-sm text-gray-500">{filteredProducts.length} produto{filteredProducts.length !== 1 ? 's' : ''} nesta campanha</p>
+        {filteredProducts.length ? <div className="grid grid-cols-2 gap-3 px-4">{filteredProducts.map(product => <ProductCard key={product.id} product={product} />)}</div>
+          : <p role="status" className="px-4 py-10 text-center text-sm text-gray-500">{campaignBanner ? 'Nenhum produto disponível vinculado a esta campanha.' : 'Esta campanha não está disponível.'}</p>}
+      </main>
+      <BottomNav />
+    </div>
+  );
 
   return (
     <div className="peddi-storefront min-h-screen pb-24" style={{

@@ -132,6 +132,7 @@ function App() {
                 <Route path="/oauth/consent" element={<OAuthConsent />} />
                 {/* Public storefront routes — accessible without login */}
                 <Route path="/loja" element={<Home />} />
+                <Route path="/loja/campanha/:bannerId" element={<Home />} />
                 <Route path="/item/:id" element={<ProductDetail />} />
                 <Route path="/buscar" element={<SearchPage />} />
                 <Route path="/checkout" element={<Checkout />} />
