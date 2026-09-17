@@ -4,6 +4,7 @@ import { Loader2, MessageCircle, Send, Search, Bike, History, ArrowLeft, Sliders
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog';
 import TypingIndicator from '@/components/storefront/TypingIndicator';
 import { useChatTyping } from '@/hooks/useChatTyping';
+import { isPresentationDemo } from '@/lib/presentationDemo';
 import BottomNav from '@/components/storefront/BottomNav';
 import { buildConversations, filterConversations, matchesChatTab, remainingChatDays, chatReasons, chatLabels } from '@/lib/chatConversations';
 import { useSearchParams } from 'react-router-dom';
@@ -121,7 +122,7 @@ export default function Chat() {
       { $set: { is_read_by_store: true } }
     );
     setReply('');
-    if(currentTicket && currentTicket.status!=='closed') await base44.entities.SupportTicket.update(currentTicket.id,{status:'waiting_response'});
+    if(isPresentationDemo() && currentTicket && currentTicket.status!=='closed') await base44.entities.SupportTicket.update(currentTicket.id,{status:'waiting_response'});
     load();
     } catch(error) { setChatError(error.message); load(); } finally { setSending(false); }
   };
