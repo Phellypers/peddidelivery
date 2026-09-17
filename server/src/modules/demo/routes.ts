@@ -11,6 +11,7 @@ import { blockPresentationDemoWrites, requireAuth, requireRoles, type AuthReques
 import { defaults, entityNames, isManager, matches, readEntities, readOrders, recordView, storeId, writeOrder } from './data.js';
 import { saveCourier, archiveCourier } from '../couriers/data.js';
 import { syncDelivery } from '../deliveries/data.js';
+import { resolveChatSender } from './chat-sender.js';
 import { storageConfigured, uploadImage, StorageUploadError } from '../storage/client.js';
 
 export const demoRouter=Router();
@@ -114,9 +115,12 @@ async function saveEntity(request:AuthRequest,response:express.Response){
     const ticket=(await readEntities('SupportTicket',request)).find(row=>row.id===data.conversation_id);
     if(!ticket) return response.status(403).json({error:'Sem acesso ao protocolo.'});
     if(!id && ticket.status==='closed') return response.status(409).json({error:'Atendimento encerrado. Inicie um novo protocolo.'});
-    if(id && ['message','conversation_id'].some(key=>request.body[key]!==undefined && request.body[key]!==prior?.[key]))
+    if(id && ['message','conversation_id','sender_type'].some(key=>request.body[key]!==undefined && request.body[key]!==prior?.[key]))
       return response.status(403).json({error:'Mensagens enviadas não podem ser alteradas.'});
-    if(!id) data.sender_type=isManager(request)?'store':'customer';
+    if(!id) {
+      try { data.sender_type=resolveChatSender(isManager(request),request.body.sender_type,ticket.customer_email===request.auth?.email); }
+      catch(error) { return response.status(403).json({error:error instanceof Error?error.message:'Remetente inválido.'}); }
+    }
   }
   switch(entity){
     case 'Deliverer': {

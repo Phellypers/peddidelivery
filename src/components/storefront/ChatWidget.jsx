@@ -243,7 +243,7 @@ export default function ChatWidget({ externalOpen = false, onExternalClose, hide
                         <div className="py-10 text-center text-[#9CA3AF]"><MessageCircle size={34} className="mx-auto mb-2 opacity-40" /><p className="text-sm">Envie uma mensagem para a loja</p></div>
                       ) : messages.map(message => (
                         <div key={message.id} className={`flex ${message.sender_type === 'customer' ? 'justify-end' : 'justify-start'}`}>
-                          <div className={`max-w-[82%] whitespace-pre-wrap rounded-2xl px-3.5 py-2.5 text-sm ${message.sender_type === 'customer' ? 'bg-[#DCFCE7] text-[#111111]' : 'border border-[#E5E7EB] bg-white text-[#111111]'}`}>
+                          <div aria-label={message.sender_type === 'customer' ? 'Mensagem do cliente' : 'Mensagem da loja'} className={`max-w-[82%] min-w-0 whitespace-pre-wrap break-words rounded-2xl px-3.5 py-2.5 text-sm ${message.sender_type === 'customer' ? 'rounded-br-md bg-[#DCFCE7] text-[#111111]' : 'rounded-bl-md border border-[#E5E7EB] bg-white text-[#111111]'}`}>
                             {message.message}
                             <p className="mt-1 text-right text-[10px] text-[#6B7280]">{new Date(message.created_date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</p>
                           </div>

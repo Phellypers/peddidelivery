@@ -304,7 +304,7 @@ export default function Chat() {
               <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto p-4 space-y-2">
                 {currentMessages.map(m => (
                   <div key={m.id} className={`flex ${m.sender_type === 'store' ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`max-w-[75%] whitespace-pre-wrap break-words px-4 py-3 rounded-2xl text-sm leading-relaxed ${m.sender_type === 'store' ? 'bg-green-100 text-[#111111]' : 'bg-gray-100 text-[#111111]'}`}>
+                    <div aria-label={m.sender_type === 'store' ? 'Mensagem da loja' : 'Mensagem recebida'} className={`max-w-[82%] min-w-0 whitespace-pre-wrap break-words px-4 py-3 rounded-2xl text-sm leading-relaxed ${m.sender_type === 'store' ? 'rounded-br-md bg-green-100 text-[#111111]' : 'rounded-bl-md bg-gray-100 text-[#111111]'}`}>
                       {m.message}
                       <p className={`text-[9px] mt-0.5 ${m.sender_type === 'store' ? 'text-gray-500' : 'text-gray-500'}`}>{new Date(m.created_date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</p>
                     </div>
