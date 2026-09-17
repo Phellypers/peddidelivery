@@ -184,7 +184,7 @@ export default function Home() {
         <div className="peddi-store-categories overflow-x-auto scrollbar-hide">
           <div className="flex gap-3 px-4 py-4">
             <button type="button" aria-pressed={!activeCategory && !activeBanner} onClick={clearProductFilter} className={`peddi-store-category ${!activeCategory && !activeBanner ? 'active' : ''}`}>
-              <span className="peddi-store-category-image">{store?.logo_url ? <img src={store.logo_url} alt="" /> : <House size={32} />}</span><span>Todos</span>
+              <span className="peddi-store-category-image"><House size={32} aria-hidden="true" /></span><span>Todos</span>
             </button>
             {visibleCategories.map(cat => <button type="button" key={cat.id} aria-pressed={activeCategory === cat.id} onClick={() => { setActiveBanner(null); setActiveCategory(activeCategory === cat.id ? null : cat.id); }} className={`peddi-store-category ${activeCategory === cat.id ? 'active' : ''} ${hasRecentProduct(cat.id, products) ? 'has-new-product' : ''}`}>
               <span className="peddi-store-category-image">{getCategoryCover(cat) ? <img src={getCategoryCover(cat)} alt="" /> : <span className="text-3xl">{cat.icon || <House size={28} />}</span>}</span>
