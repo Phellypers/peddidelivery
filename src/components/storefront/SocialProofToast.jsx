@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShoppingBag } from 'lucide-react';
+import { playNotificationSound } from '@/lib/notificationSounds';
 
 const NAMES = ['Maria', 'João', 'Ana Paula', 'Carlos', 'Fernanda', 'Rafael', 'Beatriz', 'Lucas', 'Juliana', 'Pedro'];
 const ACTIONS = [
@@ -12,23 +13,6 @@ const ACTIONS = [
 export default function SocialProofToast({ products }) {
   const [notification, setNotification] = useState(null);
   const timerRef = useRef(null);
-  const audioRef = useRef(null);
-
-  const playSound = () => {
-    try {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.frequency.setValueAtTime(880, ctx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(660, ctx.currentTime + 0.15);
-      gain.gain.setValueAtTime(0.15, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
-      osc.start(ctx.currentTime);
-      osc.stop(ctx.currentTime + 0.3);
-    } catch (e) {}
-  };
 
   const showNext = () => {
     if (!products || products.length === 0) return;
@@ -36,14 +20,15 @@ export default function SocialProofToast({ products }) {
     const name = NAMES[Math.floor(Math.random() * NAMES.length)];
     const action = ACTIONS[Math.floor(Math.random() * ACTIONS.length)];
     const minutesAgo = Math.floor(Math.random() * 8) + 1;
+    const id = Date.now();
     setNotification({
-      id: Date.now(),
+      id,
       name,
       text: action(product.name),
       image: product.images?.[0],
       time: `há ${minutesAgo} min`,
     });
-    playSound();
+    playNotificationSound('socialProof', id);
     setTimeout(() => setNotification(null), 4500);
   };
 
