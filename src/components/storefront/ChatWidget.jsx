@@ -5,6 +5,8 @@ import { useAuth } from '@/lib/AuthContext';
 import { MessageCircle, X, Send, Loader2, Package, Bike, Edit3, HelpCircle, MessageSquare, ChevronDown, ChevronRight, CalendarDays } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createPortal } from 'react-dom';
+import TypingIndicator from './TypingIndicator';
+import { useChatTyping } from '@/hooks/useChatTyping';
 import { useDragControls } from 'framer-motion';
 
 const REASONS = [
@@ -76,6 +78,7 @@ export default function ChatWidget({ externalOpen = false, onExternalClose, hide
   }, [isAuthenticated, user]);
 
   const conversationId = ticket?.id || '';
+  const chatTyping=useChatTyping(conversationId,open && ticket?.status!=='closed');
 
   useEffect(() => {
     if (!open || !conversationId) return;
@@ -130,6 +133,7 @@ export default function ChatWidget({ externalOpen = false, onExternalClose, hide
 
   const send = async () => {
     if (!text.trim() || !conversationId || ticket?.status === 'closed') return;
+    chatTyping.stop();
     setSending(true);setChatError('');
     try {
     await base44.entities.ChatMessage.create({
@@ -183,6 +187,7 @@ export default function ChatWidget({ externalOpen = false, onExternalClose, hide
                     <div className="min-w-0">
                       <h2 id="peddi-chat-title" className="truncate text-lg font-bold text-[#111111]">Chat com a loja</h2>
                       <p className="truncate text-xs text-[#6B7280]">{ticket?.protocol ? `Protocolo ${ticket.protocol}` : 'Novo atendimento'}</p>
+                      {ticket && <p role="status" className="mt-1 text-xs font-semibold text-[#15803D]">{{open:'Aguardando atendimento',in_progress:'Em atendimento',waiting_response:'Aguardando resposta',resolved:'Em atendimento',closed:'Encerrado'}[ticket.status] || 'Aguardando atendimento'}</p>}
                     </div>
                   </div>
                   <button type="button" aria-label="Fechar chat" onClick={closeChat} className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl text-[#6B7280] transition-colors hover:bg-[#F3F4F6] hover:text-[#111111]"><X size={22} /></button>
@@ -195,7 +200,7 @@ export default function ChatWidget({ externalOpen = false, onExternalClose, hide
                   {historyOpen && <div id="chat-history-list" className="max-h-[min(22dvh,180px)] space-y-2 overflow-y-auto overscroll-contain pb-2">
                     {ticketHistory.map(previous => <button type="button" key={previous.id} aria-pressed={ticket?.id === previous.id} onClick={() => {if(ticket?.id === previous.id && step === 'chat')return;setTicket(previous);setMessages([]);setText('');setChatError('');setStep('chat');}} className={`flex min-h-24 w-full items-center gap-3 rounded-2xl border bg-white p-3 text-left transition-colors ${ticket?.id === previous.id ? 'border-[#BBF7D0]' : 'border-[#E5E7EB] hover:border-[#22C55E]'}`}>
                       <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-2"><p className="break-words text-sm font-bold text-[#111111]">Protocolo {previous.protocol}</p><span className={`rounded-full px-2 py-1 text-[11px] font-semibold ${previous.status === 'closed' ? 'bg-[#F3F4F6] text-[#6B7280]' : 'bg-[#ECFDF3] text-[#15803D]'}`}>{{open:'Aberto',in_progress:'Em atendimento',resolved:'Resolvido',closed:'Encerrado'}[previous.status] || 'Aberto'}</span></div>
+                        <div className="flex flex-wrap items-center gap-2"><p className="break-words text-sm font-bold text-[#111111]">Protocolo {previous.protocol}</p><span className={`rounded-full px-2 py-1 text-[11px] font-semibold ${previous.status === 'closed' ? 'bg-[#F3F4F6] text-[#6B7280]' : 'bg-[#ECFDF3] text-[#15803D]'}`}>{{open:'Aberto',in_progress:'Em atendimento',resolved:'Resolvido',waiting_response:'Aguardando resposta',closed:'Encerrado'}[previous.status] || 'Aberto'}</span></div>
                         <p className="mt-1 text-xs text-[#6B7280]">{REASON_LABELS[previous.reason] || previous.reason_label || 'Motivo não informado'}</p>
                         <p className="mt-2 flex items-center gap-2 text-xs text-[#6B7280]"><CalendarDays size={14}/>{previous.created_date ? new Date(previous.created_date).toLocaleDateString('pt-BR') : 'Data indisponível'}</p>
                       </div><ChevronRight size={18} className="shrink-0 text-[#6B7280]"/>
@@ -245,11 +250,12 @@ export default function ChatWidget({ externalOpen = false, onExternalClose, hide
                         </div>
                       ))}
                     </div>
+                    {chatTyping.typing && <TypingIndicator/>}
                     {ticket?.status === 'closed' ? <div className="flex-shrink-0 border-t border-[#E5E7EB] bg-white p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
                       <p className="text-sm text-[#6B7280]">Este atendimento foi encerrado pelo estabelecimento. O histórico ficará disponível por 30 dias e, depois desse período, será excluído permanentemente.</p>
                       <button type="button" onClick={() => {setStep('reason');setTicket(null);setMessages([]);setText('');}} className="mt-3 min-h-11 w-full rounded-xl bg-[#22C55E] px-4 font-semibold text-white">Iniciar novo atendimento</button>
                     </div> : <form onSubmit={event => { event.preventDefault(); send(); }} className="flex flex-shrink-0 items-center gap-2 border-t border-[#E5E7EB] bg-white px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 sm:px-4">
-                      <input value={text} onChange={event => setText(event.target.value)} placeholder="Mensagem..." aria-label="Mensagem"
+                      <input value={text} onChange={event => {setText(event.target.value);chatTyping.change(event.target.value);}} onBlur={chatTyping.stop} placeholder="Mensagem..." aria-label="Mensagem"
                         className="min-h-12 min-w-0 flex-1 rounded-2xl border border-[#D1D5DB] bg-white px-4 text-base text-[#111111] outline-none placeholder:text-[#9CA3AF] focus:border-[#22C55E] focus:ring-2 focus:ring-[#22C55E]/20" />
                       <button type="submit" aria-label="Enviar mensagem" disabled={sending || !text.trim()} className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl bg-[#22C55E] text-white transition-colors hover:bg-[#16A34A] disabled:opacity-40">
                         {sending ? <Loader2 size={18} className="animate-spin" /> : <Send size={19} />}

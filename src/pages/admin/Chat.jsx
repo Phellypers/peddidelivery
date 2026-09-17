@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Loader2, MessageCircle, Send, Search, Bike, History, ArrowLeft, SlidersHorizontal, Info } from 'lucide-react';
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog';
+import TypingIndicator from '@/components/storefront/TypingIndicator';
+import { useChatTyping } from '@/hooks/useChatTyping';
 import BottomNav from '@/components/storefront/BottomNav';
 import { buildConversations, filterConversations, matchesChatTab, remainingChatDays, chatReasons, chatLabels } from '@/lib/chatConversations';
 import { useSearchParams } from 'react-router-dom';
@@ -10,6 +12,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 const TICKET_STATUS = {
   open: { label: 'Aberto', color: 'bg-amber-100 text-amber-700' },
   in_progress: { label: 'Em atendimento', color: 'bg-blue-100 text-blue-700' },
+  waiting_response: {label:'Aguardando cliente',color:'bg-amber-50 text-amber-700'},
   resolved: { label: 'Resolvido', color: 'bg-green-100 text-green-700' },
   closed: { label: 'Encerrada', color: 'bg-gray-100 text-gray-500' },
 };
@@ -81,10 +84,13 @@ export default function Chat() {
   const currentConv = conversations[selectedConv];
   const currentMessages = currentConv?.messages || [];
   const currentTicket = ticketMap[selectedConv];
+  const chatTyping=useChatTyping(selectedConv,Boolean(selectedConv) && currentTicket?.status!=='closed');
   const customerTickets = currentConv?.email ? tickets.filter(t=>t.customer_email===currentConv.email) : [];
   const markRead = async id => {
     try {
       await base44.entities.ChatMessage.updateMany({conversation_id:id,sender_type:id.startsWith('deliverer_')?'deliverer':'customer',is_read_by_store:false},{$set:{is_read_by_store:true}});
+      const active=ticketMap[id];
+      if(active?.status==='open')await base44.entities.SupportTicket.update(id,{status:'in_progress'});
       setMessages(prev=>prev.map(m=>m.conversation_id===id&&m.sender_type!=='store'?{...m,is_read_by_store:true}:m));
     } catch(error) {setChatError(error.message);}
   };
@@ -92,6 +98,7 @@ export default function Chat() {
 
   const sendReply = async () => {
     if (!reply.trim() || !selectedConv || sending || !currentConv || currentTicket?.status === 'closed') return;
+    chatTyping.stop();
     setSending(true);
     setChatError('');
     try {
@@ -114,7 +121,7 @@ export default function Chat() {
       { $set: { is_read_by_store: true } }
     );
     setReply('');
-    if(currentTicket && currentTicket.status!=='closed') await base44.entities.SupportTicket.update(currentTicket.id,{status:'in_progress'});
+    if(currentTicket && currentTicket.status!=='closed') await base44.entities.SupportTicket.update(currentTicket.id,{status:'waiting_response'});
     load();
     } catch(error) { setChatError(error.message); load(); } finally { setSending(false); }
   };
@@ -306,9 +313,10 @@ export default function Chat() {
               </div>
 
               {chatError && <p role="alert" className="p-3 text-sm text-red-600">{chatError}</p>}
+              {chatTyping.typing && <TypingIndicator/>}
               <div className="mx-4 mb-3 hidden md:flex shrink-0 items-center gap-2 rounded-xl bg-gray-50 p-3 text-xs text-gray-500"><Info size={16} className="shrink-0"/>Históricos encerrados são excluídos após 30 dias.</div>
               <div className="shrink-0 bg-white p-3 border-t border-gray-100 flex gap-2">
-                <input disabled={currentTicket?.status === 'closed'} value={reply} onChange={e => setReply(e.target.value)} placeholder="Digite sua mensagem..." onKeyDown={e => { if (e.key === 'Enter') sendReply(); }}
+                <input disabled={currentTicket?.status === 'closed'} value={reply} onChange={e => {setReply(e.target.value);chatTyping.change(e.target.value);}} onBlur={chatTyping.stop} placeholder="Digite sua mensagem..." onKeyDown={e => { if (e.key === 'Enter') sendReply(); }}
                   className="min-w-0 min-h-12 flex-1 px-3 py-2 bg-gray-50 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-primary/20" />
                 <button onClick={sendReply} disabled={sending || !reply.trim() || currentTicket?.status === 'closed'} className="min-h-12 px-4 py-2 bg-[#22C55E] text-white rounded-xl text-sm font-bold disabled:opacity-50 flex items-center gap-1">
                   {sending ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />}

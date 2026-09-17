@@ -10,7 +10,8 @@ export function buildConversations(messages, tickets) {
     conversation.messages.sort((a,b)=>String(a.created_date).localeCompare(String(b.created_date)));
     const last=conversation.messages.at(-1);
     const unread=conversation.messages.filter(m=>['customer','deliverer'].includes(m.sender_type)&&!m.is_read_by_store).length;
-    const status=conversation.ticket?.status==='closed'?'closed':unread?'unread':last?.sender_type==='store'?'waiting':'in_progress';
+    const ticketStatus=conversation.ticket?.status;
+    const status=ticketStatus==='closed'?'closed':unread?'unread':ticketStatus==='waiting_response'?'waiting':ticketStatus==='in_progress'?'in_progress':last?.sender_type==='store'?'waiting':'in_progress';
     return {...conversation,name:conversation.name||last?.customer_name,email:conversation.email||last?.customer_email,last,unread,status,date:last?.created_date||conversation.ticket?.created_date,reason:chatReasons[conversation.ticket?.reason]||conversation.ticket?.reason_label||(conversation.id.startsWith('deliverer_')?'Conversa com entregador':'Motivo não informado')};
   }).sort((a,b)=>String(b.date).localeCompare(String(a.date)));
 }

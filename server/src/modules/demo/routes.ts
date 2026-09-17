@@ -44,6 +44,28 @@ demoRouter.use(async (request:AuthRequest,response,next)=>{
   next();
 });
 demoRouter.use(blockPresentationDemoWrites);
+
+demoRouter.all('/chat/:ticketId/typing',requireAuth,async(request:AuthRequest,response)=>{
+  if(!['GET','POST'].includes(request.method))return response.sendStatus(405);
+  const id=String(request.params.ticketId);
+  if(!z.string().uuid().safeParse(id).success)return response.sendStatus(400);
+  const client=await pool!.connect();
+  try {
+    await client.query('BEGIN');
+    const result=await client.query("SELECT * FROM app_records WHERE id=$1 AND store_id=$2 AND entity_name='SupportTicket' FOR UPDATE",[id,storeId(request)]);
+    const ticket=result.rows[0];
+    if(!ticket||(!isManager(request)&&ticket.owner_id!==request.auth!.userId)){await client.query('ROLLBACK');return response.sendStatus(404);}
+    const sender=isManager(request)?'store':'customer';
+    if(request.method==='POST'){
+      if(typeof request.body.typing!=='boolean'){await client.query('ROLLBACK');return response.sendStatus(400);}
+      if(request.body.typing && ticket.data.status!=='closed')await client.query("INSERT INTO chat_presence(ticket_id,sender,expires_at) VALUES($1,$2,now()+interval '5 seconds') ON CONFLICT(ticket_id,sender) DO UPDATE SET expires_at=EXCLUDED.expires_at",[id,sender]);
+      else await client.query('DELETE FROM chat_presence WHERE ticket_id=$1 AND sender=$2',[id,sender]);
+      await client.query('COMMIT');return response.sendStatus(204);
+    }
+    const presence=await client.query('SELECT 1 FROM chat_presence WHERE ticket_id=$1 AND sender<>$2 AND expires_at>now()',[id,sender]);
+    await client.query('COMMIT');response.json({typing:ticket.data.status!=='closed'&&Boolean(presence.rowCount)});
+  }catch(error){await client.query('ROLLBACK');throw error;}finally{client.release();}
+});
 demoRouter.delete('/live-sessions/history', requireAuth, requireRoles('manager', 'peddi_admin'), async (request:AuthRequest, response) => {
   const result = await query("DELETE FROM app_records WHERE store_id=$1 AND entity_name='LiveSession'", [storeId(request)]);
   response.json({ deleted: result.rowCount ?? 0 });

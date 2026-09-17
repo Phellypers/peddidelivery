@@ -6,7 +6,7 @@ export default function ChatBadge() {
 
   const load = async () => {
     try {
-      const msgs = await base44.entities.ChatMessage.list('-created_date', 500);
+      const msgs=[];for(let skip=0;;skip+=500){const page=await base44.entities.ChatMessage.list('-created_date',500,skip);msgs.push(...page);if(page.length<500)break;}
       const count = msgs.filter(m => m.sender_type !== 'store' && !m.is_read_by_store).length;
       setUnread(count);
     } catch (_) {}
@@ -21,8 +21,8 @@ export default function ChatBadge() {
   if (unread === 0) return null;
 
   return (
-    <span className="ml-auto bg-red-500 text-white text-[10px] font-bold min-w-[18px] h-[18px] px-1 rounded-full flex items-center justify-center">
-      {unread > 9 ? '9+' : unread}
+    <span role="status" aria-label={`${unread} mensagens não lidas no Chat`} className="ml-auto bg-red-500 text-white text-[10px] font-bold min-w-[18px] h-[18px] px-1 rounded-full flex items-center justify-center">
+      {unread}
     </span>
   );
 }

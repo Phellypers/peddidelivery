@@ -38,6 +38,7 @@
       "enum": [
         "open",
         "in_progress",
+        "waiting_response",
         "resolved",
         "closed"
       ],
