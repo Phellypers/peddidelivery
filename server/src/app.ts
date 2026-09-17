@@ -9,6 +9,7 @@ import { catalogRouter, productView } from './modules/products/routes.js';
 import { demoRouter, uploadPath } from './modules/demo/routes.js';
 import { courierRouter } from './modules/couriers/routes.js';
 import { syncDelivery } from './modules/deliveries/data.js';
+import { accountRouter } from './modules/account/routes.js';
 
 export const app = express();
 const clientOrigins = [env.clientOrigin];
@@ -24,6 +25,7 @@ app.use(express.json({ limit: '1mb' }));
 app.use('/api/v1/admin', catalogRouter);
 app.use('/api/v1',courierRouter);
 app.use('/api/v1/demo', demoRouter);
+app.use('/api/v1/my-peddi',accountRouter);
 app.use('/uploads', express.static(uploadPath, { dotfiles:'deny' }));
 
 app.get('/health', async (_request, response) => {

@@ -6,6 +6,7 @@ import ChatBadge from '@/components/admin/ChatBadge';
 import ManagerOnboarding from '@/components/admin/ManagerOnboarding';
 
 const navItems = [
+  { icon: Settings, label: 'Minha PEDDI', path: '/admin/minha-peddi' },
   { icon: LayoutDashboard, label: 'Dashboard', path: '/admin' },
   { icon: Package, label: 'Produtos', path: '/admin/catalogo' },
   { icon: Boxes, label: 'Estoque', path: '/admin/estoque' },

@@ -40,6 +40,7 @@ import PDV from '@/pages/admin/PDV';
 import Financeiro from '@/pages/admin/Financeiro';
 import Comments from '@/pages/admin/Comments';
 import ChatAdmin from '@/pages/admin/Chat';
+import MyPeddi from '@/pages/admin/MyPeddi';
 import Tables from '@/pages/admin/Tables';
 import MyOrders from '@/pages/MyOrders';
 import MyData from '@/pages/MyData';
@@ -97,6 +98,7 @@ const AuthenticatedApp = () => {
         <Route path="financeiro" element={<Financeiro />} />
         <Route path="comentarios" element={<Comments />} />
         <Route path="chat" element={<ChatAdmin />} />
+        <Route path="minha-peddi" element={<MyPeddi />} />
         <Route path="entregadores" element={<Deliverers />} />
         <Route path="mapa-entregadores" element={<DelivererMap />} />
         <Route path="configuracoes" element={<StoreSettings />} />
