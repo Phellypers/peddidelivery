@@ -1,6 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { getBannerProductIds } from '@/lib/bannerProducts';
 
 // Default banners shown when no store banners configured
@@ -32,94 +31,63 @@ const DEFAULT_BANNERS = [
 ];
 
 export default function PromoBannerCarousel({ banners, onSelectBanner }) {
-  // Use store banners (active only) if available, otherwise fall back to defaults
-  const activeBanners = banners?.filter(b => b.is_active && b.image_url);
-  const slides = (activeBanners && activeBanners.length > 0) ? activeBanners : DEFAULT_BANNERS;
+  const slides = useMemo(() => {
+    const active = banners?.filter(b => b.is_active && b.image_url) || [];
+    return active.length ? active : DEFAULT_BANNERS;
+  }, [banners]);
   const [current, setCurrent] = useState(0);
-  const timerRef = useRef(null);
-
-  const next = () => setCurrent(c => (c + 1) % slides.length);
-  const prev = () => setCurrent(c => (c - 1 + slides.length) % slides.length);
-
+  const trackRef = useRef(null);
+  const interacting = useRef(false);
+  const currentRef = useRef(0);
+  const goTo = index => {
+    const track = trackRef.current;
+    const slide = track?.children[index];
+    if (!slide) return;
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    track.scrollTo({left: slide.offsetLeft - track.children[0].offsetLeft, behavior: reduceMotion ? 'auto' : 'smooth'});
+  };
   useEffect(() => {
-    timerRef.current = setInterval(next, 4000);
-    return () => clearInterval(timerRef.current);
-  }, [slides.length]);
-
-  const resetTimer = () => {
-    clearInterval(timerRef.current);
-    timerRef.current = setInterval(next, 4000);
+    currentRef.current = 0;setCurrent(0);
+    trackRef.current?.scrollTo({left: 0, behavior: 'auto'});
+    if (slides.length < 2 || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return undefined;
+    const timer = setInterval(() => {
+      if (!interacting.current && !document.hidden && !trackRef.current?.parentElement.contains(document.activeElement)) goTo((currentRef.current + 1) % slides.length);
+    }, 6000);
+    return () => clearInterval(timer);
+  }, [slides]);
+  const onScroll = () => {
+    const track = trackRef.current;
+    const first = track?.children[0];
+    if (!first) return;
+    let closest = 0, distance = Infinity;
+    Array.from(track.children).forEach((slide,index) => {
+      const delta = Math.abs(slide.offsetLeft - first.offsetLeft - track.scrollLeft);
+      if (delta < distance) {distance = delta;closest = index;}
+    });
+    currentRef.current = closest;setCurrent(closest);
   };
-
-  const selectCurrentBanner = () => {
-    if (getBannerProductIds(slides[current]).length) onSelectBanner?.(slides[current], current);
-  };
-
-  return (
-    <div className="peddi-banner-carousel relative w-full overflow-hidden rounded-none" style={{ aspectRatio: '16/7' }}>
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={current}
-          initial={{ opacity: 0, x: 60 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: -60 }}
-          transition={{ duration: 0.35 }}
-          className={`absolute inset-0 ${getBannerProductIds(slides[current]).length ? 'cursor-pointer' : ''}`}
-          onClick={selectCurrentBanner}
-        >
-          <img
-            src={slides[current].image_url || slides[current].image}
-            alt={slides[current].title || ''}
-            className="h-full w-full object-cover"
-          />
-          <div className={`peddi-banner-shade absolute inset-0 bg-gradient-to-r ${slides[current].color || 'from-black/60'} to-transparent`} />
-          <div className="peddi-banner-copy absolute bottom-0 left-0 p-4">
-            {slides[current].badge && (
-              <span className="bg-primary text-white text-[10px] font-bold px-2 py-0.5 rounded-full mb-1.5 inline-block">
-                {slides[current].badge}
-              </span>
-            )}
-            <h3 className="font-heading font-bold text-white text-lg leading-tight drop-shadow">{slides[current].title}</h3>
-            {slides[current].subtitle && (
-              <p className="text-white/90 text-xs mt-0.5">{slides[current].subtitle}</p>
-            )}
-            {getBannerProductIds(slides[current]).length > 0 && <button type="button" className="peddi-banner-cta">Ver campanha</button>}
-            {getBannerProductIds(slides[current]).length === 0 && <a href="#cardapio-produtos" className="peddi-banner-cta inline-block">Peça já!</a>}
-          </div>
-        </motion.div>
-      </AnimatePresence>
-
-      {/* Arrows */}
-      {slides.length > 1 && (
-        <>
-          <button
-            aria-label="Banner anterior"
-            onClick={() => { prev(); resetTimer(); }}
-            className="absolute left-2 top-1/2 -translate-y-1/2 w-7 h-7 bg-black/30 hover:bg-black/50 text-white rounded-full flex items-center justify-center transition-colors"
-          >
-            <ChevronLeft size={16} />
-          </button>
-          <button
-            aria-label="Próximo banner"
-            onClick={() => { next(); resetTimer(); }}
-            className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 bg-black/30 hover:bg-black/50 text-white rounded-full flex items-center justify-center transition-colors"
-          >
-            <ChevronRight size={16} />
-          </button>
-        </>
-      )}
-
-      {/* Dots */}
-      <div className="peddi-banner-dots absolute bottom-2 right-3 flex gap-1">
-        {slides.map((_, i) => (
-          <button
-            key={i}
-            aria-label={`Mostrar banner ${i + 1}`}
-            onClick={() => { setCurrent(i); resetTimer(); }}
-            className={`h-1.5 rounded-full transition-all ${i === current ? 'bg-white w-4' : 'bg-white/50 w-1.5'}`}
-          />
-        ))}
-      </div>
+  return <section aria-label="Banners promocionais" aria-roledescription="carrossel" className="peddi-promo-compact relative">
+    <div ref={trackRef} onScroll={onScroll} onPointerDown={() => {interacting.current=true;}} onPointerUp={() => {interacting.current=false;}} onPointerCancel={() => {interacting.current=false;}}
+      onMouseEnter={() => {interacting.current=true;}} onMouseLeave={() => {interacting.current=false;}}
+      className="peddi-promo-track scrollbar-hide">
+      {slides.map((banner,index) => {
+        const linked = getBannerProductIds(banner).length > 0;
+        return <a key={banner.id || index} href="#cardapio-produtos" className={`peddi-promo-slide ${slides.length === 1 ? 'single' : ''}`}
+          aria-label={banner.title || `Banner ${index + 1}`} onClick={event => {if(linked) {event.preventDefault();onSelectBanner?.(banner,index);}}}>
+          <img src={banner.image_url || banner.image} alt={banner.title || ''} className="h-full w-full object-cover" draggable="false" loading={index === 0 ? 'eager' : 'lazy'}/>
+          {(banner.title || banner.subtitle || banner.badge) && <><div className="peddi-promo-shade"/><div className="peddi-promo-copy">
+            {banner.badge && <span className="peddi-promo-badge">{banner.badge}</span>}
+            {banner.title && <h3>{banner.title}</h3>}
+            {banner.subtitle && <p>{banner.subtitle}</p>}
+            <span className="peddi-promo-cta">{linked ? 'Ver campanha' : 'Peça já!'} <ChevronRight size={14}/></span>
+          </div></>}
+        </a>;
+      })}
     </div>
-  );
+    {slides.length > 1 && <>
+      <button type="button" aria-label="Banner anterior" onClick={() => goTo((current - 1 + slides.length) % slides.length)} className="peddi-promo-arrow left-1 hidden sm:flex"><ChevronLeft size={16}/></button>
+      <button type="button" aria-label="Próximo banner" onClick={() => goTo((current + 1) % slides.length)} className="peddi-promo-arrow right-1 hidden sm:flex"><ChevronRight size={16}/></button>
+      <div className="flex justify-center gap-0.5 pt-1">{slides.map((banner,index) => <button type="button" key={banner.id || index} aria-label={`Mostrar banner ${index + 1}`} aria-current={current === index ? 'true' : undefined} onClick={() => goTo(index)} className="flex h-7 w-7 items-center justify-center rounded-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-green-500"><span className={`h-1.5 w-1.5 rounded-full transition-colors ${current === index ? 'bg-primary' : 'bg-gray-300'}`}/></button>)}</div>
+    </>}
+  </section>;
 }

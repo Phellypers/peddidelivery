@@ -191,8 +191,8 @@ export default function Home() {
 
         {/* ── Promo Banner Carousel ── */}
         {!searchQuery && !activeCategory && (
-          <div className="border-b border-gray-100 px-3 py-3">
-            <div className="rounded-2xl overflow-hidden">
+          <div className="px-0 pt-1 pb-0">
+            <div className="min-w-0">
               <PromoBannerCarousel banners={store?.banners} onSelectBanner={showBannerCampaign} />
             </div>
           </div>
