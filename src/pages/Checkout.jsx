@@ -19,6 +19,7 @@ const paymentMethods = [
   { id: 'debit_card', label: 'Cartão de débito', icon: '💳' },
   { id: 'cash', label: 'Dinheiro na entrega', icon: '💵' },
 ];
+const formatMoney = value => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 
 export default function Checkout() {
   const { items, subtotal, clearCart } = useCart();
@@ -43,9 +44,18 @@ export default function Checkout() {
     splitAmounts: {},
     changeFor: 0,
   });
-  const [couponDiscount, setCouponDiscount] = useState(0);
+  const [appliedCoupon, setAppliedCoupon] = useState(null);
+  const couponDiscount = appliedCoupon && subtotal >= Number(appliedCoupon.min_order_value || 0)
+    ? Number(appliedCoupon.type === 'percentage' ? subtotal * appliedCoupon.value / 100 : appliedCoupon.value) : 0;
   const [couponError, setCouponError] = useState('');
   const [couponApplied, setCouponApplied] = useState(false);
+  useEffect(() => {
+    if (appliedCoupon && subtotal < Number(appliedCoupon.min_order_value || 0)) {
+      setAppliedCoupon(null);
+      setCouponApplied(false);
+      setCouponError(`Cupom removido: pedido mínimo de ${formatMoney(appliedCoupon.min_order_value)}.`);
+    }
+  }, [subtotal, appliedCoupon]);
   const [areasLoading, setAreasLoading] = useState(true);
   const [areasError, setAreasError] = useState('');
   const [submitError, setSubmitError] = useState('');
@@ -157,7 +167,10 @@ export default function Checkout() {
     });
   }
 
-  const total = subtotal - couponDiscount - pixDiscount - campaignDiscount + deliveryFee;
+  const originalTotal = subtotal + deliveryFee;
+  const discountsApplied = couponDiscount + pixDiscount + campaignDiscount;
+  const total = Math.max(0, Math.round((originalTotal - discountsApplied) * 100) / 100);
+  const savings = originalTotal - total;
   const splitPaymentStatus = getSplitPaymentStatus(total, form.splitAmounts);
   const paymentIsValid = !form.splitPayment || splitPaymentStatus.isValid;
 
@@ -196,8 +209,7 @@ export default function Checkout() {
     if (!coupon) { setCouponError('Cupom inválido'); return; }
     if (coupon.min_order_value && subtotal < coupon.min_order_value) { setCouponError(`Pedido mínimo: R$ ${coupon.min_order_value.toFixed(2)}`); return; }
     if (coupon.max_uses && coupon.uses_count >= coupon.max_uses) { setCouponError('Cupom esgotado'); return; }
-    const discount = coupon.type === 'percentage' ? subtotal * coupon.value / 100 : coupon.value;
-    setCouponDiscount(discount);
+    setAppliedCoupon(coupon);
     setCouponApplied(true);
   };
 
@@ -499,7 +511,7 @@ export default function Checkout() {
           <div className="flex gap-2">
             <input
               value={form.couponCode}
-              onChange={e => { updateForm('couponCode', e.target.value.toUpperCase()); setCouponError(''); setCouponApplied(false); setCouponDiscount(0); }}
+              onChange={e => { updateForm('couponCode', e.target.value.toUpperCase()); setCouponError(''); setCouponApplied(false); setAppliedCoupon(null); }}
               placeholder="Digite o código"
               className="min-w-0 flex-1 px-4 py-2.5 bg-muted rounded-xl text-sm border-0 focus:outline-none focus:ring-2 focus:ring-primary/20 uppercase"
               disabled={couponApplied}
@@ -555,8 +567,8 @@ export default function Checkout() {
           <div className="space-y-2 text-sm">
             {items.map(item => (
               <div key={item.key} className="flex justify-between">
-                <span className="text-muted-foreground">{item.quantity}x {item.product_name}</span>
-                <span>R$ {((item.unit_price + item.addon_total) * item.quantity).toFixed(2)}</span>
+                <span className="min-w-0 pr-3 text-muted-foreground break-words">{item.quantity}x {item.product_name}</span>
+                <span className="shrink-0 tabular-nums">{formatMoney((item.unit_price + item.addon_total) * item.quantity)}</span>
               </div>
             ))}
             {campaignGifts.map((g, i) => (
@@ -567,15 +579,18 @@ export default function Checkout() {
             ))}
           </div>
           <div className="border-t border-border pt-3 space-y-2 text-sm">
-            <div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span>R$ {subtotal.toFixed(2)}</span></div>
-            {couponDiscount > 0 && <div className="flex justify-between text-green-600"><span>Cupom</span><span>-R$ {couponDiscount.toFixed(2)}</span></div>}
-            {pixDiscount > 0 && <div className="flex justify-between text-green-600"><span>Desconto Pix</span><span>-R$ {pixDiscount.toFixed(2)}</span></div>}
-            {campaignDiscount > 0 && <div className="flex justify-between text-green-600"><span>Campanha{appliedCampaign ? `: ${appliedCampaign.name}` : ''}</span><span>-R$ {campaignDiscount.toFixed(2)}</span></div>}
-            {form.deliveryMethod === 'delivery' && <div className="flex justify-between"><span className="text-muted-foreground">Entrega</span><span>{deliveryFee === 0 ? 'Grátis' : `R$ ${deliveryFee.toFixed(2)}`}</span></div>}
-            <div className="flex justify-between font-heading font-bold text-lg pt-2 border-t border-border">
-              <span>Total</span>
-              <span className="text-primary">R$ {total.toFixed(2)}</span>
+            <div className="flex justify-between gap-3"><span className="text-muted-foreground">Subtotal dos produtos</span><span className="shrink-0 tabular-nums">{formatMoney(subtotal)}</span></div>
+            <div className="flex justify-between gap-3 text-green-600"><span>Descontos aplicados</span><span className="shrink-0 tabular-nums">{savings > 0 ? '-' : ''}{formatMoney(savings)}</span></div>
+            {couponDiscount > 0 && <div className="flex justify-between gap-3 text-xs text-muted-foreground"><span>Cupom</span><span className="shrink-0 tabular-nums">-{formatMoney(couponDiscount)}</span></div>}
+            {pixDiscount > 0 && <div className="flex justify-between gap-3 text-xs text-muted-foreground"><span>Desconto Pix</span><span className="shrink-0 tabular-nums">-{formatMoney(pixDiscount)}</span></div>}
+            {campaignDiscount > 0 && <div className="flex justify-between gap-3 text-xs text-muted-foreground"><span className="min-w-0 break-words">Campanha{appliedCampaign ? `: ${appliedCampaign.name}` : ''}</span><span className="shrink-0 tabular-nums">-{formatMoney(campaignDiscount)}</span></div>}
+            {form.deliveryMethod === 'delivery' && <div className="flex justify-between"><span className="text-muted-foreground">Taxa de entrega</span><span className="tabular-nums">{deliveryFee === 0 ? 'Grátis' : formatMoney(deliveryFee)}</span></div>}
+            {savings > 0 && <div className="flex justify-between gap-3 text-muted-foreground"><span>Total antes dos descontos</span><span className="shrink-0 tabular-nums line-through">{formatMoney(originalTotal)}</span></div>}
+            <div aria-live="polite" aria-atomic="true" className="flex justify-between gap-3 font-heading font-bold text-lg pt-2 border-t border-border">
+              <span>Total final a pagar</span>
+              <span className="shrink-0 tabular-nums text-primary">{formatMoney(total)}</span>
             </div>
+            {savings > 0 && <p className="text-xs font-medium text-green-600">Você economizou {formatMoney(savings)} nesta compra.</p>}
           </div>
         </div>
 
