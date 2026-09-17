@@ -4,6 +4,7 @@ import { LayoutDashboard, Package, ShoppingCart, Tag, FolderOpen, Settings, Menu
 import NewOrderNotifier from '@/components/admin/NewOrderNotifier';
 import ChatBadge from '@/components/admin/ChatBadge';
 import ManagerOnboarding from '@/components/admin/ManagerOnboarding';
+import peddiLogo from '../../../Logo Peddi/logo3.png';
 
 const navItems = [
   { icon: Settings, label: 'Minha PEDDI', path: '/admin/minha-peddi' },
@@ -40,7 +41,7 @@ export default function AdminLayout() {
         <div className="p-4 border-b border-border">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="text-xl font-black tracking-tight text-foreground">PEDDI</span>
+              {location.pathname === '/admin/minha-peddi' ? <img src={peddiLogo} alt="PEDDI — cardápio digital" className="h-12 w-44 object-contain"/> : <span className="text-xl font-black tracking-tight text-foreground">PEDDI</span>}
             </div>
             <button aria-label="Fechar menu" onClick={() => setSidebarOpen(false)} className="lg:hidden p-3 rounded-xl hover:bg-muted">
               <X size={18} />
