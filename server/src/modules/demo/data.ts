@@ -6,6 +6,8 @@ import { productView } from '../products/routes.js';
 import type { AuthRequest } from '../../auth/middleware.js';
 import { isProductAvailable } from '../../../../src/lib/productAvailability.js';
 import { courierView } from '../couriers/data.js';
+import { validateDeliveryAddress } from '../../../../src/lib/deliveryArea.js';
+import { getSplitPaymentStatus } from '../../../../src/lib/splitPayment.js';
 
 export const entityNames = new Set(['Account','Campaign','CashbackRule','Category','ChatMessage','City','Coupon','CustomerProfile','Deliverer','DelivererRating','Ingredient','LiveSession','Notification','Order','Product','PromoMessage','ReactivationCampaign','Review','ReviewComment','Store','SupportTicket','Table','UpsellGroup','User']);
 const schemaCache = new Map<string, Record<string, any>>();
@@ -76,9 +78,9 @@ export async function readEntities(entity: string, request: AuthRequest) {
       return result.rows.filter(row => !row.details.deleted && (manager || row.active)).map(row => ({ ...defaults(entity), ...row.details, id: row.id, name: row.name, is_active: row.active, created_date: row.created_at }));
     }
     case 'Store': {
-      const result = await query('SELECT * FROM stores WHERE id=$1', [tenant]);
+      const result = await query("SELECT s.*, EXISTS(SELECT 1 FROM app_records a WHERE a.store_id=s.id AND a.entity_name='City') AS delivery_areas_configured FROM stores s WHERE s.id=$1", [tenant]);
       return result.rows.map(row => ({ ...defaults(entity), delivery_enabled:true,pickup_enabled:true,pix_enabled:true,card_enabled:true,cash_enabled:true,
-        primary_color:'#22C55E', business_type:'menu', ...row.details, id: row.id,name:row.name,slug:row.slug,created_date:row.created_at }));
+        primary_color:'#22C55E', business_type:'menu', ...row.details, delivery_areas_configured:row.delivery_areas_configured, id: row.id,name:row.name,slug:row.slug,created_date:row.created_at }));
     }
     case 'Ingredient': {
       if (!manager) return [];
@@ -125,6 +127,17 @@ export async function readEntities(entity: string, request: AuthRequest) {
 }
 
 export async function writeOrder(client: PoolClient, tenant: string, data: Record<string, any>, request: AuthRequest, orderId?: string) {
+  const checkout = !orderId && (!isManager(request) || data.sale_origin === 'catalog');
+  let area: import('../../../../src/lib/deliveryArea.js').DeliveryArea | null = null;
+  if (checkout) {
+    const regions = (await client.query("SELECT id,data FROM app_records WHERE store_id=$1 AND entity_name='City'", [tenant])).rows.map(row=>({...row.data,id:row.id}));
+    const validation = validateDeliveryAddress(regions, {address:data.delivery_address,city:data.delivery_city,neighborhood:data.delivery_neighborhood,state:data.delivery_state,zip:data.delivery_zip,deliveryMethod:data.delivery_method||'delivery'});
+    if (!validation.valid) throw new Error(validation.error);
+    area=validation.area;
+    data.delivery_area_id=area?.id||null;
+    data.payment_status='pending';
+    data.is_test_order=request.auth?.email==='gestor.demo@peddi.local';
+  }
   if (!Array.isArray(data.items) || !data.items.length) throw new Error('O pedido precisa de itens.');
   const quantityMap = new Map<string, number>();
   for (const item of data.items) {
@@ -169,9 +182,16 @@ export async function writeOrder(client: PoolClient, tenant: string, data: Recor
     return {...item,product_id:item.product_id,product_name:product.name,unit_price:price,quantity,subtotal:Math.round(price*quantity*100)/100};
   });
   subtotal=Math.round(subtotal*100)/100;
-  const deliveryFee=Number(data.delivery_fee||0),discount=Number(data.discount||0);
+  const deliveryFee=checkout&&area?.delivery_fee_type==='fixed'?Number(area.delivery_fee_value||0):Number(data.delivery_fee||0),discount=Number(data.discount||0);
   if (![deliveryFee,discount].every(n=>Number.isFinite(n)&&n>=0)) throw new Error('Frete ou desconto inválido.');
   const total=Math.max(0,Math.round((subtotal+deliveryFee-discount)*100)/100);
+  if (checkout) {
+    if (Number(area?.min_order_value||0)>subtotal) throw new Error('Pedido abaixo do mínimo da região de entrega.');
+    const methods=['pix','cash','credit_card','debit_card'];
+    if (data.payment_method==='split') {
+      if (!data.split_payments||typeof data.split_payments!=='object'||Array.isArray(data.split_payments)||Object.entries(data.split_payments).some(([key,value])=>!methods.includes(key)||!Number.isFinite(Number(value))||Number(value)<0)||!getSplitPaymentStatus(total,data.split_payments).isValid) throw new Error('A soma do pagamento dividido deve ser igual ao total do pedido.');
+    } else if (!methods.includes(data.payment_method)) throw new Error('Selecione uma forma de pagamento válida.');
+  }
   const status=data.status==='shipped'?'out_for_delivery':data.status||'pending';
   if (!['pending','confirmed','preparing','ready','assigned','out_for_delivery','delivered','cancelled'].includes(status)) throw new Error('Status inválido.');
   let customerId;

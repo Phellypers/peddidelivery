@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useCart } from '@/lib/CartContext';
 import { useAuth } from '@/lib/AuthContext';
@@ -10,6 +10,8 @@ import { emitLiveEvent } from '@/lib/liveSession';
 import SafeBackButton from '@/components/navigation/SafeBackButton';
 import { simulateExternalAction } from '@/lib/presentationDemo';
 import { getSplitPaymentStatus } from '@/lib/splitPayment';
+import { findDeliveryArea, normalizePostalCode, validateDeliveryAddress } from '@/lib/deliveryArea';
+import { isPresentationDemo } from '@/lib/presentationDemo';
 
 const paymentMethods = [
   { id: 'pix', label: 'Pix', icon: '💠', discount: true },
@@ -32,7 +34,7 @@ export default function Checkout() {
   const [form, setForm] = useState({
     name: '', phone: '', email: '',
     deliveryMethod: 'delivery',
-    address: '', city: '', zip: '',
+    address: '', city: '', neighborhood: '', state: '', zip: '',
     deliveryNotes: '',
     paymentMethod: 'pix',
     couponCode: '', orderNotes: '',
@@ -44,16 +46,23 @@ export default function Checkout() {
   const [couponDiscount, setCouponDiscount] = useState(0);
   const [couponError, setCouponError] = useState('');
   const [couponApplied, setCouponApplied] = useState(false);
-  const [cityFee, setCityFee] = useState(null);
-  const [cityNotFound, setCityNotFound] = useState(false);
+  const [areasLoading, setAreasLoading] = useState(true);
+  const [areasError, setAreasError] = useState('');
+  const [submitError, setSubmitError] = useState('');
+  const [createdOrder, setCreatedOrder] = useState(null);
+  const [zipNotice, setZipNotice] = useState('');
+  const [zipNotFound, setZipNotFound] = useState(false);
+  const zipRequest = useRef(0);
   const [saveProfilePrompt, setSaveProfilePrompt] = useState(false);
   const [profileChanged, setProfileChanged] = useState(false);
   const [campaigns, setCampaigns] = useState([]);
   const [userOrderCount, setUserOrderCount] = useState(0);
 
   useEffect(() => {
-    base44.entities.Store.list().then(stores => setStore(stores[0]));
-    base44.entities.City.filter({ is_active: true }, 'name').then(setCities);
+    Promise.all([base44.entities.Store.list(), base44.entities.City.list('name')])
+      .then(([stores, regions]) => {setStore(stores[0]);setCities(regions);})
+      .catch(() => setAreasError('Não foi possível carregar as áreas de entrega. Atualize a página para tentar novamente.'))
+      .finally(() => setAreasLoading(false));
     base44.entities.Campaign.filter({ is_active: true }).then(setCampaigns);
     emitLiveEvent('checkout', {
       cart_count: items.reduce((s, i) => s + i.quantity, 0),
@@ -83,6 +92,8 @@ export default function Checkout() {
           email: p.email || user.email || prev.email,
           address: p.address || prev.address,
           city: p.city || prev.city,
+          neighborhood: p.neighborhood || prev.neighborhood,
+          state: p.state || prev.state,
           zip: p.zip || prev.zip,
           deliveryNotes: p.delivery_notes || prev.deliveryNotes,
         }));
@@ -91,21 +102,10 @@ export default function Checkout() {
     });
   }, [user, profileLoaded]);
 
-  // Detect city fee
-  useEffect(() => {
-    if (!form.city || form.deliveryMethod !== 'delivery') { setCityFee(null); setCityNotFound(false); return; }
-    const match = cities.find(c => c.name.toLowerCase() === form.city.toLowerCase().trim());
-    if (match) {
-      setCityFee(match.delivery_fee_type === 'fixed' ? match.delivery_fee_value : match.delivery_fee_type === 'custom' ? null : null);
-      setCityNotFound(false);
-    } else if (form.city.length > 2) {
-      setCityFee(null);
-      setCityNotFound(cities.length > 0);
-    } else {
-      setCityFee(null);
-      setCityNotFound(false);
-    }
-  }, [form.city, cities, form.deliveryMethod]);
+  const addressValidation = validateDeliveryAddress(cities, form, {hasConfiguredAreas:store?.delivery_areas_configured,subtotal});
+  const deliveryArea = findDeliveryArea(cities, form, store?.delivery_areas_configured).area;
+  const cityNotFound = addressValidation.reason === 'outside_area';
+  const cityFee = deliveryArea?.delivery_fee_type === 'fixed' ? Number(deliveryArea.delivery_fee_value||0) : null;
 
   const deliveryFee = form.deliveryMethod === 'delivery'
     ? (cityFee !== null ? cityFee : (store?.free_shipping_above && subtotal >= store.free_shipping_above ? 0 : (store?.flat_delivery_fee || 6.90)))
@@ -162,9 +162,29 @@ export default function Checkout() {
   const paymentIsValid = !form.splitPayment || splitPaymentStatus.isValid;
 
   const updateForm = (field, value) => {
+    setSubmitError('');
+    if(field==='zip'){zipRequest.current++;setZipNotice('');setZipNotFound(false);}
     setForm(prev => ({ ...prev, [field]: value }));
-    if (['name', 'phone', 'email', 'address', 'city', 'zip', 'deliveryNotes'].includes(field)) {
+    if (['name', 'phone', 'email', 'address', 'city', 'neighborhood', 'state', 'zip', 'deliveryNotes'].includes(field)) {
       setProfileChanged(true);
+    }
+  };
+  const lookupZip = async () => {
+    const zip=normalizePostalCode(form.zip);
+    if(!/^\d{8}$/.test(zip)){setZipNotice('Informe um CEP válido com 8 números.');return;}
+    const requestId=++zipRequest.current;
+    setZipNotice('Consultando CEP...');
+    try {
+      const response=await fetch(`https://viacep.com.br/ws/${zip}/json/`,{signal:AbortSignal.timeout(6000)});
+      if(!response.ok)throw new Error('Consulta indisponível');
+      const data=await response.json();
+      if(requestId!==zipRequest.current)return;
+      if(data.erro){setZipNotFound(true);setZipNotice('CEP não encontrado. Confira os números informados.');return;}
+      setZipNotFound(false);
+      setForm(previous=>normalizePostalCode(previous.zip)!==zip?previous:{...previous,city:previous.city||data.localidade||'',neighborhood:previous.neighborhood||data.bairro||'',state:previous.state||data.uf||'',address:previous.address||data.logradouro||''});
+      setZipNotice('Confira a cidade, o bairro e complete o endereço com o número.');
+    }catch {
+      if(requestId===zipRequest.current)setZipNotice('Consulta de CEP indisponível. Preencha cidade, bairro e endereço manualmente; a área será validada pelo cadastro da loja.');
     }
   };
 
@@ -183,11 +203,15 @@ export default function Checkout() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!paymentIsValid) return;
+    if (loading) return;
+    if (areasLoading||areasError){setSubmitError(areasError||'Aguarde o carregamento das áreas de entrega.');return;}
+    if (!addressValidation.valid || (zipNotFound&&form.deliveryMethod==='delivery')) {setSubmitError(zipNotFound?'Confira o CEP informado.':addressValidation.error);return;}
+    if (!paymentIsValid) {setSubmitError('Confira a divisão dos valores do pagamento.');return;}
+    setSubmitError('');
     setLoading(true);
     try {
     const orderNum = String(Date.now()).slice(-6);
-    await base44.entities.Order.create({
+    const savedOrder=await base44.entities.Order.create({
       order_number: orderNum,
       customer_name: form.name,
       customer_phone: form.phone,
@@ -220,20 +244,19 @@ export default function Checkout() {
       delivery_method: form.deliveryMethod,
       delivery_address: form.address,
       delivery_city: form.city,
+      delivery_neighborhood: form.neighborhood,
+      delivery_state: form.state,
+      delivery_area_id: deliveryArea?.id||null,
       delivery_zip: form.zip,
       delivery_notes: form.deliveryNotes,
       order_notes: form.orderNotes,
       sale_origin: 'catalog'
     });
+    setCreatedOrder(savedOrder);
+    setStep('success');
     emitLiveEvent('concluida');
     clearCart();
-    // Prompt to save profile if user is logged in and changed data
-    if (isAuthenticated && user && profileChanged) {
-      setSaveProfilePrompt(true);
-    } else {
-      setStep('success');
-    }
-    } catch (error) { console.error(error); }
+    } catch (error) { setSubmitError(error.message||'Não foi possível concluir o pedido. Seu carrinho foi mantido.'); }
     finally { setLoading(false); }
   };
 
@@ -245,6 +268,8 @@ export default function Checkout() {
       email: form.email,
       address: form.address,
       city: form.city,
+      neighborhood: form.neighborhood,
+      state: form.state,
       zip: form.zip,
       delivery_notes: form.deliveryNotes,
     };
@@ -287,9 +312,12 @@ export default function Checkout() {
         <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="mb-6">
           <CheckCircle2 size={72} className="text-green-500 mx-auto" />
         </motion.div>
-        <h1 className="font-heading font-bold text-2xl text-foreground mb-2">Pedido realizado! 🎉</h1>
-        <p className="text-muted-foreground mb-6">Você receberá a confirmação em breve.</p>
+        <h1 className="font-heading font-bold text-2xl text-foreground mb-2">Pedido concluído com sucesso! 🎉</h1>
+        <p className="text-muted-foreground mb-2">Pedido #{createdOrder?.order_number} · pagamento pendente.</p>
+        <p className="text-muted-foreground mb-6">{createdOrder?.is_test_order||isPresentationDemo()?'Pedido de teste, sem cobrança online.':'Você receberá a confirmação em breve.'}</p>
         <div className="flex flex-col gap-3 w-full max-w-xs">
+          <Link to={`/meus-pedidos?order=${createdOrder?.id||''}`} className="border border-primary text-primary px-6 py-3 rounded-xl font-semibold text-sm">Ver em Meus Pedidos</Link>
+          {isAuthenticated&&user&&profileChanged&&<button onClick={()=>setSaveProfilePrompt(true)} className="px-6 py-3 rounded-xl border border-border text-sm">Salvar dados no meu perfil</button>}
           <Link to="/loja" className="bg-primary text-primary-foreground px-6 py-3 rounded-xl font-heading font-bold text-sm hover:bg-primary/90 transition-colors text-center">
             Voltar ao cardápio
           </Link>
@@ -360,7 +388,7 @@ export default function Checkout() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs font-medium text-muted-foreground mb-1 block">Cidade *</label>
-                  <input
+                  <input required
                     list="cities-list"
                     value={form.city}
                     onChange={e => updateForm('city', e.target.value)}
@@ -368,11 +396,13 @@ export default function Checkout() {
                     className="w-full px-4 py-2.5 bg-muted rounded-xl text-sm border-0 focus:outline-none focus:ring-2 focus:ring-primary/20"
                   />
                   <datalist id="cities-list">
-                    {cities.map(c => <option key={c.id} value={c.name} />)}
+                    {cities.filter(c=>c.is_active!==false).map(c => <option key={c.id} value={c.name} />)}
                   </datalist>
                 </div>
-                <Input label="CEP" value={form.zip} onChange={v => updateForm('zip', v)} />
+                <Input label="CEP" value={form.zip} onChange={v => updateForm('zip', v)} onBlur={lookupZip} inputMode="numeric" maxLength={9} required />
               </div>
+              <div className="grid grid-cols-[minmax(0,1fr)_80px] gap-3"><Input label="Bairro / Região" value={form.neighborhood} onChange={v=>updateForm('neighborhood',v)} placeholder="Ex.: Riacho Fundo II"/><Input label="UF" value={form.state} onChange={v=>updateForm('state',v.toUpperCase())} maxLength={2}/></div>
+              {zipNotice&&<p role="status" className={`text-xs ${zipNotFound?'text-red-600':'text-muted-foreground'}`}>{zipNotice}</p>}
               <Input label="Complemento / Referência" value={form.deliveryNotes} onChange={v => updateForm('deliveryNotes', v)} />
 
               {/* City not found warning */}
@@ -471,7 +501,7 @@ export default function Checkout() {
               value={form.couponCode}
               onChange={e => { updateForm('couponCode', e.target.value.toUpperCase()); setCouponError(''); setCouponApplied(false); setCouponDiscount(0); }}
               placeholder="Digite o código"
-              className="flex-1 px-4 py-2.5 bg-muted rounded-xl text-sm border-0 focus:outline-none focus:ring-2 focus:ring-primary/20 uppercase"
+              className="min-w-0 flex-1 px-4 py-2.5 bg-muted rounded-xl text-sm border-0 focus:outline-none focus:ring-2 focus:ring-primary/20 uppercase"
               disabled={couponApplied}
             />
             <button type="button" onClick={applyCoupon} disabled={couponApplied} className="px-4 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-medium disabled:opacity-50">
@@ -549,9 +579,12 @@ export default function Checkout() {
           </div>
         </div>
 
+        {areasError&&<p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-600">{areasError}</p>}
+        {submitError&&<p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-600">{submitError}</p>}
+        {form.deliveryMethod==='delivery'&&addressValidation.reason==='minimum'&&<p role="alert" className="text-sm text-red-600">{addressValidation.error}</p>}
         <button
           type="submit"
-          disabled={loading || !form.name || !form.phone || cityNotFound || !paymentIsValid}
+          disabled={loading || areasLoading || Boolean(areasError) || !form.name || !form.phone || !addressValidation.valid || (zipNotFound&&form.deliveryMethod==='delivery') || !paymentIsValid}
           className="w-full bg-primary text-primary-foreground py-4 rounded-2xl font-heading font-bold text-base hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
         >
           {loading ? <Loader2 className="animate-spin" size={20} /> : 'Finalizar Pedido'}
@@ -581,7 +614,7 @@ function Section({ title, icon, children }) {
   );
 }
 
-function Input({ label, value, onChange, type = 'text', placeholder, required }) {
+function Input({ label, value, onChange, type = 'text', placeholder, required, onBlur, inputMode, maxLength }) {
   return (
     <div>
       <label className="text-xs font-medium text-muted-foreground mb-1 block">{label}{required && ' *'}</label>
@@ -591,6 +624,9 @@ function Input({ label, value, onChange, type = 'text', placeholder, required })
         onChange={e => onChange(e.target.value)}
         placeholder={placeholder || label}
         required={required}
+        onBlur={onBlur}
+        inputMode={inputMode}
+        maxLength={maxLength}
         className="w-full px-4 py-2.5 bg-muted rounded-xl text-sm border-0 focus:outline-none focus:ring-2 focus:ring-primary/20"
       />
     </div>

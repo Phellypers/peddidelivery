@@ -35,7 +35,7 @@ test('MVP persiste entregador, cliente, itens e ciclo de entrega com isolamento'
     assert.equal((await call(`/admin/couriers/${riderId}`,'PATCH',{name:'Outra loja'},other.token)).status,404);
     assert.equal((await call('/admin/couriers','POST',{name:'Conta de outra loja',user_id:otherCourier.id})).status,400);
     const product=(await call('/admin/products','POST',{name:'Produto entrega',price:20,cost:4,stock:10})).body.product;
-    const created=await call('/demo/entities/Order','POST',{items:[{product_id:product.id,quantity:2}],customer_name:'Cliente teste',status:'delivered',deliverer_user_id:courier.id,delivery_method:'delivery',delivery_fee:5,discount:0,total:1},customer.token);
+    const created=await call('/demo/entities/Order','POST',{items:[{product_id:product.id,quantity:2}],customer_name:'Cliente teste',status:'delivered',deliverer_user_id:courier.id,delivery_method:'delivery',delivery_address:'Rua Teste, 1',delivery_city:'Cidade Teste',delivery_zip:'01001000',payment_method:'cash',delivery_fee:5,discount:0,total:1},customer.token);
     assert.equal(created.status,201,JSON.stringify(created.body));const orderId=created.body.id;
     assert.equal(created.body.status,'pending');assert.equal(created.body.total,45);
     const customerSql=(await query('SELECT c.user_id FROM orders o JOIN customers c ON c.id=o.customer_id WHERE o.id=$1',[orderId])).rows[0];
@@ -70,6 +70,26 @@ test('MVP persiste entregador, cliente, itens e ciclo de entrega com isolamento'
     assert.equal((await delivery()).status,'cancelled');
     const rls=(await query("SELECT count(*)::int AS count FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relname=ANY($1::text[]) AND c.relrowsecurity",[['users','couriers','orders','deliveries','refresh_tokens']])).rows[0].count;
     assert.equal(rls,5);
+    // Checkout uses the same real API and isolated store as the delivery lifecycle.
+    const region=await call('/demo/entities/City','POST',{name:'Riacho Fundo II',state:'DF',is_active:true,delivery_fee_type:'fixed',delivery_fee_value:5});
+    assert.equal(region.status,201);
+    const checkout={items:[{product_id:product.id,quantity:1}],customer_name:'Cliente teste',delivery_method:'delivery',delivery_address:'QN 7, casa 4',delivery_city:'Brasília',delivery_neighborhood:'Riacho Fundo 2',delivery_state:'DF',delivery_zip:'71880000',delivery_fee:0,payment_method:'split',split_payments:{pix:10,cash:15},payment_status:'paid'};
+    assert.equal((await call('/demo/entities/Order','POST',{...checkout,delivery_neighborhood:'Outra região'},customer.token)).status,400);
+    assert.equal((await call('/demo/entities/Order','POST',{...checkout,split_payments:{pix:24.99}},customer.token)).status,400);
+    const simulated=await call('/demo/entities/Order','POST',checkout,customer.token);
+    assert.equal(simulated.status,201,JSON.stringify(simulated.body));
+    assert.equal(simulated.body.total,25);
+    assert.equal(simulated.body.delivery_fee,5);
+    assert.equal(simulated.body.delivery_area_id,region.body.id);
+    assert.equal(simulated.body.payment_status,'pending');
+    assert.equal(simulated.body.status,'pending');
+    const history=await call('/demo/entities/Order','GET',undefined,customer.token);
+    assert.ok(history.body.some((order:any)=>order.id===simulated.body.id));
+    assert.equal((await query('SELECT count(*)::int AS count FROM order_items WHERE order_id=$1',[simulated.body.id])).rows[0].count,1);
+    await call(`/demo/entities/City/${region.body.id}`,'PATCH',{is_active:false});
+    assert.equal((await call('/demo/entities/Order','POST',checkout,customer.token)).status,400);
+    const storeView=await call('/demo/entities/Store','GET',undefined,customer.token);
+    assert.equal(storeView.body[0].delivery_areas_configured,true);
   }finally{
     await new Promise<void>(resolve=>server.close(()=>resolve()));
     await query('DELETE FROM orders WHERE store_id=ANY($1::uuid[])',[tenants]);

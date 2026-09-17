@@ -64,9 +64,10 @@ function OrderProgressBar({ status }) {
 }
 
 export default function MyOrders() {
-  const { user } = useAuth();
+  const { user, isLoadingAuth } = useAuth();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [expanded, setExpanded] = useState(null);
   const [editingOrder, setEditingOrder] = useState(null);
   const [ratingOrder, setRatingOrder] = useState(null);
@@ -74,14 +75,17 @@ export default function MyOrders() {
   const rateDelivererParam = new URLSearchParams(window.location.search).get('rate_deliverer');
 
   const loadOrders = () => {
-    if (!user) return;
-    base44.entities.Order.filter({ customer_email: user.email }, '-created_date').then(data => {
+    if (isLoadingAuth) return;
+    const request=user?.email?base44.entities.Order.filter({ customer_email: user.email }, '-created_date'):base44.entities.Order.list('-created_date');
+    request.then(data => {
       setOrders(data);
+      setError('');
+    }).catch(err=>setError(err.message||'Não foi possível carregar seus pedidos.')).finally(()=>{
       setLoading(false);
     });
   };
 
-  useEffect(() => { loadOrders(); }, [user]);
+  useEffect(() => { loadOrders(); }, [user, isLoadingAuth]);
 
   useEffect(() => {
     if (!loading && rateDelivererParam && orders.some(o => o.id === rateDelivererParam)) {
@@ -115,6 +119,7 @@ export default function MyOrders() {
           <h1 className="font-heading font-bold text-lg">Meus Pedidos</h1>
         </div>
 
+        {error&&<div role="alert" className="px-4 py-3 text-sm text-red-600">{error}<button onClick={loadOrders} className="ml-2 font-semibold underline">Tentar novamente</button></div>}
         {loading ? (
           <div className="flex justify-center py-16"><Loader2 size={28} className="animate-spin text-primary" /></div>
         ) : orders.length === 0 ? (

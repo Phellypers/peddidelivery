@@ -128,6 +128,7 @@ function CityForm({ city, deliverers, onClose, onSave }) {
     min_order_value: 0, estimated_time_min: 30
   });
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
   const set = (f, v) => setForm(p => ({ ...p, [f]: v }));
 
   const toggleDeliverer = (id) => set('deliverer_ids', (form.deliverer_ids || []).includes(id)
@@ -136,10 +137,16 @@ function CityForm({ city, deliverers, onClose, onSave }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError('');
+    const start=String(form.zip_start||'').replace(/[\s.-]/g,''),end=String(form.zip_end||'').replace(/[\s.-]/g,'');
+    if((start||end)&&(!/^\d{8}$/.test(start)||!/^\d{8}$/.test(end)||start>end)){setError('Informe os dois CEPs da faixa, com 8 números, em ordem crescente.');return;}
     setSaving(true);
-    if (city?.id) await base44.entities.City.update(city.id, form);
-    else await base44.entities.City.create(form);
-    onSave();
+    try {
+      const data={...form,name:form.name.trim(),state:String(form.state||'').trim().toUpperCase(),zip_start:start,zip_end:end};
+      if (city?.id) await base44.entities.City.update(city.id, data);
+      else await base44.entities.City.create(data);
+      onSave();
+    }catch(err){setError(err.message||'Não foi possível salvar a região.');}finally{setSaving(false);}
   };
 
   return (
@@ -149,7 +156,7 @@ function CityForm({ city, deliverers, onClose, onSave }) {
         <form onSubmit={handleSubmit} className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className={lbl}>Cidade *</label>
+              <label className={lbl}>Cidade / Região *</label>
               <input required value={form.name} onChange={e => set('name', e.target.value)} className={inp} />
             </div>
             <div>
@@ -157,6 +164,11 @@ function CityForm({ city, deliverers, onClose, onSave }) {
               <input value={form.state} onChange={e => set('state', e.target.value)} maxLength={2} className={inp} placeholder="SP" />
             </div>
           </div>
+
+          <div><label className={lbl}>Município (opcional)</label><input value={form.municipality||''} onChange={e=>set('municipality',e.target.value)} className={inp} placeholder="Ex.: Brasília"/><p className="mt-1 text-xs text-gray-500">Para uma região como Riacho Fundo II, informe aqui a cidade à qual ela pertence.</p></div>
+          <div><label className={lbl}>Outros nomes / abreviações (opcional)</label><input value={Array.isArray(form.aliases)?form.aliases.join('; '):form.aliases||''} onChange={e=>set('aliases',e.target.value)} className={inp} placeholder="Ex.: RF II; Riacho Fundo 2"/><p className="mt-1 text-xs text-gray-500">Separe os nomes por ponto e vírgula. Acentos e maiúsculas são reconhecidos automaticamente.</p></div>
+          <div className="grid grid-cols-2 gap-3"><div><label className={lbl}>CEP inicial (opcional)</label><input value={form.zip_start||''} onChange={e=>set('zip_start',e.target.value)} inputMode="numeric" maxLength={9} className={inp} placeholder="00000-000"/></div><div><label className={lbl}>CEP final (opcional)</label><input value={form.zip_end||''} onChange={e=>set('zip_end',e.target.value)} inputMode="numeric" maxLength={9} className={inp} placeholder="00000-000"/></div></div>
+          <p className="text-xs text-gray-500">Preencha a faixa somente se conhecer os CEPs atendidos. Fora dessa faixa, a entrega será bloqueada.</p>
 
           {/* Delivery fee */}
           <div className="border-t border-gray-100 pt-3">
@@ -223,8 +235,9 @@ function CityForm({ city, deliverers, onClose, onSave }) {
 
           <label className="flex items-center gap-2 text-sm cursor-pointer">
             <input type="checkbox" checked={form.is_active} onChange={e => set('is_active', e.target.checked)} className="w-4 h-4 accent-primary" />
-            Cidade ativa
+            Cidade / Região ativa
           </label>
+          {error&&<p role="alert" className="text-sm text-red-600">{error}</p>}
           <div className="flex gap-3 pt-2">
             <button type="button" onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-medium hover:bg-gray-50">Cancelar</button>
             <button type="submit" disabled={saving} className="flex-1 py-2.5 rounded-xl bg-primary text-white text-sm font-bold disabled:opacity-50">
