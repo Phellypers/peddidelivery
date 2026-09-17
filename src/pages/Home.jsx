@@ -70,9 +70,12 @@ export default function Home() {
     let result = products;
 
     if (activeCategory === '__most_ordered__') {
-      result = [...products].sort((a, b) => (b.views || 0) - (a.views || 0)).slice(0, 12);
+      result = products.filter(product => Number(product.orders_count || 0) > 0)
+        .sort((a, b) => Number(b.orders_count || 0) - Number(a.orders_count || 0)).slice(0, 12);
     } else if (activeCategory === '__promotions__') {
-      result = products.filter(p => p.promo_price && p.promo_price < p.price);
+      const campaignProducts = new Set((store?.banners || []).filter(banner => banner.is_active)
+        .flatMap(getBannerProductIds));
+      result = products.filter(p => (Number(p.promo_price) > 0 && Number(p.promo_price) < Number(p.price)) || campaignProducts.has(p.id));
     } else if (activeCategory === '__featured__') {
       result = products.filter(p => p.is_featured);
     } else if (activeBanner) {
@@ -91,7 +94,7 @@ export default function Home() {
       );
     }
     return result;
-  }, [products, activeCategory, activeBanner, searchQuery]);
+  }, [products, store, activeCategory, activeBanner, searchQuery]);
 
   if (loading) {
     return (
@@ -124,6 +127,12 @@ export default function Home() {
     setActiveCategory(null);
     setSearchQuery('');
   };
+  const selectMenuCategory = category => {
+    setActiveBanner(null);
+    setSearchQuery('');
+    setActiveCategory(category);
+    window.requestAnimationFrame(() => document.getElementById('cardapio-produtos')?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+  };
 
   return (
     <div className="peddi-storefront min-h-screen pb-24" style={{
@@ -145,9 +154,10 @@ export default function Home() {
       <MenuDrawer
         open={menuOpen}
         onClose={() => setMenuOpen(false)}
+        store={store}
         categories={categories}
         activeCategory={activeCategory}
-        onSelectCategory={setActiveCategory}
+        onSelectCategory={selectMenuCategory}
         isAdmin={isAdmin}
       />
 
