@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
-import { MessageCircle, X, Send, Loader2, Package, Bike, Edit3, HelpCircle, MessageSquare } from 'lucide-react';
+import { MessageCircle, X, Send, Loader2, Package, Bike, Edit3, HelpCircle, MessageSquare, ChevronDown, ChevronRight, CalendarDays } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createPortal } from 'react-dom';
 import { useDragControls } from 'framer-motion';
@@ -36,6 +36,7 @@ export default function ChatWidget({ externalOpen = false, onExternalClose, hide
   useEffect(() => { if (externalOpen) setOpen(true); }, [externalOpen]);
   const closeChat = () => { setOpen(false); onExternalClose?.(); };
   const [step, setStep] = useState('reason'); // reason | chat
+  const [historyOpen, setHistoryOpen] = useState(true);
   const [ticketHistory, setTicketHistory] = useState([]);
   const [ticket, setTicket] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -78,7 +79,12 @@ export default function ChatWidget({ externalOpen = false, onExternalClose, hide
 
   useEffect(() => {
     if (!open || !conversationId) return;
-    loadMessages();
+    let cancelled = false;
+    setLoading(true);
+    base44.entities.ChatMessage.filter({conversation_id:conversationId}, 'created_date', 200)
+      .then(rows => {if(!cancelled)setMessages(rows);})
+      .catch(error => {if(!cancelled)setChatError(error.message);})
+      .finally(() => {if(!cancelled)setLoading(false);});
     const unsub = base44.entities.ChatMessage.subscribe((event) => {
       if (event.type === 'create' && event.data.conversation_id === conversationId) {
         setMessages(prev => [...prev, event.data]);
@@ -91,17 +97,8 @@ export default function ChatWidget({ externalOpen = false, onExternalClose, hide
       if(event.type === 'delete') {setTicket(null);setMessages([]);setStep('reason');}
       else setTicket(event.data);
     });
-    return () => {unsub();unsubTickets();};
+    return () => {cancelled=true;unsub();unsubTickets();};
   }, [open, conversationId]);
-
-  const loadMessages = async () => {
-    if (!conversationId) return;
-    setLoading(true);
-    const msgs = await base44.entities.ChatMessage.filter({ conversation_id: conversationId }, 'created_date', 200);
-    setMessages(msgs);
-    setLoading(false);
-    setTimeout(() => { scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight }); }, 100);
-  };
 
   const startTicket = async (reasonId) => {
     setStarting(true);setChatError('');setMessages([]);
@@ -191,13 +188,20 @@ export default function ChatWidget({ externalOpen = false, onExternalClose, hide
                   <button type="button" aria-label="Fechar chat" onClick={closeChat} className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl text-[#6B7280] transition-colors hover:bg-[#F3F4F6] hover:text-[#111111]"><X size={22} /></button>
                 </header>
 
-                {ticketHistory.length > 0 && <div className="flex-shrink-0 border-b border-[#E5E7EB] px-4 py-2">
-                  <label className="text-xs text-[#6B7280]" htmlFor="chat-history">Histórico de atendimentos</label>
-                  <select id="chat-history" value={ticket?.id || ''} onChange={event => {const selected=ticketHistory.find(t=>t.id===event.target.value);if(selected){setTicket(selected);setMessages([]);setStep('chat');}}} className="mt-1 min-h-10 w-full rounded-xl border border-[#E5E7EB] bg-white px-2 text-sm">
-                    <option value="">Novo atendimento</option>
-                    {ticketHistory.map(t => <option key={t.id} value={t.id}>{t.protocol} {t.status==='closed'?'(Encerrado)':''}</option>)}
-                  </select>
-                </div>}
+                {ticketHistory.length > 0 && <section className="flex-shrink-0 border-b border-[#E5E7EB] bg-white px-4 py-2">
+                  <button type="button" onClick={() => setHistoryOpen(value => !value)} aria-expanded={historyOpen} aria-controls="chat-history-list" className="flex min-h-11 w-full items-center justify-between gap-2 text-left text-sm font-medium text-[#6B7280]">
+                    Histórico de atendimentos <ChevronDown size={18} className={`shrink-0 transition-transform ${historyOpen ? 'rotate-180' : ''}`}/>
+                  </button>
+                  {historyOpen && <div id="chat-history-list" className="max-h-[min(22dvh,180px)] space-y-2 overflow-y-auto overscroll-contain pb-2">
+                    {ticketHistory.map(previous => <button type="button" key={previous.id} aria-pressed={ticket?.id === previous.id} onClick={() => {if(ticket?.id === previous.id && step === 'chat')return;setTicket(previous);setMessages([]);setText('');setChatError('');setStep('chat');}} className={`flex min-h-24 w-full items-center gap-3 rounded-2xl border bg-white p-3 text-left transition-colors ${ticket?.id === previous.id ? 'border-[#BBF7D0]' : 'border-[#E5E7EB] hover:border-[#22C55E]'}`}>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2"><p className="break-words text-sm font-bold text-[#111111]">Protocolo {previous.protocol}</p><span className={`rounded-full px-2 py-1 text-[11px] font-semibold ${previous.status === 'closed' ? 'bg-[#F3F4F6] text-[#6B7280]' : 'bg-[#ECFDF3] text-[#15803D]'}`}>{{open:'Aberto',in_progress:'Em atendimento',resolved:'Resolvido',closed:'Encerrado'}[previous.status] || 'Aberto'}</span></div>
+                        <p className="mt-1 text-xs text-[#6B7280]">{REASON_LABELS[previous.reason] || previous.reason_label || 'Motivo não informado'}</p>
+                        <p className="mt-2 flex items-center gap-2 text-xs text-[#6B7280]"><CalendarDays size={14}/>{previous.created_date ? new Date(previous.created_date).toLocaleDateString('pt-BR') : 'Data indisponível'}</p>
+                      </div><ChevronRight size={18} className="shrink-0 text-[#6B7280]"/>
+                    </button>)}
+                  </div>}
+                </section>}
                 {chatError && <p role="alert" className="px-4 py-2 text-sm text-red-600">{chatError}</p>}
                 {step === 'reason' ? (
                   <div className="min-h-0 flex-1 overflow-y-auto bg-white p-4 sm:p-5">
