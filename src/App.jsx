@@ -41,6 +41,7 @@ import Financeiro from '@/pages/admin/Financeiro';
 import Comments from '@/pages/admin/Comments';
 import ChatAdmin from '@/pages/admin/Chat';
 import MyPeddi from '@/pages/admin/MyPeddi';
+import NotificationSounds from '@/components/NotificationSounds';
 import Tables from '@/pages/admin/Tables';
 import MyOrders from '@/pages/MyOrders';
 import MyData from '@/pages/MyData';
@@ -118,6 +119,7 @@ function App() {
           <WishlistProvider>
             <Router>
               <AppNavigationTracker />
+              <NotificationSounds />
               <ScrollToTop />
               <DemoNotice />
               <Routes>

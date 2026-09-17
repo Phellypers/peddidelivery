@@ -1,28 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { base44 } from '@/api/base44Client';
+import { playNotificationSound } from '@/lib/notificationSounds';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Bell } from 'lucide-react';
-
-function playAlertSound() {
-  try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    const play = (freq, start, dur) => {
-      const o = ctx.createOscillator();
-      const g = ctx.createGain();
-      o.connect(g); g.connect(ctx.destination);
-      o.frequency.value = freq;
-      o.type = 'sine';
-      g.gain.setValueAtTime(0.4, ctx.currentTime + start);
-      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + dur);
-      o.start(ctx.currentTime + start);
-      o.stop(ctx.currentTime + start + dur);
-    };
-    play(880, 0, 0.15);
-    play(1100, 0.18, 0.15);
-    play(880, 0.36, 0.15);
-    play(1320, 0.54, 0.3);
-  } catch (e) { /* silent fail */ }
-}
 
 const POPUP_CONFIG = {
   new: { border: 'border-green-400', bg: 'bg-green-100', text: 'text-green-600', label: '🛍️ Novo pedido recebido!' },
@@ -54,7 +34,7 @@ export default function NewOrderNotifier() {
         if (knownIds.current.has(event.id)) return;
         knownIds.current.add(event.id);
         prevStates.current.set(event.id, { status: event.data?.status, deliverer_accepted: event.data?.deliverer_accepted, deliverer_user_id: event.data?.deliverer_user_id });
-        playAlertSound();
+        playNotificationSound('newOrder', event.id + ':' + (event.data?.status || '') + ':' + 'newOrder');
         setPopup({ ...event.data, _kind: 'new' });
         setTimeout(() => setPopup(null), 8000);
       } else if (event.type === 'update') {
@@ -64,22 +44,22 @@ export default function NewOrderNotifier() {
         // Detect deliverer actions
         if (prev) {
           if (!prev.deliverer_accepted && curr.deliverer_accepted) {
-            playAlertSound();
+            playNotificationSound('accepted', event.id + ':' + (event.data?.status || '') + ':' + 'accepted');
             setPopup({ ...event.data, _kind: 'accepted' });
             setTimeout(() => setPopup(null), 8000);
           }
           if (prev.deliverer_user_id && !curr.deliverer_user_id) {
-            playAlertSound();
+            playNotificationSound('refused', event.id + ':' + (event.data?.status || '') + ':' + 'refused');
             setPopup({ ...event.data, _kind: 'refused' });
             setTimeout(() => setPopup(null), 8000);
           }
           if (prev.status !== 'shipped' && curr.status === 'shipped' && curr.deliverer_user_id) {
-            playAlertSound();
+            playNotificationSound('general', event.id + ':' + (event.data?.status || '') + ':' + 'general');
             setPopup({ ...event.data, _kind: 'picked_up' });
             setTimeout(() => setPopup(null), 8000);
           }
           if (prev.status !== 'delivered' && curr.status === 'delivered' && curr.deliverer_user_id) {
-            playAlertSound();
+            playNotificationSound('general', event.id + ':' + (event.data?.status || '') + ':' + 'general');
             setPopup({ ...event.data, _kind: 'delivered' });
             setTimeout(() => setPopup(null), 8000);
           }
@@ -90,7 +70,7 @@ export default function NewOrderNotifier() {
         if (event.data?.edited_by_customer) {
           if (!editedFlagged.current.has(event.id)) {
             editedFlagged.current.add(event.id);
-            playAlertSound();
+            playNotificationSound('general', event.id + ':' + (event.data?.status || '') + ':' + 'general');
             setPopup({ ...event.data, _kind: 'edited' });
             setTimeout(() => setPopup(null), 8000);
           }
