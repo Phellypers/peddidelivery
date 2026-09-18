@@ -137,15 +137,15 @@ function KanbanView({ orders, deliverers, onStatusChange, onAssign, onOpen }) {
             <Droppable droppableId={col} key={col}>
               {(provided, snapshot) => (
                 <div ref={provided.innerRef} {...provided.droppableProps}
-                  className={`orders-kanban-column flex-shrink-0 rounded-2xl border ${colColors[col]} p-3 space-y-2 min-h-[100px] ${snapshot.isDraggingOver ? 'ring-2 ring-primary/40' : ''}`}>
+                  className={`orders-kanban-column flex-shrink-0 rounded-2xl border ${colColors[col]} p-3 space-y-2 min-h-[100px] ${snapshot.isDraggingOver ? 'orders-drop-target ring-2 ring-primary/40' : ''}`}>
                   <div className="flex items-center justify-between mb-2">
                     <p className="flex items-center gap-2 text-sm font-bold text-foreground"><Icon size={22}/>{col === 'confirmed' ? 'Pendente' : statusLabels[col]}</p>
                     <span className="text-xs font-bold bg-white/80 rounded-full px-2 py-0.5">{colOrders.length}</span>
                   </div>
                   {colOrders.map((order, index) => (
-                    <Draggable draggableId={order.id} index={index} key={order.id}>
-                      {(provided) => (
-                        <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps}>
+                    <Draggable draggableId={order.id} index={index} key={order.id} disableInteractiveElementBlocking>
+                      {(provided, snapshot) => (
+                        <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps} className={`orders-draggable ${snapshot.isDragging ? 'orders-is-dragging' : ''}`}>
                           <KanbanCard order={order} onStatusChange={onStatusChange} onOpen={onOpen} />
                         </div>
                       )}
@@ -366,7 +366,15 @@ export default function Orders() {
   const updateStatus = async (orderId, newStatus) => {
     const order = orders.find(o => o.id === orderId);
     const prevStatus = order?.status;
-    await base44.entities.Order.update(orderId, { status: newStatus, edited_by_customer: false });
+    if (!order || prevStatus === newStatus) return;
+    setOrders(previous => previous.map(item => item.id === orderId ? { ...item, status: newStatus, edited_by_customer: false } : item));
+    try {
+      await base44.entities.Order.update(orderId, { status: newStatus, edited_by_customer: false });
+    } catch {
+      setOrders(previous => previous.map(item => item.id === orderId ? { ...item, status: prevStatus, edited_by_customer: order.edited_by_customer } : item));
+      toast({ title: 'Não foi possível salvar o status.', description: 'O pedido voltou à coluna anterior. Tente novamente.', variant: 'destructive' });
+      return;
+    }
 
     // Send notification + update customer profile metrics
     if (order) {
