@@ -40,11 +40,12 @@ app.get('/health', async (_request, response) => {
 });
 
 app.post('/api/v1/auth/login', async (request, response) => {
-  const { email, password } = request.body ?? {};
+  const { email, password, context } = request.body ?? {};
   if (!email || !password) return response.status(400).json({ error: 'Email e senha sao obrigatorios.' });
   const result = await query<{ id: string; email: string; name: string; role: string; business_id: string | null; store_id: string | null; password_hash: string }>('SELECT id, email, name, role, business_id, store_id, password_hash FROM users WHERE email = $1 AND active = true', [String(email).trim().toLowerCase()]);
   const user = result.rows[0];
   if (!user || !(await bcrypt.compare(String(password), user.password_hash))) return response.status(401).json({ error: 'Credenciais invalidas.' });
+  if (context==='manager' && !['manager','peddi_admin'].includes(user.role)) return response.status(403).json({error:'Este acesso é exclusivo para gestores. Use o login do cliente ou do entregador.'});
   if (user.role==='courier' && !await courierHasAccess(user.id,user.store_id)) return response.status(403).json({error:'Cadastro de entregador não aprovado ou acesso desativado.'});
   const authUser = { id: user.id, email: user.email, name: user.name, role: user.role, businessId: user.business_id, storeId: user.store_id };
   const refreshToken = createRefreshToken();

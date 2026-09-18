@@ -10,7 +10,7 @@ import GoogleIcon from "@/components/GoogleIcon";
 import { safeReturnTo } from "@/lib/authReturnTo";
 import { peddiApi, saveSession } from '@/services/api/peddiApi';
 
-export default function Login() {
+export default function Login({ managerOnly = false }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -24,12 +24,11 @@ export default function Login() {
     try {
       let destination = safeReturnTo();
       if (peddiApi.isConfigured) {
-        const result = await peddiApi.login(email, password);
+        const result = await peddiApi.login(email, password, managerOnly ? 'manager' : undefined);
         saveSession(result);
         if (result.user.role === 'courier') destination = '/entregador';
-        if (!new URLSearchParams(window.location.search).has('returnTo') && ['manager', 'peddi_admin'].includes(result.user.role)) {
-          destination = '/admin';
-        }
+        if (managerOnly) destination = destination === '/admin' || destination.startsWith('/admin/') ? destination : '/admin';
+        else if (result.user.role !== 'courier' && !new URLSearchParams(window.location.search).has('returnTo')) destination = '/loja';
       } else {
         await base44.auth.loginViaEmailPassword(email, password);
       }
@@ -48,10 +47,10 @@ export default function Login() {
   return (
     <AuthLayout
       icon={LogIn}
-      title="Welcome back"
-      subtitle="Log in to your account"
+      title={managerOnly ? 'Acesso do gestor' : 'Welcome back'}
+      subtitle={managerOnly ? 'Entre com sua conta administrativa PEDDI.' : 'Log in to your account'}
       footer={
-        <>
+        managerOnly ? <Link to="/gestor" className="text-primary font-medium">Conhecer a PEDDI para gestores</Link> : <>
           Don't have an account?{" "}
           <Link to="/register" className="text-primary font-medium hover:underline">
             Create one
@@ -59,7 +58,7 @@ export default function Login() {
         </>
       }
     >
-      <Button
+      {!managerOnly && <><Button
         variant="outline"
         className="w-full h-12 text-sm font-medium mb-6"
         onClick={handleGoogle}
@@ -76,6 +75,7 @@ export default function Login() {
           <span className="bg-card px-3 text-muted-foreground">or</span>
         </div>
       </div>
+      </>}
 
       {error && (
         <div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
@@ -103,9 +103,9 @@ export default function Login() {
         </div>
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <Label htmlFor="password">Password</Label>
+            <Label htmlFor="password">{managerOnly ? 'Senha' : 'Password'}</Label>
             <Link to="/forgot-password" className="text-xs text-primary hover:underline">
-              Forgot password?
+              {managerOnly ? 'Esqueci minha senha' : 'Forgot password?'}
             </Link>
           </div>
           <div className="relative">
@@ -137,10 +137,10 @@ export default function Login() {
           {loading ? (
             <>
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              Logging in...
+              {managerOnly ? 'Entrando...' : 'Logging in...'}
             </>
           ) : (
-            "Log in"
+            managerOnly ? 'Entrar no painel' : "Log in"
           )}
         </Button>
       </form>

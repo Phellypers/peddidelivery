@@ -3,6 +3,7 @@ import { base44 } from '@/api/base44Client';
 import { Loader2, Save, ImageIcon, Store, Copy, Check, Link2, Bike, Palette, RotateCcw, ShoppingCart } from 'lucide-react';
 import FakeReviewsManager from '@/components/admin/FakeReviewsManager';
 import { getStoreTheme } from '@/lib/storeTheme';
+import StoriesRing from '@/components/storefront/StoriesRing';
 
 const BRAND_PRESETS = ['#22C55E', '#16A34A', '#2563EB', '#7C3AED', '#DC2626', '#111111'];
 
@@ -89,6 +90,11 @@ export default function StoreSettings() {
       {error && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
 
       {/* Link público */}
+      <section className={section}>
+        <h2 className="mb-2 font-heading font-semibold text-gray-900">Stories da loja</h2>
+        <p className="mb-4 text-xs text-gray-500">Publique Stories pelo painel. Seus clientes visualizam as novidades no cardápio público.</p>
+        <StoriesRing store={{...form,id:storeId}} isAdmin onUpdateStore={updated=>setForm(previous=>({...previous,stories:updated.stories}))}/>
+      </section>
       <div className={section}>
         <div className="flex items-center gap-2 mb-2">
           <Link2 size={18} className="text-primary" />

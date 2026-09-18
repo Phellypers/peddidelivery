@@ -50,7 +50,6 @@ export default function Home() {
   const [activeBanner, setActiveBanner] = useState(null);
 
   const { user } = useAuth();
-  const isAdmin = ['admin','manager','peddi_admin'].includes(user?.role);
 
   const loadData = useCallback(() => {
     return loadPublicCatalog().then(({ store: currentStore, categories: cats, products: prods }) => {
@@ -181,7 +180,6 @@ export default function Home() {
         categories={categories}
         activeCategory={activeCategory}
         onSelectCategory={selectMenuCategory}
-        isAdmin={isAdmin}
       />
 
       <div className="peddi-store-shell max-w-2xl mx-auto bg-white min-h-screen">
@@ -192,12 +190,11 @@ export default function Home() {
             <div className="flex items-center gap-3">{user ? <button type="button" aria-label="Conversar com a loja" onClick={() => setChatOpen(true)}><MessageCircle size={27} /></button> : <Link to="/login?returnTo=/loja" aria-label="Entrar para conversar com a loja" className="flex h-11 w-11 items-center justify-center"><MessageCircle size={27} /></Link>}{user ? <NotificationBell /> : <Link to="/login?returnTo=/loja" aria-label="Entrar para ver notificações" className="flex h-11 w-11 items-center justify-center"><Bell size={27} /></Link>}</div>
           </div>
           <div className="peddi-store-profile">
-            <div className="peddi-store-logo"><StoriesRing store={store} isAdmin={isAdmin} onUpdateStore={setStore} /></div>
+            <div className="peddi-store-logo"><StoriesRing store={store} isAdmin={false} onUpdateStore={setStore} /></div>
             <h1>{store?.name || 'Meu Restaurante'}</h1>
             {store?.opening_hours && <p className="peddi-store-hours"><span aria-hidden="true">●</span> {store.opening_hours}</p>}
             <p className="peddi-store-description">{store?.description || 'Seja bem-vindo! Confira nosso cardápio completo.'}</p>
             {store?.address && <p className="peddi-store-address"><MapPin size={16} />{store.address}{store.city ? `, ${store.city}` : ''}</p>}
-            {isAdmin && <Link to="/admin" className="inline-flex items-center mt-3 text-xs text-primary font-semibold bg-orange-50 px-3 py-2 rounded-full">Painel do Gestor</Link>}
           </div>
         </header>
 
@@ -256,7 +253,6 @@ export default function Home() {
         <div className="px-4 py-6 text-center border-t border-gray-100">
           <p className="text-xs text-gray-400">{store?.name} · {store?.opening_hours}</p>
           <p className="text-[10px] text-gray-300 mt-1">© {new Date().getFullYear()} {store?.name}</p>
-          <Link to="/gestor" className="inline-block text-[10px] text-gray-400 hover:text-primary transition-colors mt-3">Área do Gestor</Link>
           <div className="flex items-center justify-center gap-1 mt-3">
             <Heart size={10} className="text-primary/60 fill-primary/40" />
             <span className="text-[10px] text-gray-400">feito com</span>

@@ -56,7 +56,7 @@ async function request(path, options = {}, retried = false) {
 export const peddiApi = {
   request,
   isConfigured: true,
-  login: (email, password) => request('/api/v1/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
+  login: (email, password, context) => request('/api/v1/auth/login', { method: 'POST', body: JSON.stringify({ email, password, ...(context ? { context } : {}) }) }),
   me: (token) => request('/api/v1/me', { headers: { Authorization: `Bearer ${token}` } }),
   updatePreferences: (preferences) => request('/api/v1/me/preferences', {
     method: 'PATCH',

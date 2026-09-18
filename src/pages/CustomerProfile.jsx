@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/lib/AuthContext';
 import { Link } from 'react-router-dom';
-import { ShoppingBag, Heart, Settings, ChevronRight, LogIn, Star, Edit, LogOut, Camera, RefreshCw, Loader2, X, Check, FileText, ArrowLeft } from 'lucide-react';
+import { ShoppingBag, Heart, ChevronRight, LogIn, Star, Edit, LogOut, Camera, RefreshCw, Loader2, X, Check, FileText, ArrowLeft } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { motion, AnimatePresence } from 'framer-motion';
 import FinancialReportModal from '@/components/customer/FinancialReportModal';
@@ -467,21 +467,6 @@ export default function CustomerProfile() {
                   );
                 })}
               </div>
-
-              {['admin','manager','peddi_admin'].includes(user?.role) && (
-                <div className="bg-orange-50 rounded-2xl border border-orange-100 overflow-hidden">
-                  <Link to="/admin" className="flex items-center gap-3 px-4 py-4 hover:bg-orange-100 transition-colors">
-                    <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center">
-                      <Settings size={18} className="text-orange-600" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-semibold text-orange-800">Painel do Gestor</p>
-                      <p className="text-xs text-orange-500">Produtos, pedidos e promoções</p>
-                    </div>
-                    <ChevronRight size={16} className="text-orange-300" />
-                  </Link>
-                </div>
-              )}
 
               <button onClick={() => logout()}
                 className="w-full flex items-center gap-3 px-4 py-4 bg-white rounded-2xl border border-gray-100 text-red-500 hover:bg-red-50 transition-colors">

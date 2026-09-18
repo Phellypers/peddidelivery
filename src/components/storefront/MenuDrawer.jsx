@@ -1,7 +1,7 @@
 ﻿import React, { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { getCategoryCover } from '@/lib/categoryCovers';
-import { X, Star, Tag, Flame, Settings, UserRound, Heart, House, ChefHat, ChevronRight, Package } from 'lucide-react';
+import { X, Star, Tag, Flame, UserRound, Heart, House, ChefHat, ChevronRight, Package } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
 
@@ -12,7 +12,7 @@ const quickSections = [
 ];
 const rowClass = active => `relative flex min-h-14 w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left text-sm font-semibold transition-colors ${active ? 'bg-green-50 text-green-700 before:absolute before:inset-y-3 before:left-0 before:w-1 before:rounded-full before:bg-green-500' : 'bg-gray-50 text-gray-800 hover:bg-gray-100'}`;
 
-export default function MenuDrawer({ open, onClose, categories, activeCategory, onSelectCategory, isAdmin, store }) {
+export default function MenuDrawer({ open, onClose, categories, activeCategory, onSelectCategory, store }) {
   const drawer = useRef(null);
   useEffect(() => {
     if (!open) return;
@@ -58,7 +58,6 @@ export default function MenuDrawer({ open, onClose, categories, activeCategory, 
             </div></section>
             <footer className="mt-5 space-y-1 border-t border-gray-100 pt-4">
               <Link to="/favoritos" onClick={onClose} className={footerClass}><Heart size={22} /><span className="flex-1">Favoritos</span><ChevronRight size={18} /></Link>
-              {isAdmin && <Link to="/admin" onClick={onClose} className={footerClass}><Settings size={22} className="text-green-600" /><span className="flex-1">Painel do Gestor</span><ChevronRight size={18} /></Link>}
               <Link to="/perfil" onClick={onClose} className={footerClass}><UserRound size={22} /><span className="flex-1">Minha Conta</span><ChevronRight size={18} /></Link>
             </footer>
           </div>

@@ -16,7 +16,7 @@ export default function ManagerLanding() {
     { icon: Smartphone, title: '100% responsivo', desc: 'Funciona no celular, tablet e desktop — seus clientes compram de qualquer tela.' },
   ];
 
-  const ctaTarget = isAuthenticated && isAdmin ? '/admin' : '/login';
+  const ctaTarget = isAuthenticated && isAdmin ? '/admin' : '/gestor/login';
   const ctaLabel = isAuthenticated && isAdmin ? 'Acessar painel' : 'Entrar no sistema';
 
   return (
@@ -28,7 +28,7 @@ export default function ManagerLanding() {
             {isAdmin ? 'Ir ao painel' : 'Início'}
           </Link>
         ) : (
-          <Link to="/login" className="text-sm text-primary font-bold hover:underline">Entrar</Link>
+          <Link to="/gestor/login" className="text-sm text-primary font-bold hover:underline">Entrar</Link>
         )}
       </div>
 
@@ -51,7 +51,7 @@ export default function ManagerLanding() {
             </Link>
           ) : (
             <>
-              <Link to="/login" className="flex items-center justify-center gap-2 px-8 py-3.5 bg-primary text-white rounded-2xl font-bold text-sm hover:bg-primary/90 transition-colors">
+              <Link to="/gestor/login" className="flex items-center justify-center gap-2 px-8 py-3.5 bg-primary text-white rounded-2xl font-bold text-sm hover:bg-primary/90 transition-colors">
                 <LogIn size={18} /> Entrar no sistema
               </Link>
               <Link to="/register" className="flex items-center justify-center gap-2 px-8 py-3.5 border-2 border-primary text-primary rounded-2xl font-bold text-sm hover:bg-primary/5 transition-colors">
