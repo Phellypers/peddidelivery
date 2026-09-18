@@ -1,4 +1,5 @@
 import { ThemeProvider } from 'next-themes';
+import CourierNavigationGuard from '@/components/deliverer/CourierNavigationGuard';
 import { Toaster } from "@/components/ui/toaster"
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
@@ -122,13 +123,14 @@ function App() {
               <NotificationSounds />
               <ScrollToTop />
               <DemoNotice />
-              <Routes>
+              <CourierNavigationGuard><Routes>
                 {/* Auth routes always available, outside AuthenticatedApp */}
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
                 <Route path="/forgot-password" element={<ForgotPassword />} />
                 <Route path="/reset-password" element={<ResetPassword />} />
                 <Route path="/entregador/cadastro" element={<DelivererRegister />} />
+                <Route path="/entregador" element={<DelivererApp />} />
                 <Route path="/oauth/consent" element={<OAuthConsent />} />
                 {/* Public storefront routes — accessible without login */}
                 <Route path="/loja" element={<Home />} />
@@ -139,7 +141,7 @@ function App() {
                 <Route path="/rastrear/:id" element={<OrderTracking />} />
                 {/* All other routes go through AuthenticatedApp */}
                 <Route path="*" element={<AuthenticatedApp />} />
-              </Routes>
+              </Routes></CourierNavigationGuard>
             </Router>
           </WishlistProvider>
         </CartProvider>

@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
+import CourierApplications from '@/components/admin/CourierApplications';
+import { useAuth } from '@/lib/AuthContext';
 import { Plus, Edit, Trash2, Loader2, User, Phone, Bike, MapPin, BarChart2, X, Send, CheckCircle2, Star } from 'lucide-react';
 
 const VEHICLE_LABELS = { moto: '🏍️ Moto', bicicleta: '🚲 Bicicleta', carro: '🚗 Carro', a_pe: '🚶 A pé' };
@@ -471,9 +473,11 @@ function DelivererDetail({ deliverer, cities, onClose }) {
 
 // ─── Invite Modal ─────────────────────────────────────────────────────────────
 function InviteModal({ onClose, onSent }) {
+  const { user }=useAuth();
   const [email, setEmail] = useState('');
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
+  const inviteUrl=`${window.location.origin}/entregador/cadastro?email=${encodeURIComponent(email)}${user?.storeId?`&store=${encodeURIComponent(user.storeId)}`:''}`;
 
   const handleSend = async (e) => {
     e.preventDefault();
@@ -486,12 +490,11 @@ function InviteModal({ onClose, onSent }) {
       await base44.integrations.Core.SendEmail({
         to: email,
         subject: 'Convite — Seja um entregador',
-        body: `Olá!\n\nVocê foi convidado para ser entregador.\n\nAcesse o link abaixo para se cadastrar ou entrar:\n${window.location.origin}/entregador/cadastro?email=${encodeURIComponent(email)}\n\nApós concluir o cadastro ou login, você será direcionado ao app de entregas.`,
+        body: `Olá!\n\nVocê foi convidado para ser entregador.\n\nEnvie seu cadastro pelo link:\n${inviteUrl}\n\nO acesso às entregas será liberado após a aprovação do gestor.`,
       });
     } catch (_) {}
     setSending(false);
     setSent(true);
-    setTimeout(() => { onSent(); }, 1500);
   };
 
   return (
@@ -500,23 +503,25 @@ function InviteModal({ onClose, onSent }) {
         {sent ? (
           <div className="text-center py-6">
             <CheckCircle2 size={48} className="mx-auto mb-3 text-green-500" />
-            <h3 className="font-heading font-bold text-lg">Convite enviado!</h3>
-            <p className="text-sm text-muted-foreground mt-1">O entregador receberá um e-mail com o link exclusivo de cadastro/login.</p>
+            <h3 className="font-heading font-bold text-lg">Convite preparado!</h3>
+            <p className="text-sm text-muted-foreground mt-1">Compartilhe o link com o entregador. Ele enviará o cadastro para sua aprovação.</p>
+            <input readOnly aria-label="Link de convite" value={inviteUrl} onFocus={event=>event.target.select()} className={`${inp} mt-4`}/>
+            <button onClick={onSent} className="mt-4 min-h-11 rounded-xl bg-primary px-5 font-semibold text-white">Concluir</button>
           </div>
         ) : (
           <>
             <div className="flex items-center justify-between">
-              <h2 className="font-heading font-bold text-lg">Convidar por e-mail</h2>
+              <h2 className="font-heading font-bold text-lg">Convidar entregador</h2>
               <button onClick={onClose}><X size={20} className="text-gray-400" /></button>
             </div>
-            <p className="text-sm text-muted-foreground">O motoboy receberá um link para se cadastrar e preencher seus próprios dados (nome, telefone e veículo).</p>
+            <p className="text-sm text-muted-foreground">Gere um link para o entregador preencher seus dados e solicitar acesso à sua loja.</p>
             <form onSubmit={handleSend} className="space-y-3">
               <div>
                 <label className={lbl}>E-mail do motoboy *</label>
                 <input type="email" required value={email} onChange={e => setEmail(e.target.value)} className={inp} placeholder="motoboy@email.com" />
               </div>
               <button type="submit" disabled={sending || !email} className="w-full py-3 rounded-xl bg-primary text-white text-sm font-bold disabled:opacity-50 flex items-center justify-center gap-2">
-                {sending ? <Loader2 size={16} className="animate-spin" /> : <><Send size={16} /> Enviar convite</>}
+                {sending ? <Loader2 size={16} className="animate-spin" /> : <><Send size={16} /> Gerar convite</>}
               </button>
             </form>
           </>
@@ -547,7 +552,7 @@ export default function Deliverers() {
       base44.entities.Deliverer.list('name'),
       base44.entities.City.list('name'),
     ]);
-    setDeliverers(ds);
+    setDeliverers(ds.filter(row=>!['pending','rejected'].includes(row.application_status)));
     setCities(cs);
     setLoading(false);
   };
@@ -583,6 +588,7 @@ export default function Deliverers() {
       </div>
 
       {/* Tabs */}
+      <CourierApplications onChange={load}/>
       <div className="flex gap-1 bg-muted p-1 rounded-2xl w-fit">
         {TABS.map(t => {
           const Icon = t.icon;

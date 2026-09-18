@@ -34,7 +34,7 @@ demoRouter.use('/upload',requireAuth,requireRoles('manager','peddi_admin','custo
 demoRouter.use(async (request:AuthRequest,response,next)=>{
   if (request.headers.authorization) {
     let accepted=false;
-    requireAuth(request,response,()=>{accepted=true});
+    await requireAuth(request,response,()=>{accepted=true});
     if (!accepted) return;
   }
   if (request.auth?.storeId) request.localStoreId=request.auth.storeId;
@@ -125,6 +125,10 @@ async function saveEntity(request:AuthRequest,response:express.Response){
   }
   switch(entity){
     case 'Deliverer': {
+      if (!isManager(request)) {
+        const allowed=['name','phone','vehicle','bio','email_notifications','photo_url','current_status','available','lat','lng','location_updated_at'];
+        if (!id || prior?.user_id!==request.auth?.userId || Object.keys(request.body).some(key=>!allowed.includes(key))) return response.status(403).json({error:'Somente o gestor pode ativar ou aprovar entregadores.'});
+      }
       try { response.status(id?200:201).json(await saveCourier(pool!,tenant,data,id as string|undefined)); }
       catch(error){response.status(400).json({error:error instanceof Error?error.message:'Não foi possível salvar o entregador.'});}
       return;

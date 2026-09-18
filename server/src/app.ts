@@ -8,6 +8,8 @@ import { blockPresentationDemoWrites, requireAuth, requireRoles, type AuthReques
 import { catalogRouter, productView } from './modules/products/routes.js';
 import { demoRouter, uploadPath } from './modules/demo/routes.js';
 import { courierRouter } from './modules/couriers/routes.js';
+import { courierApplicationRouter } from './modules/couriers/applications.js';
+import { courierHasAccess } from './modules/couriers/access.js';
 import { syncDelivery } from './modules/deliveries/data.js';
 import { accountRouter } from './modules/account/routes.js';
 
@@ -24,6 +26,7 @@ app.use(cors({ origin: clientOrigins }));
 app.use(express.json({ limit: '1mb' }));
 app.use('/api/v1/admin', catalogRouter);
 app.use('/api/v1',courierRouter);
+app.use('/api/v1',courierApplicationRouter);
 app.use('/api/v1/demo', demoRouter);
 app.use('/api/v1/my-peddi',accountRouter);
 app.use('/uploads', express.static(uploadPath, { dotfiles:'deny' }));
@@ -42,6 +45,7 @@ app.post('/api/v1/auth/login', async (request, response) => {
   const result = await query<{ id: string; email: string; name: string; role: string; business_id: string | null; store_id: string | null; password_hash: string }>('SELECT id, email, name, role, business_id, store_id, password_hash FROM users WHERE email = $1 AND active = true', [String(email).trim().toLowerCase()]);
   const user = result.rows[0];
   if (!user || !(await bcrypt.compare(String(password), user.password_hash))) return response.status(401).json({ error: 'Credenciais invalidas.' });
+  if (user.role==='courier' && !await courierHasAccess(user.id,user.store_id)) return response.status(403).json({error:'Cadastro de entregador não aprovado ou acesso desativado.'});
   const authUser = { id: user.id, email: user.email, name: user.name, role: user.role, businessId: user.business_id, storeId: user.store_id };
   const refreshToken = createRefreshToken();
   await query(`INSERT INTO refresh_tokens (user_id, token_hash, expires_at) VALUES ($1, $2, CASE WHEN $3 THEN 'infinity'::timestamptz ELSE now() + interval '30 days' END)`, [user.id, hashToken(refreshToken), env.demoMode && user.email === 'gestor.demo@peddi.local' && user.role === 'manager']);
@@ -50,9 +54,9 @@ app.post('/api/v1/auth/login', async (request, response) => {
 
 app.post('/api/v1/auth/refresh', async (request, response) => {
   const token = String(request.body?.refreshToken ?? '');
-  const result = await query<{ id: string; email: string; name: string; role: string; business_id: string | null; store_id: string | null }>(`SELECT u.id, u.email, u.name, u.role, u.business_id, u.store_id FROM refresh_tokens r JOIN users u ON u.id = r.user_id WHERE r.token_hash = $1 AND r.revoked_at IS NULL AND r.expires_at > now()`, [hashToken(token)]);
+  const result = await query<{ id: string; email: string; name: string; role: string; business_id: string | null; store_id: string | null }>(`SELECT u.id, u.email, u.name, u.role, u.business_id, u.store_id FROM refresh_tokens r JOIN users u ON u.id = r.user_id WHERE r.token_hash = $1 AND r.revoked_at IS NULL AND r.expires_at > now() AND u.active=true`, [hashToken(token)]);
   const user = result.rows[0];
-  if (!user) return response.status(401).json({ error: 'Refresh token invalido.' });
+  if (!user || user.role==='courier' && !await courierHasAccess(user.id,user.store_id)) return response.status(401).json({ error: 'Refresh token invalido.' });
   response.json({ accessToken: createAccessToken({ id: user.id, email: user.email, name: user.name, role: user.role, businessId: user.business_id, storeId: user.store_id }) });
 });
 

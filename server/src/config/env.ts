@@ -24,6 +24,8 @@ export const env = {
   supabaseUrl: process.env.SUPABASE_URL ?? '',
   supabaseStorageKey: process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '',
   supabaseStorageBucket: process.env.SUPABASE_STORAGE_BUCKET ?? 'peddi-images',
+  resendApiKey: process.env.RESEND_API_KEY ?? '',
+  notificationEmailFrom: process.env.NOTIFICATION_EMAIL_FROM ?? '',
 };
 
 if (!env.jwtSecret || (process.env.NODE_ENV === 'production' && (env.jwtSecret.length < 32 || /change-me|gere-|development/i.test(env.jwtSecret)))) {

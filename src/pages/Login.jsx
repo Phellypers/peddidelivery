@@ -26,6 +26,7 @@ export default function Login() {
       if (peddiApi.isConfigured) {
         const result = await peddiApi.login(email, password);
         saveSession(result);
+        if (result.user.role === 'courier') destination = '/entregador';
         if (!new URLSearchParams(window.location.search).has('returnTo') && ['manager', 'peddi_admin'].includes(result.user.role)) {
           destination = '/admin';
         }

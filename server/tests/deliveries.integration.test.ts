@@ -50,12 +50,16 @@ test('MVP persiste entregador, cliente, itens e ciclo de entrega com isolamento'
     assert.equal((await query('SELECT courier_id FROM orders WHERE id=$1',[orderId])).rows[0].courier_id,riderId);
     assert.equal((await call('/deliveries','GET',undefined,courier.token)).body.deliveries.length,1);
     assert.equal((await call('/orders','GET',undefined,courier.token)).body.orders.length,1);
-    assert.equal((await call('/orders','GET',undefined,otherCourier.token)).body.orders.length,0);
+    assert.equal((await call('/orders','GET',undefined,otherCourier.token)).status,403);
     assert.equal((await call(`/demo/entities/Order/${orderId}`,'PATCH',{deliverer_user_id:otherCourier.id})).status,400);
     assert.equal((await delivery()).courier_id,riderId);
     assert.equal((await call(`/demo/entities/Order/${orderId}`,'PATCH',{status:'delivered'},customer.token)).status,400);
     assert.equal((await call(`/demo/entities/Order/${orderId}`,'PATCH',{status:'delivered'},courier.token)).status,400);
-    assert.equal((await call(`/demo/entities/Order/${orderId}`,'PATCH',{deliverer_accepted:true},courier.token)).status,200);
+    const refused=await call(`/demo/entities/Order/${orderId}`,'PATCH',{deliverer_user_id:'',tracking_code:'',deliverer_accepted:false},courier.token);
+    assert.equal(refused.status,200);assert.equal(refused.body.delivery_action_event.type,'refused');assert.equal((await delivery()).courier_id,null);
+    assert.equal((await call(`/demo/entities/Order/${orderId}`,'PATCH',{deliverer_user_id:courier.id},manager.token)).status,200);
+    const accepted=await call(`/demo/entities/Order/${orderId}`,'PATCH',{deliverer_accepted:true},courier.token);
+    assert.equal(accepted.status,200);assert.equal(accepted.body.delivery_action_event.type,'accepted');assert.equal(accepted.body.delivery_action_event.origin,'courier');
     assert.equal((await delivery()).status,'accepted');assert.ok((await delivery()).accepted_at);
     assert.equal((await call(`/demo/entities/Order/${orderId}`,'PATCH',{status:'shipped'},courier.token)).status,200);
     assert.equal((await delivery()).status,'out_for_delivery');assert.ok((await delivery()).picked_up_at);

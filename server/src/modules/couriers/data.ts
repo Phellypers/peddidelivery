@@ -7,6 +7,11 @@ export function courierView(row:Record<string,any>) {
     available:row.available,created_date:row.created_at,updated_date:row.updated_at};
 }
 export async function saveCourier(database:Database,tenant:string,input:Record<string,any>,id?:string) {
+  if (id) {
+    const previous=(await database.query('SELECT details FROM couriers WHERE id=$1 AND store_id=$2',[id,tenant])).rows[0];
+    if (previous?.details.application_status && previous.details.application_status !== 'approved') throw new Error('Use a área de solicitações para aprovar ou recusar este entregador.');
+    if (previous?.details.application_status) input={...input,application_status:previous.details.application_status};
+  }
   const name=String(input.name||'').trim();
   if (!name) throw new Error('Informe o nome do entregador.');
   let userId:string|null=null;

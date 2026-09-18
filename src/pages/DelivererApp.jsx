@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
-import { Link } from 'react-router-dom';
-import { Loader2, Bike, MapPin, Navigation, Package, Check, LogIn, ArrowLeft, Power, Camera, Mail, X, Save, User as UserIcon, Phone, Star, CheckCircle2, XCircle, BarChart2, ChevronDown, ChevronUp, DollarSign, MessageCircle } from 'lucide-react';
+import { Loader2, Bike, MapPin, Navigation, Package, Check, ArrowLeft, Power, Camera, Mail, X, Save, User as UserIcon, Phone, Star, CheckCircle2, XCircle, BarChart2, ChevronDown, ChevronUp, DollarSign, MessageCircle } from 'lucide-react';
 import DelivererChatTab from '@/components/deliverer/DelivererChatTab';
 import DeliveryChat from '@/components/delivery/DeliveryChat';
 import { motion, AnimatePresence } from 'framer-motion';
 import { startLocationTracking, stopLocationTracking, isTracking } from '@/lib/delivererLocation';
-import SafeBackButton from '@/components/navigation/SafeBackButton';
+import DelivererRegister from './DelivererRegister';
+import { peddiApi } from '@/services/api/peddiApi';
 
 const VEHICLE_OPTIONS = [
   { value: 'moto', label: '🏍️ Moto' },
@@ -22,7 +22,7 @@ const PAYMENT_LABELS = {
 };
 
 export default function DelivererApp() {
-  const { user, isAuthenticated, navigateToLogin } = useAuth();
+  const { user, isAuthenticated, logout } = useAuth();
   const [deliverer, setDeliverer] = useState(null);
   const [orders, setOrders] = useState([]);
   const [completedOrders, setCompletedOrders] = useState([]);
@@ -43,20 +43,14 @@ export default function DelivererApp() {
 
   useEffect(() => {
     if (!user?.id) { setLoading(false); return; }
+    setLoading(true);
     (async () => {
       let dels = await base44.entities.Deliverer.filter({ user_id: user.id });
       if (!dels[0] && user.email) {
         dels = await base44.entities.Deliverer.filter({ email: user.email });
       }
       if (dels[0]) {
-        const updates = {};
-        if (!dels[0].user_id) updates.user_id = user.id;
-        if (dels[0].name === 'Aguardando cadastro' && user.full_name) updates.name = user.full_name;
-        if (!dels[0].is_active) updates.is_active = true;
-        if (Object.keys(updates).length > 0) {
-          await base44.entities.Deliverer.update(dels[0].id, updates);
-          dels[0] = { ...dels[0], ...updates };
-        }
+        if (dels[0].is_active === false || ['pending', 'rejected'].includes(dels[0].application_status)) { setLoading(false); return; }
         setDeliverer(dels[0]);
         setProfileForm({
           name: dels[0].name || '', phone: dels[0].phone || '', vehicle: dels[0].vehicle || 'moto',
@@ -70,8 +64,19 @@ export default function DelivererApp() {
         if (orderParam) setHighlightedOrder(orderParam);
       }
       setLoading(false);
-    })();
+    })().catch(() => { setDeliverer(null); setLoading(false); });
   }, [user]);
+
+  useEffect(() => {
+    if (user?.role!=='courier') return;
+    const check=()=>peddiApi.me(localStorage.getItem('peddi_access_token')).catch(error=>{
+      if ([401,403].includes(error.status)) { stopLocationTracking(); setDeliverer(null); setOrders([]); logout(false); }
+    });
+    const timer=setInterval(check,15000);
+    const checkOnFocus=()=>{void check();};
+    window.addEventListener('focus',checkOnFocus);
+    return()=>{clearInterval(timer);window.removeEventListener('focus',checkOnFocus);stopLocationTracking();};
+  },[user?.id]);
 
   // Real-time subscription
   useEffect(() => {
@@ -79,7 +84,7 @@ export default function DelivererApp() {
     const unsub = base44.entities.Order.subscribe((event) => {
       if (event.type === 'create' || event.type === 'update') {
         const o = event.data;
-        if (o.deliverer_user_id !== user.id) return;
+        if (o.deliverer_user_id !== user.id) { setOrders(previous => previous.filter(item => item.id !== event.id)); return; }
         if (o.status === 'delivered') {
           setOrders(prev => prev.filter(p => p.id !== event.id));
           setCompletedOrders(prev => {
@@ -99,7 +104,7 @@ export default function DelivererApp() {
           setOrders(prev => prev.filter(p => p.id !== event.id));
           setCompletedOrders(prev => prev.filter(p => p.id !== event.id));
         }
-      }
+      } else if (event.type === 'delete') { setOrders(previous => previous.filter(item => item.id !== event.id)); }
     });
     return () => unsub();
   }, [user?.id]);
@@ -215,28 +220,7 @@ export default function DelivererApp() {
     : completedOrders;
 
   // ── Not authenticated ──
-  if (!isAuthenticated || !user) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 px-4 text-center space-y-4">
-        <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center">
-          <Bike size={36} className="text-primary" />
-        </div>
-        <div>
-          <h1 className="font-heading font-bold text-xl">Área do Entregador</h1>
-          <p className="text-gray-500 text-sm mt-1">Entre para ver suas entregas</p>
-        </div>
-        <button onClick={() => navigateToLogin()} className="flex items-center gap-2 px-8 py-3 bg-primary text-white rounded-2xl font-bold text-sm">
-          <LogIn size={18} /> Fazer login
-        </button>
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 max-w-xs">
-          <p className="text-xs text-amber-800 leading-relaxed">
-            <strong>Não tem cadastro?</strong> O cadastro é realizado exclusivamente por convite do gestor. Solicite ao responsável o envio do seu convite por e-mail.
-          </p>
-        </div>
-        <Link to="/loja" className="text-sm text-gray-400">← Voltar</Link>
-      </div>
-    );
-  }
+  if (!isAuthenticated || !user) return <DelivererRegister/>;
 
   if (loading) {
     return <div className="flex justify-center py-20"><Loader2 className="animate-spin text-primary" size={32} /></div>;
@@ -249,10 +233,10 @@ export default function DelivererApp() {
           <Bike size={36} className="text-orange-500" />
         </div>
         <div>
-          <h1 className="font-heading font-bold text-xl">Você não está cadastrado como entregador</h1>
-          <p className="text-gray-500 text-sm mt-1">Peça ao gestor para te enviar um convite pelo seu e-mail.</p>
+          <h1 className="font-heading font-bold text-xl">Acesso às entregas indisponível</h1>
+          <p className="text-gray-500 text-sm mt-1">Seu cadastro precisa estar aprovado e ativo. Consulte o gestor da loja.</p>
         </div>
-        <Link to="/loja" className="text-sm text-primary">← Voltar ao cardápio</Link>
+        <button onClick={() => logout(false)} className="text-sm text-primary">Sair da conta</button>
       </div>
     );
   }
@@ -357,9 +341,9 @@ export default function DelivererApp() {
         {/* Header */}
         <div className="bg-gradient-to-br from-primary to-emerald-400 p-5 text-white">
           <div className="flex items-center justify-between mb-3">
-            <SafeBackButton fallback="/loja" aria-label="Voltar ao cardápio" className="w-9 h-9 bg-black/20 rounded-full flex items-center justify-center">
+            <button onClick={() => logout(false)} aria-label="Sair da área do entregador" className="w-9 h-9 bg-black/20 rounded-full flex items-center justify-center">
               <ArrowLeft size={18} />
-            </SafeBackButton>
+            </button>
             <span className="text-xs font-bold bg-white/20 px-3 py-1 rounded-full">Área do Entregador</span>
           </div>
           <div className="flex items-center gap-3">
