@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
+import { toast } from '@/components/ui/use-toast';
 import { getStockDeduction } from '@/lib/recipeCost';
 import { Search, Loader2, LayoutList, Columns, Check, X, Plus, Minus, Trash2, ShoppingCart, Send, Inbox, Clock, ChefHat, Truck, CheckCircle2 } from 'lucide-react';
 import { OrderCards as ListView, OrderKanbanCard as KanbanCard, OrderDetails } from '@/components/admin/OrdersPresentation';
@@ -462,7 +463,9 @@ export default function Orders() {
       tracking_code: delivererId ? d?.name : '',
       deliverer_user_id: delivererId ? (d?.user_id || '') : '',
       deliverer_accepted: false,
+      delivery_action_event: null,
     });
+    toast({ title: !delivererId ? 'Entregador removido do pedido.' : order?.deliverer_user_id ? 'Entregador alterado com sucesso.' : 'Entregador atribuído com sucesso.' });
     if (delivererId && d && order) {
       // Notify deliverer in-app
       if (d.user_id) {

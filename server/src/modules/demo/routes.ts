@@ -12,6 +12,7 @@ import { defaults, entityNames, isManager, matches, readEntities, readOrders, re
 import { saveCourier, archiveCourier } from '../couriers/data.js';
 import { syncDelivery } from '../deliveries/data.js';
 import { resolveChatSender } from './chat-sender.js';
+import { deliveryActionEvent } from '../../../../src/lib/deliveryEvents.js';
 import { storageConfigured, uploadImage, StorageUploadError } from '../storage/client.js';
 
 export const demoRouter=Router();
@@ -168,6 +169,7 @@ async function saveEntity(request:AuthRequest,response:express.Response){
           await client.query('SELECT id FROM orders WHERE id=$1 AND store_id=$2 FOR UPDATE',[id,tenant]);
           if (!isManager(request) && prior!.customer_email!==request.auth?.email && prior!.deliverer_user_id!==request.auth?.userId && prior!.visitor_id!==request.headers['x-peddi-visitor']) throw new Error('Sem permissão para editar o pedido.');
         }
+        data.delivery_action_event=deliveryActionEvent(prior,request.body,{role:request.auth?.role,userId:request.auth?.userId},crypto.randomUUID());
         if (!id || request.body.items) savedId=await writeOrder(client,tenant,data,request,id as string|undefined);
         else {
           const status=data.status==='shipped'?'out_for_delivery':data.status;

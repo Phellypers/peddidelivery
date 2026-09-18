@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { base44 } from '@/api/base44Client';
+import { newDeliveryAction } from '@/lib/deliveryEvents';
 import { playNotificationSound } from '@/lib/notificationSounds';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Bell } from 'lucide-react';
@@ -24,7 +25,7 @@ export default function NewOrderNotifier() {
       knownIds.current = new Set(orders.map(o => o.id));
       editedFlagged.current = new Set(orders.filter(o => o.edited_by_customer).map(o => o.id));
       const states = new Map();
-      orders.forEach(o => states.set(o.id, { status: o.status, deliverer_accepted: o.deliverer_accepted, deliverer_user_id: o.deliverer_user_id }));
+      orders.forEach(o => states.set(o.id, { status: o.status, deliverer_accepted: o.deliverer_accepted, deliverer_user_id: o.deliverer_user_id, delivery_action_event: o.delivery_action_event }));
       prevStates.current = states;
     });
 
@@ -33,36 +34,20 @@ export default function NewOrderNotifier() {
         if (knownIds.current === null) return;
         if (knownIds.current.has(event.id)) return;
         knownIds.current.add(event.id);
-        prevStates.current.set(event.id, { status: event.data?.status, deliverer_accepted: event.data?.deliverer_accepted, deliverer_user_id: event.data?.deliverer_user_id });
+        prevStates.current.set(event.id, { status: event.data?.status, deliverer_accepted: event.data?.deliverer_accepted, deliverer_user_id: event.data?.deliverer_user_id, delivery_action_event: event.data?.delivery_action_event });
         playNotificationSound('newOrder', event.id + ':' + (event.data?.status || '') + ':' + 'newOrder');
         setPopup({ ...event.data, _kind: 'new' });
         setTimeout(() => setPopup(null), 8000);
       } else if (event.type === 'update') {
         const prev = prevStates.current.get(event.id);
-        const curr = { status: event.data?.status, deliverer_accepted: event.data?.deliverer_accepted, deliverer_user_id: event.data?.deliverer_user_id };
+        const curr = { status: event.data?.status, deliverer_accepted: event.data?.deliverer_accepted, deliverer_user_id: event.data?.deliverer_user_id, delivery_action_event: event.data?.delivery_action_event };
 
-        // Detect deliverer actions
-        if (prev) {
-          if (!prev.deliverer_accepted && curr.deliverer_accepted) {
-            playNotificationSound('accepted', event.id + ':' + (event.data?.status || '') + ':' + 'accepted');
-            setPopup({ ...event.data, _kind: 'accepted' });
-            setTimeout(() => setPopup(null), 8000);
-          }
-          if (prev.deliverer_user_id && !curr.deliverer_user_id) {
-            playNotificationSound('refused', event.id + ':' + (event.data?.status || '') + ':' + 'refused');
-            setPopup({ ...event.data, _kind: 'refused' });
-            setTimeout(() => setPopup(null), 8000);
-          }
-          if (prev.status !== 'shipped' && curr.status === 'shipped' && curr.deliverer_user_id) {
-            playNotificationSound('general', event.id + ':' + (event.data?.status || '') + ':' + 'general');
-            setPopup({ ...event.data, _kind: 'picked_up' });
-            setTimeout(() => setPopup(null), 8000);
-          }
-          if (prev.status !== 'delivered' && curr.status === 'delivered' && curr.deliverer_user_id) {
-            playNotificationSound('general', event.id + ':' + (event.data?.status || '') + ':' + 'general');
-            setPopup({ ...event.data, _kind: 'delivered' });
-            setTimeout(() => setPopup(null), 8000);
-          }
+        const deliveryAction = prev && newDeliveryAction(prev, curr);
+        if (deliveryAction) {
+          const sound = ['accepted', 'refused'].includes(deliveryAction) ? deliveryAction : 'general';
+          playNotificationSound(sound, event.id + ':' + curr.delivery_action_event.id);
+          setPopup({ ...event.data, _kind: deliveryAction });
+          setTimeout(() => setPopup(null), 8000);
         }
         prevStates.current.set(event.id, curr);
 
