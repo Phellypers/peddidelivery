@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { getStockDeduction } from '@/lib/recipeCost';
-import { Search, Loader2, ChevronDown, ChevronUp, Clock, MapPin, CreditCard, MessageSquare, LayoutList, Columns, Phone, Bike, Edit, Check, X, Plus, Minus, Trash2, ShoppingBag, Send } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { Search, Loader2, LayoutList, Columns, Check, X, Plus, Minus, Trash2, ShoppingCart, Send, Inbox, Clock, ChefHat, Truck, CheckCircle2 } from 'lucide-react';
+import { OrderCards as ListView, OrderKanbanCard as KanbanCard, OrderDetails } from '@/components/admin/OrdersPresentation';
+import '@/components/admin/orders-presentation.css';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { simulateExternalAction } from '@/lib/presentationDemo';
 
@@ -107,95 +108,7 @@ function SendMessageButton({ order }) {
 }
 
 // ─── Kanban Card ──────────────────────────────────────────────────────────────
-function KanbanCard({ order, deliverers, onStatusChange, onAssign }) {
-  const [open, setOpen] = useState(false);
-  const assignedDeliverer = deliverers.find(d => d.name === order.tracking_code);
-
-  return (
-    <div className={`bg-white rounded-2xl shadow-sm overflow-hidden ${order.edited_by_customer ? 'border-2 border-orange-400' : 'border border-border/50'} ${!order.viewed_by_admin ? 'ring-2 ring-cyan-400 shadow-lg shadow-cyan-400/50' : ''}`}>
-      {/* Always-visible summary */}
-      <div className="p-3 space-y-1.5 cursor-pointer" onClick={() => { const n = !open; setOpen(n); if (n && !order.viewed_by_admin) base44.entities.Order.update(order.id, { viewed_by_admin: true }); }}>
-        {!order.viewed_by_admin && (
-          <div className="text-[10px] font-bold text-white bg-cyan-500 rounded-lg px-2 py-1 text-center animate-pulse">
-            ✨ Novo Pedido
-          </div>
-        )}
-        {order.edited_by_customer && (
-          <div className="text-[10px] font-bold text-white bg-orange-500 rounded-lg px-2 py-1 text-center animate-pulse">
-            ⚠️ Pedido alterado pelo cliente
-          </div>
-        )}
-        <div className="flex items-center justify-between">
-          <p className="font-heading font-bold text-sm text-foreground">#{order.order_number}</p>
-          <span className="text-xs font-bold text-primary">R$ {order.total?.toFixed(2)}</span>
-        </div>
-        <p className="text-xs font-semibold text-foreground">{order.customer_name}</p>
-        {order.customer_phone && (
-          <p className="text-[10px] text-muted-foreground flex items-center gap-1"><Phone size={9} />{order.customer_phone}</p>
-        )}
-        {order.delivery_method === 'delivery' && order.delivery_address && (
-          <p className="text-[10px] text-muted-foreground flex items-center gap-1 leading-tight"><MapPin size={9} className="flex-shrink-0" />{order.delivery_address}{order.delivery_city ? `, ${order.delivery_city}` : ''}</p>
-        )}
-        <div className="flex items-center justify-between pt-0.5">
-          <span className="text-[10px] text-muted-foreground">{paymentLabels[order.payment_method] || order.payment_method}</span>
-          <div className="flex items-center gap-1.5">
-            {order.delivery_fee > 0 && <span className="text-[10px] text-muted-foreground">Frete: R$ {order.delivery_fee?.toFixed(2)}</span>}
-            <span className="text-[10px] text-blue-500 font-medium bg-blue-50 px-1.5 rounded-full">{ORIGIN_SHORT[order.sale_origin] || 'Catálogo'}</span>
-          </div>
-        </div>
-        {/* Items always visible */}
-        <div className="pt-1 space-y-1 border-t border-border/30">
-          {order.items?.map((item, i) => (
-            <div key={i} className="text-[11px]">
-              <span className="font-semibold text-foreground">{item.quantity}x {item.product_name}</span>
-              {item.variation && <span className="text-muted-foreground"> · {item.variation}</span>}
-              {item.addons?.length > 0 && <p className="text-[10px] text-muted-foreground pl-2">+ {item.addons.join(', ')}</p>}
-              {item.notes && <p className="text-[10px] text-orange-600 pl-2 italic">"{item.notes}"</p>}
-            </div>
-          ))}
-        </div>
-        {order.order_notes && (
-          <p className="text-[10px] text-orange-600 italic flex items-start gap-1"><MessageSquare size={9} className="mt-0.5 flex-shrink-0" />"{order.order_notes}"</p>
-        )}
-        {assignedDeliverer && (
-          <p className="text-[10px] text-blue-600 flex items-center gap-1"><Bike size={9} />{assignedDeliverer.name}</p>
-        )}
-      </div>
-
-      {/* Expandable controls */}
-      {open && (
-        <div className="border-t border-border/50 p-3 space-y-2 bg-muted/30" onClick={e => e.stopPropagation()}>
-          {deliverers.length > 0 && order.delivery_method !== 'pickup' && (
-            <select
-              value={deliverers.find(d => d.name === order.tracking_code)?.id || ''}
-              onChange={e => onAssign(order.id, e.target.value)}
-              onClick={e => e.stopPropagation()}
-              className="w-full px-2 py-1.5 bg-white border border-border rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-primary/20"
-            >
-              <option value="">— Entregador —</option>
-              {deliverers.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-            </select>
-          )}
-          <div className="flex flex-wrap gap-1">
-            {statusFlow.map(s => (
-              <button key={s} onClick={() => onStatusChange(order.id, s)}
-                className={`px-2 py-1 rounded-lg text-[10px] font-semibold transition-all ${order.status === s ? 'bg-primary text-white' : 'bg-white border border-border text-muted-foreground hover:bg-accent'}`}>
-                {statusLabels[s]}
-              </button>
-            ))}
-            <button onClick={() => onStatusChange(order.id, 'cancelled')}
-              className={`px-2 py-1 rounded-lg text-[10px] font-semibold transition-all ${order.status === 'cancelled' ? 'bg-destructive text-white' : 'bg-white border border-border text-destructive hover:bg-destructive/10'}`}>
-              Cancelar
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ─── Kanban View ──────────────────────────────────────────────────────────────
-function KanbanView({ orders, deliverers, onStatusChange, onAssign }) {
+function KanbanView({ orders, deliverers, onStatusChange, onAssign, onOpen }) {
   const onDragEnd = (result) => {
     if (!result.destination) return;
     const orderId = result.draggableId;
@@ -208,30 +121,31 @@ function KanbanView({ orders, deliverers, onStatusChange, onAssign }) {
 
   return (
     <DragDropContext onDragEnd={onDragEnd}>
-      <div className="flex gap-3 overflow-x-auto pb-4">
+      <div className="orders-kanban">
         {kanbanColumns.map(col => {
           const colOrders = orders.filter(o => o.status === col);
+          const Icon = {pending:Inbox,confirmed:Clock,preparing:ChefHat,shipped:Truck,delivered:CheckCircle2}[col];
           const colColors = {
-            pending: 'border-amber-300 bg-amber-50',
-            confirmed: 'border-blue-300 bg-blue-50',
-            preparing: 'border-purple-300 bg-purple-50',
-            shipped: 'border-cyan-300 bg-cyan-50',
+            pending: 'border-gray-200 bg-gray-50',
+            confirmed: 'border-amber-200 bg-amber-50',
+            preparing: 'border-blue-200 bg-blue-50',
+            shipped: 'border-purple-200 bg-purple-50',
             delivered: 'border-green-300 bg-green-50',
           };
           return (
             <Droppable droppableId={col} key={col}>
               {(provided, snapshot) => (
                 <div ref={provided.innerRef} {...provided.droppableProps}
-                  className={`flex-shrink-0 w-64 rounded-2xl border-2 ${colColors[col]} p-3 space-y-2 min-h-[100px] ${snapshot.isDraggingOver ? 'ring-2 ring-primary/40' : ''}`}>
+                  className={`orders-kanban-column flex-shrink-0 rounded-2xl border ${colColors[col]} p-3 space-y-2 min-h-[100px] ${snapshot.isDraggingOver ? 'ring-2 ring-primary/40' : ''}`}>
                   <div className="flex items-center justify-between mb-2">
-                    <p className="text-xs font-bold text-foreground uppercase tracking-wide">{statusLabels[col]}</p>
+                    <p className="flex items-center gap-2 text-sm font-bold text-foreground"><Icon size={22}/>{col === 'confirmed' ? 'Pendente' : statusLabels[col]}</p>
                     <span className="text-xs font-bold bg-white/80 rounded-full px-2 py-0.5">{colOrders.length}</span>
                   </div>
                   {colOrders.map((order, index) => (
                     <Draggable draggableId={order.id} index={index} key={order.id}>
                       {(provided) => (
                         <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps}>
-                          <KanbanCard order={order} deliverers={deliverers} onStatusChange={onStatusChange} onAssign={onAssign} />
+                          <KanbanCard order={order} onStatusChange={onStatusChange} onOpen={onOpen} />
                         </div>
                       )}
                     </Draggable>
@@ -403,179 +317,6 @@ function EditOrderModal({ order, onClose, onSave }) {
 }
 
 // ─── List View ────────────────────────────────────────────────────────────────
-function ListView({ orders, deliverers, onStatusChange, onAssign, onEdit, focusOrderId }) {
-  const [expandedOrder, setExpandedOrder] = useState(focusOrderId || null);
-
-  return (
-    <div className="space-y-3">
-      {orders.map(order => (
-        <div key={order.id} className={`bg-card rounded-2xl overflow-hidden ${order.edited_by_customer ? 'border-2 border-orange-400' : 'border border-border/50'} ${focusOrderId === order.id ? 'ring-2 ring-blue-400 shadow-lg shadow-blue-400/30' : ''}`}>
-          <button
-            onClick={() => {
-              const willOpen = expandedOrder !== order.id;
-              setExpandedOrder(willOpen ? order.id : null);
-              if (willOpen && !order.viewed_by_admin) base44.entities.Order.update(order.id, { viewed_by_admin: true });
-            }}
-            className={`w-full flex items-center justify-between p-4 text-left transition-colors ${order.edited_by_customer ? 'bg-orange-50 hover:bg-orange-100' : 'hover:bg-accent/30'} ${!order.viewed_by_admin ? 'ring-2 ring-cyan-400 shadow-lg shadow-cyan-400/50' : ''}`}
-          >
-            <div className="flex items-center gap-4">
-              <div>
-                <div className="flex items-center gap-2">
-                  <p className="font-heading font-bold text-foreground">#{order.order_number}</p>
-                  {!order.viewed_by_admin && (
-                    <span className="text-[10px] font-bold text-white bg-cyan-500 rounded-full px-2 py-0.5 animate-pulse">
-                      ✨ Novo
-                    </span>
-                  )}
-                  {order.edited_by_customer && (
-                    <span className="text-[10px] font-bold text-white bg-orange-500 rounded-full px-2 py-0.5">
-                      ⚠️ Alterado pelo cliente
-                    </span>
-                  )}
-                </div>
-                <p className="text-xs text-muted-foreground">{order.customer_name}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <span className={`text-xs font-medium px-2.5 py-1 rounded-full border ${statusColors[order.status]}`}>
-                {statusLabels[order.status]}
-              </span>
-              <span className="font-heading font-bold text-sm hidden sm:block">R$ {order.total?.toFixed(2)}</span>
-              {expandedOrder === order.id ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-            </div>
-          </button>
-
-          <AnimatePresence>
-            {expandedOrder === order.id && (
-              <motion.div initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }} className="overflow-hidden">
-                <div className="px-4 pb-4 border-t border-border pt-4 space-y-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <Clock size={14} />
-                      {formatDate(order.created_date)}
-                    </div>
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <CreditCard size={14} />
-                      {paymentLabels[order.payment_method] || order.payment_method} — {order.payment_status === 'paid' ? '✅ Pago' : '⏳ Pendente'}
-                    </div>
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <MapPin size={14} />
-                      {order.delivery_method === 'pickup' ? 'Retirada' : order.delivery_address || 'Entrega'}
-                    </div>
-                    <div className="flex items-center gap-2 text-blue-500">
-                      <ShoppingBag size={14} />
-                      {ORIGIN_SHORT[order.sale_origin] ? `Origem: ${ORIGIN_SHORT[order.sale_origin]}` : 'Origem: Catálogo online'}
-                    </div>
-                  </div>
-
-                  {/* Customer details */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
-                    {order.customer_phone && (
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <Phone size={14} /> {order.customer_phone}
-                      </div>
-                    )}
-                    {order.delivery_method === 'delivery' && order.delivery_neighborhood && (
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <MapPin size={14} /> {order.delivery_neighborhood}{order.delivery_zip ? ` · CEP: ${order.delivery_zip}` : ''}
-                      </div>
-                    )}
-                    {order.delivery_notes && (
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <MessageSquare size={14} /> Ref: {order.delivery_notes}
-                      </div>
-                    )}
-                    {order.payment_method === 'cash' && order.change_for > 0 && (
-                      <div className="flex items-center gap-2 text-amber-600 font-medium">
-                        💵 Troco para: R$ {order.change_for.toFixed(2)}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="bg-muted/50 rounded-xl p-3">
-                    <p className="text-xs font-medium text-muted-foreground mb-2 uppercase">Itens do pedido</p>
-                    {order.items?.map((item, idx) => (
-                      <div key={idx} className="py-1.5 text-sm border-b border-border/30 last:border-0">
-                        <div className="flex justify-between">
-                          <span>{item.quantity}x {item.product_name} {item.variation && `(${item.variation})`}</span>
-                          <span className="font-medium">R$ {(item.unit_price * item.quantity).toFixed(2)}</span>
-                        </div>
-                        {item.addons?.length > 0 && <p className="text-xs text-muted-foreground pl-2">+ {item.addons.join(', ')}</p>}
-                        {item.notes && <p className="text-xs text-orange-600 pl-2 italic">"{item.notes}"</p>}
-                      </div>
-                    ))}
-                    {order.discount > 0 && (
-                      <div className="flex justify-between py-1 text-sm text-green-600"><span>Desconto</span><span>- R$ {order.discount?.toFixed(2)}</span></div>
-                    )}
-                    {order.delivery_fee > 0 && (
-                      <div className="flex justify-between py-1 text-sm text-muted-foreground"><span>Frete</span><span>R$ {order.delivery_fee?.toFixed(2)}</span></div>
-                    )}
-                    <div className="flex justify-between pt-2 font-heading font-bold text-sm border-t border-border/30 mt-1">
-                      <span>Total</span>
-                      <span className="text-primary">R$ {order.total?.toFixed(2)}</span>
-                    </div>
-                  </div>
-
-                  {order.order_notes && (
-                    <div className="flex items-start gap-2 text-sm text-muted-foreground">
-                      <MessageSquare size={14} className="mt-0.5 flex-shrink-0" />
-                      <p>{order.order_notes}</p>
-                    </div>
-                  )}
-                  {order.admin_notes && (
-                    <div className="flex items-start gap-2 text-sm text-orange-600 bg-orange-50 rounded-xl p-3">
-                      <MessageSquare size={14} className="mt-0.5 flex-shrink-0" />
-                      <p className="text-xs italic">{order.admin_notes}</p>
-                    </div>
-                  )}
-
-                  {deliverers.length > 0 && order.delivery_method !== 'pickup' && (
-                    <div>
-                      <p className="text-xs font-medium text-muted-foreground mb-2 uppercase">Atribuir Entregador</p>
-                      <select
-                        value={deliverers.find(d => d.name === order.tracking_code)?.id || ''}
-                        onChange={e => onAssign(order.id, e.target.value)}
-                        className="w-full px-3 py-2 bg-muted rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-                      >
-                        <option value="">— Nenhum —</option>
-                        {deliverers.map(d => <option key={d.id} value={d.id}>{d.name} ({d.vehicle})</option>)}
-                      </select>
-                    </div>
-                  )}
-
-                  <div>
-                    <p className="text-xs font-medium text-muted-foreground mb-2 uppercase">Atualizar status</p>
-                    <div className="flex flex-wrap gap-2">
-                      {statusFlow.map(status => (
-                        <button key={status} onClick={() => onStatusChange(order.id, status)}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${order.status === status ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground hover:bg-accent'}`}>
-                          {statusLabels[status]}
-                        </button>
-                      ))}
-                      <button onClick={() => onStatusChange(order.id, 'cancelled')}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${order.status === 'cancelled' ? 'bg-destructive text-destructive-foreground' : 'bg-muted text-destructive hover:bg-destructive/10'}`}>
-                        Cancelar
-                      </button>
-                    </div>
-                  </div>
-
-                  <SendMessageButton order={order} />
-                  <button onClick={() => onEdit(order)}
-                    className="w-full flex items-center justify-center gap-2 py-2.5 border-2 border-dashed border-primary/40 rounded-xl text-primary text-sm font-semibold hover:bg-primary/5 transition-colors">
-                    <Edit size={14} /> Editar valores / pagamento
-                  </button>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-      ))}
-      {orders.length === 0 && <div className="text-center py-12 text-muted-foreground">Nenhum pedido encontrado</div>}
-    </div>
-  );
-}
-
-// ─── Main ─────────────────────────────────────────────────────────────────────
 export default function Orders() {
   const urlParams = new URLSearchParams(window.location.search);
   const focusOrderId = urlParams.get('order');
@@ -585,6 +326,8 @@ export default function Orders() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
+  const [selectedOrderId, setSelectedOrderId] = useState(focusOrderId || null);
+  const [sortOrder, setSortOrder] = useState('recent');
   const [viewMode, setViewMode] = useState('list'); // list | kanban
   const [editingOrder, setEditingOrder] = useState(null);
   const [dateFilter, setDateFilter] = useState(focusOrderId ? 'all' : 'today');
@@ -788,37 +531,27 @@ export default function Orders() {
       }
     }
     return matchSearch && matchStatus && matchDeliverer && matchDate;
-  });
+  }).sort((a,b) => sortOrder === 'oldest' ? Date.parse(a.created_date)-Date.parse(b.created_date) : sortOrder === 'highest' ? Number(b.total)-Number(a.total) : Date.parse(b.created_date)-Date.parse(a.created_date));
+  const selectedOrder = orders.find(order => order.id === selectedOrderId);
+  const openOrder = order => { setSelectedOrderId(order.id); if (!order.viewed_by_admin) base44.entities.Order.update(order.id, {viewed_by_admin:true}); window.scrollTo({top:0}); };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="peddi-orders space-y-6">
+      {selectedOrder ? <OrderDetails order={selectedOrder} deliverers={deliverers} onBack={() => setSelectedOrderId(null)} onStatusChange={updateStatus} onAssign={assignDeliverer} onEdit={setEditingOrder} messageAction={<SendMessageButton order={selectedOrder}/>} /> : <>
+      <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
           <h1 className="font-heading font-bold text-2xl text-foreground">Pedidos</h1>
-          <p className="text-sm text-muted-foreground mt-1">{filtered.length} pedidos · {orders.length} no total</p>
+          <p className="text-sm text-muted-foreground mt-1">Gerencie e acompanhe seus pedidos em tempo real.</p>
         </div>
         {/* View mode toggle */}
         <div className="flex gap-1 bg-muted p-1 rounded-xl">
-          <button onClick={() => setViewMode('list')} className={`p-2 rounded-lg transition-colors ${viewMode === 'list' ? 'bg-white shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`} title="Lista">
-            <LayoutList size={18} />
+          <button onClick={() => setViewMode('list')} className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${viewMode === 'list' ? 'bg-green-600 text-white' : 'text-muted-foreground hover:text-foreground'}`} title="Lista">
+            <LayoutList size={18} /> Lista
           </button>
-          <button onClick={() => setViewMode('kanban')} className={`p-2 rounded-lg transition-colors ${viewMode === 'kanban' ? 'bg-white shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`} title="Kanban">
-            <Columns size={18} />
+          <button onClick={() => setViewMode('kanban')} className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${viewMode === 'kanban' ? 'bg-green-600 text-white' : 'text-muted-foreground hover:text-foreground'}`} title="Kanban">
+            <Columns size={18} /> Kanban
           </button>
         </div>
-      </div>
-
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
-          <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar por nome ou número..." className="w-full pl-10 pr-4 py-2.5 bg-muted rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" />
-        </div>
-        {viewMode === 'list' && (
-          <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="px-4 py-2.5 bg-muted rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20">
-            <option value="">Todos status</option>
-            {Object.entries(statusLabels).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-          </select>
-        )}
       </div>
 
       {/* Filtro de período */}
@@ -827,7 +560,7 @@ export default function Orders() {
           { key: 'today', label: 'Hoje' },
           { key: 'yesterday', label: 'Ontem' },
           { key: 'custom', label: 'Data específica' },
-          { key: 'period', label: 'Período' },
+          { key: 'period', label: 'Intervalo' },
           { key: 'all', label: 'Tudo' },
         ].map(opt => (
           <button key={opt.key} onClick={() => setDateFilter(opt.key)}
@@ -850,14 +583,30 @@ export default function Orders() {
         )}
       </div>
 
+      {viewMode === 'list' && <div className="orders-summary">{[{label:'Total de pedidos',value:filtered.length,tone:'green'},{label:'Pendentes',value:filtered.filter(o=>['pending','confirmed'].includes(o.status)).length,tone:'amber'},{label:'Em preparo',value:filtered.filter(o=>o.status==='preparing').length,tone:'blue'},{label:'Entregues',value:filtered.filter(o=>o.status==='delivered').length,tone:'green'}].map(item=>{const Icon=item.label==='Total de pedidos'?ShoppingCart:{green:CheckCircle2,amber:Clock,blue:ChefHat}[item.tone];return <div key={item.label} className={`orders-stat ${item.tone}`}><Icon size={28}/><div><p>{item.label}</p><strong>{item.value}</strong><small>No período selecionado</small></div></div>;})}</div>}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1">
+          <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar por nome ou número..." className="w-full pl-10 pr-4 py-2.5 bg-muted rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" />
+        </div>
+        {viewMode === 'list' && (
+          <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="px-4 py-2.5 bg-muted rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20">
+            <option value="">Todos status</option>
+            {Object.entries(statusLabels).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+          </select>
+        )}
+      </div>
+
+      <div className="flex items-center justify-between flex-wrap gap-3">{viewMode === 'list' && <div><h2 className="font-heading font-bold text-xl">{dateFilter==='today'?'Pedidos de hoje':'Pedidos do período'}</h2><p className="text-xs text-muted-foreground">{filtered.length} pedidos encontrados</p></div>}<select aria-label="Ordenar pedidos" value={sortOrder} onChange={e=>setSortOrder(e.target.value)} className="rounded-xl border border-border bg-white px-3 py-2 text-sm"><option value="recent">Mais recentes</option><option value="oldest">Mais antigos</option><option value="highest">Maior valor</option></select></div>
       {loading ? (
         <div className="flex justify-center py-12"><Loader2 className="animate-spin text-primary" size={32} /></div>
       ) : viewMode === 'kanban' ? (
-        <KanbanView orders={filtered} deliverers={deliverers} onStatusChange={updateStatus} onAssign={assignDeliverer} />
+        <KanbanView orders={filtered} deliverers={deliverers} onStatusChange={updateStatus} onAssign={assignDeliverer} onOpen={openOrder} />
       ) : (
-        <ListView orders={filtered} deliverers={deliverers} onStatusChange={updateStatus} onAssign={assignDeliverer} onEdit={setEditingOrder} focusOrderId={focusOrderId} />
+        <ListView orders={filtered} onOpen={openOrder} focusOrderId={focusOrderId} />
       )}
 
+      </>}
       {editingOrder && (
         <EditOrderModal
           order={editingOrder}
