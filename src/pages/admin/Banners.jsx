@@ -1,3 +1,4 @@
+import ImageUrlInput from '@/components/admin/ImageUrlInput';
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Plus, Trash2, Upload, Loader2, ToggleLeft, ToggleRight, Link, Save } from 'lucide-react';
@@ -127,11 +128,13 @@ export default function Banners() {
               <label className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 hover:opacity-100 transition-opacity cursor-pointer">
                 {uploading === index
                   ? <Loader2 size={24} className="text-white animate-spin" />
-                  : <div className="flex items-center gap-2 text-white font-medium text-sm"><Upload size={18} /> Enviar imagem</div>
+                  : <div className="flex items-center gap-2 text-white font-medium text-sm"><Upload size={18} /> Upload de imagem</div>
                 }
                 <input type="file" accept="image/*" className="hidden" onChange={e => handleUpload(e, index)} disabled={uploading !== null} />
               </label>
             </div>
+
+            <ImageUrlInput onApply={url => update(index, 'image_url', url)} disabled={uploading !== null} />
 
             {/* Title */}
             <input

@@ -1,3 +1,4 @@
+import ImageUrlInput from '@/components/admin/ImageUrlInput';
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Loader2, Save, ImageIcon, Store, Copy, Check, Link2, Bike, Palette, RotateCcw, ShoppingCart } from 'lucide-react';
@@ -148,7 +149,7 @@ export default function StoreSettings() {
               <input type="file" accept="image/*" className="hidden" onChange={e => handleUpload('logo', e)} />
             </label>
           </div>
-          <input value={form.logo_url} onChange={e => set('logo_url', e.target.value)} placeholder="Ou cole a URL da imagem" className={inp + ' mt-2'} />
+          <ImageUrlInput onApply={url => set('logo_url', url)} disabled={uploading.logo} />
         </div>
 
         <div>
@@ -163,7 +164,7 @@ export default function StoreSettings() {
             {uploading.banner ? <Loader2 size={15} className="animate-spin" /> : <><ImageIcon size={15} /> Upload do Banner</>}
             <input type="file" accept="image/*" className="hidden" onChange={e => handleUpload('banner', e)} />
           </label>
-          <input value={form.banner_url} onChange={e => set('banner_url', e.target.value)} placeholder="Ou cole a URL do banner" className={inp + ' mt-2'} />
+          <ImageUrlInput onApply={url => set('banner_url', url)} disabled={uploading.banner} />
         </div>
 
         <div className="border-t border-gray-100 pt-4 space-y-3">

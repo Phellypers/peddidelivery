@@ -1,3 +1,4 @@
+import ImageUrlInput from '@/components/admin/ImageUrlInput';
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Plus, Edit, Trash2, Loader2, X, ImageIcon, Eye, EyeOff } from 'lucide-react';
@@ -215,8 +216,7 @@ function CategoryForm({ category, onClose, onSave }) {
               {uploading ? <Loader2 size={16} className="animate-spin" /> : <><ImageIcon size={16} /> Fazer upload da imagem</>}
               <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} disabled={uploading} />
             </label>
-            <p className="text-xs text-gray-400 mt-1">Ou cole uma URL abaixo</p>
-            <input value={form.image_url} onChange={e => set('image_url', e.target.value)} placeholder="https://..." className={inp + ' mt-1'} />
+            <ImageUrlInput onApply={url => set('image_url', url)} disabled={uploading} />
           </div>
 
           <div>

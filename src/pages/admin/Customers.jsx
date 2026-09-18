@@ -1,3 +1,4 @@
+import ImageUrlInput from '@/components/admin/ImageUrlInput';
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Star, Search, Loader2, ChevronDown, ChevronUp, Plus, Edit2, X, Check, UserPlus, Key, Upload, LayoutList, Columns, Trash2, AlertTriangle } from 'lucide-react';
@@ -74,6 +75,8 @@ function CustomerForm({ profile, onSave, onClose }) {
               <input type="file" accept="image/*" className="hidden" onChange={handlePhoto} disabled={uploading} />
             </label>
           </div>
+
+          <ImageUrlInput onApply={setPhotoUrl} disabled={uploading} />
 
           {[
             { label: 'Nome', key: 'name', type: 'text', required: true },

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import ImageUrlInput from '@/components/admin/ImageUrlInput';
 import { X, Plus, Upload, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { base44 } from '@/api/base44Client';
@@ -158,6 +159,7 @@ function StoryUploader({ stories, onSave, onClose }) {
               {mediaUrl && <button type="button" aria-label="Remover mídia" onClick={() => { setMediaUrl(''); setMediaType(''); }} className="absolute right-2 top-2 flex h-10 w-10 items-center justify-center rounded-full bg-black/60 text-white"><X size={17} /></button>}
             </div>
 
+            <ImageUrlInput onApply={url => { setMediaUrl(url); setMediaType('image'); }} disabled={uploading || saving} />
             <label className="block">
               <span className="mb-1.5 block text-xs font-semibold text-gray-600">Texto do story <span className="font-normal text-gray-400">(opcional)</span></span>
               <textarea value={text} onChange={e => setText(e.target.value)} rows={2} maxLength={180} placeholder="Escreva uma mensagem para seus clientes" className="min-h-20 w-full resize-none rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-primary/30" />

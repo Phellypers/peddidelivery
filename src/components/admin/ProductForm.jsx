@@ -1,3 +1,4 @@
+import ImageUrlInput from '@/components/admin/ImageUrlInput';
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { productService, ingredientService } from '@/services/api/catalog';
@@ -471,12 +472,13 @@ export default function ProductForm({ product, categories, onClose, onSave }) {
                       ? <Loader2 size={24} className="animate-spin text-primary" />
                       : <>
                           <ImageIcon size={24} className="text-gray-300 mb-1" />
-                          <span className="text-xs text-gray-400">Adicionar foto</span>
+                          <span className="text-center text-xs text-gray-400">Upload de imagem</span>
                         </>
                     }
                     <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} disabled={uploadingImg} />
                   </label>
                 </div>
+                <ImageUrlInput onApply={url => set('images', [...form.images, url])} disabled={uploadingImg} />
                 {form.images.length === 0 && (
                   <p className="text-xs text-gray-400 text-center pt-2">Nenhuma foto adicionada ainda</p>
                 )}
