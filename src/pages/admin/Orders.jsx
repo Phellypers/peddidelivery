@@ -5,7 +5,7 @@ import { Search, Loader2, LayoutList, Columns, Check, X, Plus, Minus, Trash2, Sh
 import { OrderCards as ListView, OrderKanbanCard as KanbanCard, OrderDetails } from '@/components/admin/OrdersPresentation';
 import '@/components/admin/orders-presentation.css';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
-import { simulateExternalAction } from '@/lib/presentationDemo';
+import { simulateExternalAction, isPresentationDemo } from '@/lib/presentationDemo';
 
 const ORIGIN_SHORT = {
   catalog: 'Catálogo',
@@ -374,7 +374,7 @@ export default function Orders() {
         const profile = profiles[0];
 
         // Notification
-        if (statusMessages[newStatus] && profile?.user_id && !profile.user_id.startsWith('manual_')) {
+        if (isPresentationDemo() && prevStatus !== newStatus && statusMessages[newStatus] && profile?.user_id && !profile.user_id.startsWith('manual_')) {
           await base44.entities.Notification.create({
             user_id: profile.user_id,
             type: 'order_status',

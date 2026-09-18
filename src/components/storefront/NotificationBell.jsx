@@ -40,7 +40,7 @@ export default function NotificationBell() {
   }, [open]);
 
   const unreadCount = notifications.filter(notification => !notification.is_read).length;
-  const displayed = view === 'pending' ? notifications.filter(notification => !notification.is_read) : notifications.filter(notification => notification.is_read);
+  const displayed = view === 'pending' ? notifications.filter(notification => !notification.is_read) : notifications;
 
   const markAllRead = async () => {
     await Promise.all(notifications.filter(notification => !notification.is_read).map(notification => base44.entities.Notification.update(notification.id, { is_read: true })));
