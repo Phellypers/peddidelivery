@@ -331,7 +331,7 @@ export default function ProductForm({ product, categories, onClose, onSave }) {
 
         <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
           {error && <p role="alert" className="px-6 pt-4 text-sm text-red-600">{error}</p>}
-          {sessionExpired && <a href="/login?returnTo=/admin/catalogo" className="block px-6 py-2 text-sm text-primary underline">Entrar novamente e recuperar este cadastro</a>}
+          {sessionExpired && <a href="/gestor/login?returnTo=/admin/catalogo" className="block px-6 py-2 text-sm text-primary underline">Entrar novamente e recuperar este cadastro</a>}
           <div id={`product-panel-${tab}`} role="tabpanel" className="peddi-product-form-content min-h-0 flex-1 space-y-5 overflow-y-auto p-4 sm:p-6">
 
             {/* ── TAB: Informações ── */}

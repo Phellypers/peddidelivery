@@ -76,7 +76,7 @@ export default function Landing() {
         <div className="max-w-6xl mx-auto px-5 h-16 flex items-center justify-between">
           <span className="font-heading text-2xl font-extrabold tracking-tight text-primary">PEDDI</span>
           <div className="flex items-center gap-3">
-            <Link to="/login" className="text-sm font-medium text-gray-600 hover:text-primary transition-colors flex items-center gap-1.5">
+            <Link to="/gestor/login" className="text-sm font-medium text-gray-600 hover:text-primary transition-colors flex items-center gap-1.5">
               <Lock size={15} /> Entrar
             </Link>
             <button onClick={() => setShowForm(true)} className="text-sm font-bold text-white bg-primary px-4 py-2 rounded-xl hover:bg-primary/90 transition-colors">
@@ -202,7 +202,7 @@ export default function Landing() {
                   {loading ? <Loader2 size={18} className="animate-spin" /> : <>Criar minha loja <ArrowRight size={16} /></>}
                 </button>
               </form>
-              <p className="text-center text-xs text-gray-400 mt-4">Já tem conta? <Link to="/login" className="text-primary font-medium">Fazer login</Link></p>
+              <p className="text-center text-xs text-gray-400 mt-4">Já tem uma loja? <Link to="/gestor/login" className="text-primary font-medium">Acessar painel</Link></p>
             </>
           )}
           {step === 'otp' && (

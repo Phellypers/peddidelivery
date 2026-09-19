@@ -55,11 +55,12 @@ export const AuthProvider = ({ children }) => {
     setIsAuthenticated(false);
     localStorage.removeItem('peddi_access_token');
     localStorage.removeItem('peddi_refresh_token');
-    if (shouldRedirect) window.location.href = '/login';
+    if (shouldRedirect) window.location.href = window.location.pathname.startsWith('/admin') ? '/gestor/login' : '/login';
   };
 
   const navigateToLogin = () => {
-    window.location.href = `/login?returnTo=${encodeURIComponent(window.location.pathname)}`;
+    const loginPath = window.location.pathname.startsWith('/admin') ? '/gestor/login' : '/login';
+    window.location.href = `${loginPath}?returnTo=${encodeURIComponent(window.location.pathname)}`;
   };
 
   return (

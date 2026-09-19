@@ -22,10 +22,11 @@ test('manager login rejects customer accounts and administrative APIs remain pro
     const customer=users[0];
     assert.equal((await login(customer.email,'manager')).status,403);
     assert.equal((await query('SELECT count(*) FROM refresh_tokens WHERE user_id=$1',[customer.id])).rows[0].count,'0');
-    const customerLogin=await login(customer.email);assert.equal(customerLogin.status,200);
+    const customerLogin=await login(customer.email,'customer');assert.equal(customerLogin.status,200);
     assert.equal((await fetch(base+'/admin/couriers',{headers:{Authorization:`Bearer ${customerLogin.body.accessToken}`}})).status,403);
     assert.equal((await fetch(base+'/admin/couriers')).status,401);
     for(const user of users.slice(1)){
+      assert.equal((await login(user.email,'customer')).status,403);
       const result=await login(user.email,'manager');assert.equal(result.status,200);
       assert.equal((await fetch(base+'/admin/couriers',{headers:{Authorization:`Bearer ${result.body.accessToken}`}})).status,200);
     }

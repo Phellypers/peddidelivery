@@ -28,6 +28,6 @@ export default function DemoNotice() {
     {actionMessage && <p role="status" className="mt-1">{actionMessage} <button type="button" onClick={() => setActionMessage('')} className="ml-2 underline">Fechar</button></p>}
     {demo && <p>Teste local: cadastros salvos no PostgreSQL. Conta gestor demo sem expiração. Emails são simulados; pagamentos, WhatsApp e Google dependem de integração. Código de confirmação local: 000000.</p>}
     {emailMessage && <p role="status">{emailMessage}</p>}
-    {error && <p role="alert" className="text-red-700 mt-1">{error} <a className="underline" href={`/login?returnTo=${encodeURIComponent(pathname)}`}>Entrar novamente</a> <button type="button" onClick={() => setError('')} className="underline ml-3">Fechar aviso</button></p>}
+    {error && <p role="alert" className="text-red-700 mt-1">{error} <a className="underline" href={`${pathname.startsWith('/admin') ? '/gestor/login' : '/login'}?returnTo=${encodeURIComponent(pathname)}`}>Entrar novamente</a> <button type="button" onClick={() => setError('')} className="underline ml-3">Fechar aviso</button></p>}
   </div>;
 }

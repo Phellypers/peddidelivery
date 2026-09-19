@@ -97,7 +97,7 @@ export default function IngredientForm({ ingredient, onClose, onSave }) {
 
         <form onSubmit={handleSubmit} className="space-y-3">
           {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
-          {sessionExpired && <a href="/login?returnTo=/admin/estoque" className="block text-sm text-primary underline">Entrar novamente e recuperar este cadastro</a>}
+          {sessionExpired && <a href="/gestor/login?returnTo=/admin/estoque" className="block text-sm text-primary underline">Entrar novamente e recuperar este cadastro</a>}
           <div>
             <label className={lbl}>Nome *</label>
             <input required value={form.name} onChange={e => set('name', e.target.value)} className={inp} placeholder="Ex: Pão, Queijo, Bacon..." />

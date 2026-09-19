@@ -16,6 +16,7 @@ authRouter.post('/auth/login', async (request, response) => {
   if (!user || !(await bcrypt.compare(String(password), user.password_hash))) return response.status(401).json({ error: 'Credenciais invalidas.' });
   if (context==='manager' && !['manager','peddi_admin'].includes(user.role)) return response.status(403).json({error:'Este acesso é exclusivo para gestores. Use o login do cliente ou do entregador.'});
   if (user.role==='courier' && !await courierHasAccess(user.id,user.store_id)) return response.status(403).json({error:'Cadastro de entregador não aprovado ou acesso desativado.'});
+  if (context==='customer' && ['manager','peddi_admin'].includes(user.role)) return response.status(403).json({error:'Contas de gestor devem entrar pelo acesso exclusivo do painel.'});
   const authUser = { id: user.id, email: user.email, name: user.name, role: user.role, businessId: user.business_id, storeId: user.store_id };
   const refreshToken = createRefreshToken();
   await query(`INSERT INTO refresh_tokens (user_id, token_hash, expires_at) VALUES ($1, $2, CASE WHEN $3 THEN 'infinity'::timestamptz ELSE now() + interval '30 days' END)`, [user.id, hashToken(refreshToken), env.demoMode && user.email === 'gestor.demo@peddi.local' && user.role === 'manager']);
@@ -49,4 +50,3 @@ authRouter.patch('/me/preferences', requireAuth, blockPresentationDemoWrites, as
   );
   response.json({ preferences: result.rows[0]?.preferences ?? {} });
 });
-

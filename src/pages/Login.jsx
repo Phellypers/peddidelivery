@@ -24,7 +24,7 @@ export default function Login({ managerOnly = false }) {
     try {
       let destination = safeReturnTo();
       if (peddiApi.isConfigured) {
-        const result = await peddiApi.login(email, password, managerOnly ? 'manager' : undefined);
+        const result = await peddiApi.login(email, password, managerOnly ? 'manager' : 'customer');
         saveSession(result);
         if (result.user.role === 'courier') destination = '/entregador';
         if (managerOnly) destination = destination === '/admin' || destination.startsWith('/admin/') ? destination : '/admin';
@@ -50,7 +50,7 @@ export default function Login({ managerOnly = false }) {
       title={managerOnly ? 'Acesso do gestor' : 'Welcome back'}
       subtitle={managerOnly ? 'Entre com sua conta administrativa PEDDI.' : 'Log in to your account'}
       footer={
-        managerOnly ? <Link to="/gestor" className="text-primary font-medium">Conhecer a PEDDI para gestores</Link> : <>
+        managerOnly ? <Link to="/" className="text-primary font-medium">Voltar ao site da PEDDI</Link> : <>
           Don't have an account?{" "}
           <Link to="/register" className="text-primary font-medium hover:underline">
             Create one
