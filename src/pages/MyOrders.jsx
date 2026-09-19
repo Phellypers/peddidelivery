@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Package, Loader2, ChevronDown, ChevronUp, Edit, XCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import EditOrderCustomerModal from '@/components/customer/EditOrderCustomerModal';
@@ -64,6 +64,7 @@ function OrderProgressBar({ status }) {
 }
 
 export default function MyOrders() {
+  const navigate = useNavigate();
   const { user, isLoadingAuth } = useAuth();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -133,7 +134,7 @@ export default function MyOrders() {
             {orders.map(order => (
               <div key={order.id} id={`order-${order.id}`} className="bg-white">
                 <button
-                  onClick={() => setExpanded(expanded === order.id ? null : order.id)}
+                  onClick={() => order.status === 'shipped' ? navigate(`/rastrear/${order.id}`) : setExpanded(expanded === order.id ? null : order.id)}
                   className="w-full px-4 py-4 text-left flex items-center justify-between gap-3"
                 >
                   <div>

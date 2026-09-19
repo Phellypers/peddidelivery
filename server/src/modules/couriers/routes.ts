@@ -48,3 +48,34 @@ courierRouter.get('/deliveries',requireAuth,requireRoles('manager','peddi_admin'
       OR ($2='customer' AND (c.user_id=$3 OR o.details->>'customer_email'=$4))) ORDER BY d.created_at DESC`,[auth.storeId,auth.role,auth.userId,auth.email]);
   response.json({deliveries:result.rows});
 });
+
+async function trackingSnapshot(request:AuthRequest,orderId:string) {
+  const result=await query(`SELECT o.id,o.status,o.details,c.user_id AS customer_user_id,
+      r.id AS courier_id,r.user_id AS courier_user_id,r.details AS courier_details
+    FROM orders o JOIN customers c ON c.id=o.customer_id
+    LEFT JOIN couriers r ON r.id=o.courier_id
+    WHERE o.id=$1 AND o.store_id=$2`,[orderId,request.auth!.storeId]);
+  const row=result.rows[0];
+  if(!row || (request.auth!.role==='customer' && row.customer_user_id!==request.auth!.userId)
+    || (request.auth!.role==='courier' && row.courier_user_id!==request.auth!.userId)) return null;
+  const active=row.status==='out_for_delivery';
+  const details=row.courier_details||{};
+  return {orderId:row.id,status:row.status==='out_for_delivery'?'shipped':row.status,active,
+    courier:active&&row.courier_id?{id:row.courier_id,name:details.name||'Entregador',vehicle:details.vehicle||'',photoUrl:details.photo_url||'',
+      lat:Number(details.lat)||null,lng:Number(details.lng)||null,updatedAt:details.location_updated_at||null}:null,
+    destination:{address:row.details?.delivery_address||'',lat:Number(row.details?.delivery_lat)||null,lng:Number(row.details?.delivery_lng)||null}};
+}
+
+courierRouter.get('/deliveries/:orderId/tracking/stream',requireAuth,requireRoles('customer','manager','peddi_admin','courier'),async(request:AuthRequest,response)=>{
+  if(!request.auth?.storeId || !z.string().uuid().safeParse(request.params.orderId).success)return response.sendStatus(400);
+  const initial=await trackingSnapshot(request,request.params.orderId as string);
+  if(!initial)return response.sendStatus(404);
+  response.writeHead(200,{'Content-Type':'text/event-stream','Cache-Control':'no-cache, no-transform','Connection':'keep-alive','X-Accel-Buffering':'no'});
+  let stopped=false,busy=false;
+  const send=async()=>{if(stopped||busy)return;busy=true;try{const snapshot=await trackingSnapshot(request,request.params.orderId as string);if(!snapshot){response.write('event: end\ndata: {}\n\n');response.end();stopped=true;return;}response.write(`data: ${JSON.stringify(snapshot)}\n\n`);if(!snapshot.active){response.write('event: end\ndata: {}\n\n');response.end();stopped=true;}}finally{busy=false;}};
+  let timer:ReturnType<typeof setInterval>|undefined;
+  const close=()=>{stopped=true;if(timer)clearInterval(timer);};
+  request.on('close',close);response.on('close',close);
+  await send();
+  if(!stopped)timer=setInterval(()=>{void send();},4000);
+});

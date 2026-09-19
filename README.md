@@ -9,28 +9,25 @@ package.json
 index.html
 public/
 src/
-	main.jsx
-	App.jsx
-	pages/
-	components/
-	layouts/
-	services/
-	features/financeiro/
-	hooks/
-	lib/
-	utils/
-	assets/
-	styles/
-	config/entities/
+  main.jsx
+  App.jsx
+  pages/
+  components/
+  services/
+  hooks/
+  lib/
+  assets/
+  styles/
+  routes/
+  config/entities/
+server/src/
+  modules/
+  db/migrations/
 ```
 
-A origem principal foi `marketing`, que continha o roteador, as paginas e os componentes usados pela aplicacao. `Logo Peddi/entities` contribuiu com os schemas JSONC e os componentes financeiros.
+O frontend executável está em `src/`. As páginas ficam em `src/pages`, componentes compartilhados em `src/components`, regras puras em `src/lib` e integrações HTTP em `src/services`. As rotas usam carregamento sob demanda por meio de `src/routes/pages.js`.
 
-## Estado atual
-
-O frontend consolidado usa React 18, Vite, React Router, Tailwind CSS, TanStack Query e a API propria PEDDI. As copias originais continuam preservadas em `marketing` e `Logo Peddi/entities` para auditoria, enquanto a raiz executavel esta neste diretorio.
-
-A reorganizacao estrutural foi deliberadamente bloqueada nesta etapa porque os imports apontam para uma estrutura `src` que nao existe fisicamente no mesmo nivel. Mover arquivos agora poderia remover ou alterar funcionalidades. O diagnostico completo esta em [DOCUMENTACAO_PROJETO.md](DOCUMENTACAO_PROJETO.md), as regras em [REGRAS_DE_NEGOCIO_PEDDI.md](REGRAS_DE_NEGOCIO_PEDDI.md) e o mapa de backend em [MAPA_BACKEND_PEDDI.md](MAPA_BACKEND_PEDDI.md).
+O backend está em `server/src`. `app.ts` monta os middlewares e roteadores; cada domínio mantém suas rotas e regras em `server/src/modules`. Alterações de banco são versionadas em `server/src/db/migrations`.
 
 ## Tecnologias encontradas
 
@@ -41,7 +38,7 @@ A reorganizacao estrutural foi deliberadamente bloqueada nesta etapa porque os i
 - TanStack React Query
 - Radix UI, Lucide, Recharts, React Hook Form e Zod
 - API PEDDI com Express, PostgreSQL, JWT e Supabase Storage
-- Stripe, Leaflet, Framer Motion, jsPDF e outras dependencias listadas no manifesto
+- Leaflet, Framer Motion, jsPDF e outras dependências efetivamente usadas no manifesto
 
 ## Como instalar
 
@@ -63,17 +60,25 @@ A execucao usa a API PEDDI. Configure `VITE_PEDDI_API_URL` para desenvolvimento 
 - `npm run build`: build de producao.
 - `npm run lint`: ESLint.
 - `npm run typecheck`: verificacao configurada pelo `jsconfig.json`.
+- `npm run typecheck:server`: verificação TypeScript do backend.
+- `npm run test:frontend`: testes das regras do frontend.
+- `npm run test:server`: testes do backend e dos contratos de integração.
+- `npm run audit:code`: aponta arquivos e dependências sem referência estática para revisão humana.
 - `npm run preview`: preview do build.
 
 ## Variaveis e dependencias externas
 
-O backend proprio fornece autenticacao, entidades, catalogo, pedidos, entregas, upload e sessoes ao vivo. Stripe, mapas, email, push e WhatsApp permanecem pontos de integracao futura.
+O backend próprio fornece autenticação, entidades, catálogo, pedidos, entregas, upload e sessões ao vivo. Pagamentos, e-mail, push, WhatsApp e SMS permanecem integrações opcionais e devem continuar desacopladas das regras de negócio.
 
 Nunca versione `.env`, tokens, credenciais ou `node_modules`.
 
-## Arquitetura alvo
+## Regras de manutenção
 
-Depois de uma consolidacao segura, a aplicacao deve ter uma raiz unica com `src/pages`, `src/components`, `src/layouts`, `src/features`, `src/services`, `src/hooks`, `src/contexts`, `src/store`, `src/utils`, `src/constants`, `src/types`, `src/assets`, `src/styles` e `src/config`. A migracao deve ser feita com imports atualizados e validacao de build a cada grupo de arquivos.
+- Não grave operações de demonstração nem ações externas na base principal.
+- Preserve o isolamento por `store_id` nas consultas e mutações.
+- Use migrations incrementais; nunca edite uma migration já aplicada.
+- Execute lint, verificações de tipo, testes e build antes de publicar.
+- O relatório de `audit:code` é indicativo: referências dinâmicas, assets e integrações preparadas exigem confirmação manual antes da exclusão.
 
 ## Backend e producao
 

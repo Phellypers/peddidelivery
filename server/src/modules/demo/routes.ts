@@ -147,9 +147,27 @@ async function saveEntity(request:AuthRequest,response:express.Response){
       response.json((await readEntities(entity,request))[0]);return;
     }
     case 'Order': {
+      if(!id&&(!Array.isArray(data.items)||!data.items.length))return response.status(400).json({error:'O pedido precisa de itens.'});
       const client=await pool!.connect();
       try{
         await client.query('BEGIN');
+        const actorKey=request.auth?.userId || `visitor:${String(request.headers['x-peddi-visitor']||'')}`;
+        const idempotencyKey=String(request.get('Idempotency-Key')||'');
+        if (!id && (idempotencyKey.length<16 || idempotencyKey.length>128)) {
+          await client.query('ROLLBACK');return response.status(428).json({error:'Informe uma chave de idempotência válida para criar o pedido.'});
+        }
+        if (!id) {
+          const reserved=await client.query(`INSERT INTO idempotency_keys(store_id,actor_key,endpoint,idempotency_key)
+            VALUES($1,$2,'POST Order',$3) ON CONFLICT DO NOTHING RETURNING idempotency_key`,[tenant,actorKey,idempotencyKey]);
+          if (!reserved.rowCount) {
+            const priorResponse=await client.query(`SELECT response_status,response_body FROM idempotency_keys
+              WHERE store_id=$1 AND actor_key=$2 AND endpoint='POST Order' AND idempotency_key=$3 FOR UPDATE`,[tenant,actorKey,idempotencyKey]);
+            const cached=priorResponse.rows[0];
+            await client.query('COMMIT');
+            return cached?.response_body ? response.status(cached.response_status||201).json(cached.response_body)
+              : response.status(409).json({error:'Este pedido já está sendo processado.'});
+          }
+        }
         let savedId=id;
         if (!isManager(request)) {
           if (!id) {
@@ -182,8 +200,11 @@ async function saveEntity(request:AuthRequest,response:express.Response){
           await client.query('UPDATE orders SET status=$3,details=details||$4::jsonb,updated_at=now() WHERE id=$1 AND store_id=$2',[id,tenant,status,JSON.stringify(data)]);
         }
         await syncDelivery(client,tenant,savedId as string);
+        const savedOrder=(await readOrders(tenant,client)).find(row=>row.id===savedId);
+        if (!id) await client.query(`UPDATE idempotency_keys SET response_status=201,response_body=$4
+          WHERE store_id=$1 AND actor_key=$2 AND endpoint='POST Order' AND idempotency_key=$3`,[tenant,actorKey,idempotencyKey,JSON.stringify(savedOrder)]);
         await client.query('COMMIT');
-        response.status(id?200:201).json((await readOrders(tenant)).find(row=>row.id===savedId));
+        response.status(id?200:201).json(savedOrder);
       }catch(error){await client.query('ROLLBACK');response.status(400).json({error:error instanceof Error?error.message:'Não foi possível salvar o pedido.'});}finally{client.release();}
       return;
     }

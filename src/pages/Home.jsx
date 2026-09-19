@@ -147,7 +147,16 @@ export default function Home() {
           <Link to="/loja" aria-label="Voltar ao cardápio" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-gray-700 hover:bg-gray-100"><span aria-hidden="true">←</span></Link>
           <div className="min-w-0"><p className="text-xs text-gray-500">{store?.name}</p><h1 className="break-words font-heading text-lg font-bold text-gray-900">{campaignBanner?.title || 'Campanha promocional'}</h1></div>
         </header>
-        {campaignBanner?.subtitle && <p className="px-4 pt-4 text-sm text-gray-500">{campaignBanner.subtitle}</p>}
+        {campaignBanner && <section aria-label={`Campanha ${campaignBanner.title || ''}`} className="px-4 pt-4">
+          <div className="relative aspect-[2.4/1] overflow-hidden rounded-2xl bg-gray-100 shadow-sm">
+            <img src={campaignBanner.image_url || campaignBanner.image} alt={campaignBanner.title || 'Banner da campanha'} className="h-full w-full object-cover" />
+            {(campaignBanner.title || campaignBanner.subtitle || campaignBanner.badge) && <><div className="absolute inset-0 bg-gradient-to-r from-black/65 via-black/25 to-transparent"/><div className="absolute inset-y-0 left-0 flex max-w-[75%] flex-col justify-center p-4 text-white">
+              {campaignBanner.badge&&<span className="mb-1 w-fit rounded-full bg-white/90 px-2 py-0.5 text-[10px] font-bold text-gray-900">{campaignBanner.badge}</span>}
+              {campaignBanner.title&&<h2 className="text-lg font-bold leading-tight sm:text-xl">{campaignBanner.title}</h2>}
+              {campaignBanner.subtitle&&<p className="mt-1 line-clamp-2 text-xs text-white/90 sm:text-sm">{campaignBanner.subtitle}</p>}
+            </div></>}
+          </div>
+        </section>}
         <p className="px-4 py-4 text-sm text-gray-500">{filteredProducts.length} produto{filteredProducts.length !== 1 ? 's' : ''} nesta campanha</p>
         {filteredProducts.length ? <div className="grid grid-cols-2 gap-3 px-4">{filteredProducts.map(product => <ProductCard key={product.id} product={product} />)}</div>
           : <p role="status" className="px-4 py-10 text-center text-sm text-gray-500">{campaignBanner ? 'Nenhum produto disponível vinculado a esta campanha.' : 'Esta campanha não está disponível.'}</p>}

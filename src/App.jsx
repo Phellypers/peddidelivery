@@ -1,53 +1,20 @@
+import { Suspense } from 'react';
+import {
+  PageNotFound, Login, Register, ForgotPassword, ResetPassword, Landing, Home, ManagerLanding, DelivererMap, DelivererApp, DelivererRegister, ProductDetail, Checkout, Favorites, SearchPage, CustomerProfile, AdminLayout, Dashboard, Catalog, Estoque, Orders, Categories, Promotions, StoreSettings, Deliverers, Customers, Marketing, Banners, PDV, Financeiro, Comments, ChatAdmin, MyPeddi, Tables, MyOrders, MyData, OrderTracking, OAuthConsent
+} from '@/routes/pages';
+import PageLoading from '@/components/PageLoading';
 import { ThemeProvider } from 'next-themes';
 import CourierNavigationGuard from '@/components/deliverer/CourierNavigationGuard';
 import { Toaster } from "@/components/ui/toaster"
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
 import { BrowserRouter as Router, Route, Routes, Navigate, useLocation } from 'react-router-dom';
-import PageNotFound from '@/pages/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import ScrollToTop from '@/components/ScrollToTop';
 import { CartProvider } from '@/lib/CartContext';
 import { WishlistProvider } from '@/lib/WishlistContext';
-import Login from '@/pages/Login';
-import Register from '@/pages/Register';
-import ForgotPassword from '@/pages/ForgotPassword';
-import ResetPassword from '@/pages/ResetPassword';
-import Landing from '@/pages/Landing';
-import Home from '@/pages/Home';
-import ManagerLanding from '@/pages/ManagerLanding';
-import DelivererMap from '@/pages/admin/DelivererMap';
-import DelivererApp from '@/pages/DelivererApp';
-import DelivererRegister from '@/pages/DelivererRegister';
-import ProductDetail from '@/pages/ProductDetail';
-import Checkout from '@/pages/Checkout';
-import Favorites from '@/pages/Favorites';
-import SearchPage from '@/pages/Search';
-import CustomerProfile from '@/pages/CustomerProfile';
-import AdminLayout from '@/components/admin/AdminLayout';
-import Dashboard from '@/pages/admin/Dashboard';
-import Catalog from '@/pages/admin/Catalog';
-import Estoque from '@/pages/admin/Estoque';
-import Orders from '@/pages/admin/Orders';
-import Categories from '@/pages/admin/Categories';
-import Promotions from '@/pages/admin/Promotions';
-import StoreSettings from '@/pages/admin/StoreSettings';
-import Deliverers from '@/pages/admin/Deliverers';
-import Customers from '@/pages/admin/Customers';
-import Marketing from '@/pages/admin/Marketing';
-import Banners from '@/pages/admin/Banners';
-import PDV from '@/pages/admin/PDV';
-import Financeiro from '@/pages/admin/Financeiro';
-import Comments from '@/pages/admin/Comments';
-import ChatAdmin from '@/pages/admin/Chat';
-import MyPeddi from '@/pages/admin/MyPeddi';
 import NotificationSounds from '@/components/NotificationSounds';
-import Tables from '@/pages/admin/Tables';
-import MyOrders from '@/pages/MyOrders';
-import MyData from '@/pages/MyData';
-import OrderTracking from '@/pages/OrderTracking';
-import OAuthConsent from '@/pages/OAuthConsent';
 import MobilePreview from '@/components/MobilePreview';
 import DemoNotice from '@/components/DemoNotice';
 import { AppNavigationTracker } from '@/components/navigation/SafeBackButton';
@@ -59,9 +26,7 @@ const AuthenticatedApp = () => {
   // Show loading spinner while checking app public settings or auth
   if (isLoadingPublicSettings || isLoadingAuth) {
     return (
-      <div className="fixed inset-0 flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div>
-      </div>
+      <PageLoading />
     );
   }
 
@@ -128,7 +93,7 @@ function App() {
               <NotificationSounds />
               <ScrollToTop />
               <DemoNotice />
-              <CourierNavigationGuard><Routes>
+              <CourierNavigationGuard><Suspense fallback={<PageLoading />}><Routes>
                 {/* Auth routes always available, outside AuthenticatedApp */}
                 <Route path="/login" element={<Login />} />
                 <Route path="/gestor/login" element={<Login managerOnly />} />
@@ -147,7 +112,7 @@ function App() {
                 <Route path="/rastrear/:id" element={<OrderTracking />} />
                 {/* All other routes go through AuthenticatedApp */}
                 <Route path="*" element={<AuthenticatedApp />} />
-              </Routes></CourierNavigationGuard>
+              </Routes></Suspense></CourierNavigationGuard>
             </Router>
           </WishlistProvider>
         </CartProvider>

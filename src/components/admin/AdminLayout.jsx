@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { Suspense, useState } from 'react';
+import PageLoading from '@/components/PageLoading';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import { LayoutDashboard, Package, ShoppingCart, Tag, FolderOpen, Settings, Menu, X, ChevronLeft, Bike, Users, Megaphone, Image, Monitor, Wallet, UtensilsCrossed, MapPin, MessageSquare, MessageCircle, Boxes } from 'lucide-react';
 import NewOrderNotifier from '@/components/admin/NewOrderNotifier';
@@ -90,7 +91,7 @@ export default function AdminLayout() {
           </Link>
         </header>
         <main className="min-w-0 p-4 lg:p-6 max-w-full">
-          <Outlet />
+          <Suspense fallback={<PageLoading />}><Outlet /></Suspense>
         </main>
       </div>
       <NewOrderNotifier />

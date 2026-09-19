@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import type { PoolClient } from 'pg';
+import type { PoolClient, QueryResultRow } from 'pg';
 import { query } from '../../db/client.js';
 import { productView } from '../products/routes.js';
 import type { AuthRequest } from '../../auth/middleware.js';
@@ -51,8 +51,10 @@ export function matches(value: Record<string, any>, filter: Record<string, any>)
     return Array.isArray(actual) && !Array.isArray(expected) ? actual.includes(expected) : actual === expected;
   });
 }
-export async function readOrders(tenant: string) {
-  const result = await query(`SELECT o.*,r.user_id AS deliverer_user_id, COALESCE(o.details->>'customer_name',c.guest_details->>'name',u.name) AS customer_name,
+type Queryable = { query<T extends QueryResultRow = any>(text:string, values?:any[]):Promise<{rows:T[]}> };
+const sharedDatabase:Queryable={query};
+export async function readOrders(tenant: string,database:Queryable=sharedDatabase) {
+  const result = await database.query(`SELECT o.*,r.user_id AS deliverer_user_id, COALESCE(o.details->>'customer_name',c.guest_details->>'name',u.name) AS customer_name,
     COALESCE(o.details->>'customer_email',c.guest_details->>'email',u.email) AS customer_email,
     COALESCE((SELECT jsonb_agg(i.details || jsonb_build_object('product_id',i.product_id,'product_name',i.product_name,
       'unit_price',i.unit_price,'quantity',i.quantity,'subtotal',i.subtotal) ORDER BY i.id) FROM order_items i WHERE i.order_id=o.id),'[]'::jsonb) AS items

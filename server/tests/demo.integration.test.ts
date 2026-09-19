@@ -85,7 +85,7 @@ test('MVP online persiste cadastros, pedidos e isolamento entre lojas', {skip:pr
     const manager=(await query("INSERT INTO users(business_id,store_id,email,password_hash,name,role) VALUES($1,$2,$3,'test','Teste','manager') RETURNING id",[business,tenants[0],`test-${crypto.randomUUID()}@peddi.local`])).rows[0].id;
     const access=(tenant:string)=>createAccessToken({id:manager,email:'test@peddi.local',name:'Teste',role:'manager',businessId:business,storeId:tenant});
     const call=async(path:string,method='GET',data?:unknown,token=access(tenants[0]))=>{
-      const response=await fetch(base+path,{method,headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json','X-Peddi-Visitor':crypto.randomUUID()},body:data===undefined?undefined:JSON.stringify(data)});
+      const response=await fetch(base+path,{method,headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json','X-Peddi-Visitor':crypto.randomUUID(),'Idempotency-Key':crypto.randomUUID()},body:data===undefined?undefined:JSON.stringify(data)});
       return {status:response.status,body:response.status===204?{}:await response.json()};
     };
     env.demoMode=false;

@@ -33,6 +33,8 @@ export default function ProductCard({ product }) {
           <img
             src={product.images?.[0] || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400'}
             alt={product.name}
+            loading="lazy"
+            decoding="async"
             className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
           />
         </div>

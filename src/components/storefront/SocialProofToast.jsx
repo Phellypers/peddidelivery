@@ -42,7 +42,7 @@ export default function SocialProofToast({ products }) {
   }, [products]);
 
   return (
-    <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[60] pointer-events-none w-full max-w-xs px-4">
+    <div className="pointer-events-none fixed left-1/2 top-[calc(max(1rem,env(safe-area-inset-top))+3.5rem)] z-[60] w-full max-w-[min(92vw,30rem)] -translate-x-1/2 px-2 sm:top-[max(1rem,env(safe-area-inset-top))] sm:px-4">
       <AnimatePresence>
         {notification && (
           <motion.div
@@ -51,19 +51,19 @@ export default function SocialProofToast({ products }) {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -16, scale: 0.95 }}
             transition={{ type: 'spring', damping: 22, stiffness: 260 }}
-            className="bg-white/95 backdrop-blur-md rounded-2xl shadow-lg border border-gray-100 px-3 py-2.5 flex items-center gap-2.5"
+            className="flex min-h-[68px] items-center gap-3 rounded-2xl border border-gray-100 bg-white/95 px-4 py-3 shadow-[0_10px_30px_rgba(15,23,42,0.14)] backdrop-blur-md"
           >
-            <div className="w-9 h-9 rounded-xl overflow-hidden bg-gray-100 flex-shrink-0">
+            <div className="h-11 w-11 flex-shrink-0 overflow-hidden rounded-xl bg-gray-100">
               {notification.image
                 ? <img src={notification.image} alt="" className="w-full h-full object-cover" />
                 : <div className="w-full h-full flex items-center justify-center"><ShoppingBag size={14} className="text-gray-400" /></div>
               }
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-[11px] font-bold text-gray-900 leading-tight truncate">
+              <p className="line-clamp-2 break-words text-[13px] font-bold leading-[1.35] text-gray-900">
                 {notification.name} <span className="font-normal text-gray-500">{notification.text}</span>
               </p>
-              <p className="text-[10px] text-gray-400 mt-0.5">{notification.time} · 🔥 Popular</p>
+              <p className="mt-1 text-[11px] text-gray-500">{notification.time} · 🔥 Popular</p>
             </div>
             <div className="w-2 h-2 rounded-full bg-green-400 flex-shrink-0 animate-pulse" />
           </motion.div>

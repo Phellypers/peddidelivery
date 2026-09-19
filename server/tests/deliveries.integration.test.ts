@@ -23,7 +23,7 @@ test('MVP persiste entregador, cliente, itens e ciclo de entrega com isolamento'
     const manager=await addUser('manager'),customer=await addUser('customer'),courier=await addUser('courier');
     const other=await addUser('manager',tenants[1]),otherCourier=await addUser('courier',tenants[1]);
     const call=async(path:string,method='GET',body?:unknown,token=manager.token)=>{
-      const response=await fetch(base+path,{method,headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},body:body===undefined?undefined:JSON.stringify(body)});
+      const response=await fetch(base+path,{method,headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json','Idempotency-Key':crypto.randomUUID()},body:body===undefined?undefined:JSON.stringify(body)});
       return {status:response.status,body:response.status===204?{}:await response.json()};
     };
     const rider=await call('/admin/couriers','POST',{name:'Entregador teste',user_id:courier.id,email:courier.email,vehicle:'moto',current_status:'available'});

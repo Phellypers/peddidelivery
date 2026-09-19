@@ -78,7 +78,8 @@ const makeEntity = name => {
         emit(name,{type:'create',id:result.id,data:result});
         return result;
       }
-      const response = core ? (await call(`/api/v1/admin/${core[0]}`,'POST',data))[core[1]] : await call(route,'POST',data);
+      const extraHeaders = name === 'Order' ? { 'Idempotency-Key': crypto.randomUUID() } : {};
+      const response = core ? (await call(`/api/v1/admin/${core[0]}`,'POST',data,extraHeaders))[core[1]] : await call(route,'POST',data,extraHeaders);
       const result = normalize(response);
       emit(name,{type:'create',id:result.id,data:result});
       return result;

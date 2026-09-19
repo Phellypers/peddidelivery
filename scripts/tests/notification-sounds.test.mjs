@@ -11,7 +11,7 @@ class AudioFixture {
   pause() {}
 }
 test('every mapped sound uses an existing, nonempty uploaded MP3', () => {
-  assert.equal(Object.keys(NOTIFICATION_SOUNDS).length, 7);
+  assert.equal(Object.keys(NOTIFICATION_SOUNDS).length, 8);
   for (const kind of Object.keys(NOTIFICATION_SOUNDS)) {
     const file = fs.readFileSync(new URL('../../public' + decodeURIComponent(soundUrl(kind)), import.meta.url));
     assert.ok(file.length > 1000);

@@ -1,7 +1,5 @@
-import popupPurchaseSound from '../assets/sounds/popup-purchase.mp3?url';
-
 export const NOTIFICATION_SOUNDS = {
-  socialProof: popupPurchaseSound,
+  socialProof: 'Compra-simulada-peddi.mp3',
   newOrder: 'Novo-pedido-peddi-notification.mp3',
   newTicket: 'Novo-chamado-peddi.mp3',
   message: 'notificação-mensagem-recebida-peddi.mp3',
@@ -10,9 +8,7 @@ export const NOTIFICATION_SOUNDS = {
   refused: 'Entregador-rejeitou-pedido-peddi.mp3',
   general: 'Notificação-push-app.mp3',
 };
-export const soundUrl = kind => kind === 'socialProof'
-  ? popupPurchaseSound
-  : `/Sounds-peddi/${encodeURIComponent(NOTIFICATION_SOUNDS[kind] || NOTIFICATION_SOUNDS.general)}`;
+export const soundUrl = kind => `/Sounds-peddi/${encodeURIComponent(NOTIFICATION_SOUNDS[kind] || NOTIFICATION_SOUNDS.general)}`;
 
 export function createNotificationSoundPlayer(AudioClass) {
   const audio = new AudioClass(soundUrl('general'));
