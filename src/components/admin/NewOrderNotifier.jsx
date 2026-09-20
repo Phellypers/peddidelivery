@@ -4,6 +4,7 @@ import { newDeliveryAction } from '@/lib/deliveryEvents';
 import { playNotificationSound } from '@/lib/notificationSounds';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Bell } from 'lucide-react';
+import { isPdvOrder } from '@/lib/orderOrigin';
 
 const POPUP_CONFIG = {
   new: { border: 'border-green-400', bg: 'bg-green-100', text: 'text-green-600', label: '🛍️ Novo pedido recebido!' },
@@ -35,6 +36,7 @@ export default function NewOrderNotifier() {
         if (knownIds.current.has(event.id)) return;
         knownIds.current.add(event.id);
         prevStates.current.set(event.id, { status: event.data?.status, deliverer_accepted: event.data?.deliverer_accepted, deliverer_user_id: event.data?.deliverer_user_id, delivery_action_event: event.data?.delivery_action_event });
+        if (isPdvOrder(event.data)) return;
         playNotificationSound('newOrder', event.id + ':' + (event.data?.status || '') + ':' + 'newOrder');
         setPopup({ ...event.data, _kind: 'new' });
         setTimeout(() => setPopup(null), 8000);
