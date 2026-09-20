@@ -1,15 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { base44 } from '@/api/base44Client';
-import { Search, Plus, Minus, Trash2, X, Check, Loader2, UserPlus, Truck, Store, UtensilsCrossed, ShoppingCart, User } from 'lucide-react';
+import { Search, Plus, Minus, Trash2, X, Check, Loader2, UserPlus, Truck, Store, UtensilsCrossed, ShoppingCart, User, Printer, Keyboard, BarChart3 } from 'lucide-react';
+import { printOrder } from '@/components/admin/OrdersPresentation';
 
 const PAYMENT_OPTIONS = [
   { id: 'cash', label: 'Dinheiro' },
   { id: 'pix', label: 'PIX' },
-  { id: 'credit_card', label: 'Cartão' },
+  { id: 'credit_card', label: 'Cartão de crédito' },
+  { id: 'debit_card', label: 'Cartão de débito' },
   { id: 'to_arrange', label: 'A combinar' },
 ];
 
 const MONTHS = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+const toCents = value => Math.max(0, Math.round((Number(value) || 0) * 100));
+const fromCents = value => value / 100;
 
 export default function PDV() {
   const [customers, setCustomers] = useState([]);
@@ -42,6 +46,7 @@ export default function PDV() {
   const [selectedTableId, setSelectedTableId] = useState('');
   const [editingOrder, setEditingOrder] = useState(null);
   const [successMode, setSuccessMode] = useState('create');
+  const submittingRef = useRef(false);
 
   useEffect(() => {
     Promise.all([
@@ -124,16 +129,63 @@ export default function PDV() {
 
   const subtotal = cart.reduce((s, i) => s + i.unit_price * i.quantity, 0);
   const total = subtotal + (orderType === 'delivery' ? parseFloat(deliveryFee) || 0 : 0);
-  const paidAmount = payments.reduce((s, p) => s + (parseFloat(p.amount) || 0), 0);
-  const remaining = Math.round((total - paidAmount) * 100) / 100;
+  const totalCents = toCents(total);
+  const paidCents = payments.reduce((sum, payment) => sum + toCents(payment.amount), 0);
+  const hasCashPayment = payments.some(payment => payment.method === 'cash' && toCents(payment.amount) > 0);
+  const remainingCents = Math.max(0, totalCents - paidCents);
+  const changeCents = hasCashPayment ? Math.max(0, paidCents - totalCents) : 0;
+  const invalidExcessCents = hasCashPayment ? 0 : Math.max(0, paidCents - totalCents);
+  const paidAmount = fromCents(paidCents);
+  const remaining = fromCents(remainingCents);
+  const change = fromCents(changeCents);
+  const paymentComplete = totalCents > 0 && remainingCents === 0 && invalidExcessCents === 0;
   const selectedTable = tables.find(t => t.id === selectedTableId);
   const tableLabel = selectedTableId === 'balcao' ? 'Balcão' : selectedTable?.name || '';
 
   const updatePayment = (idx, key, value) => setPayments(prev => prev.map((p, k) => k === idx ? { ...p, [key]: value } : p));
   const removePayment = (idx) => setPayments(prev => prev.filter((_, k) => k !== idx));
+  const addPayment = useCallback(() => setPayments(prev => [...prev, { method: 'cash', amount: '' }]), []);
+
+  const getPaymentData = () => {
+    let changeLeft = changeCents;
+    const splitPayments = {};
+    const effectivePayments = payments.filter(payment => toCents(payment.amount) > 0);
+    effectivePayments.forEach(payment => {
+      let cents = toCents(payment.amount);
+      if (payment.method === 'cash' && changeLeft > 0) {
+        const deduction = Math.min(cents, changeLeft);
+        cents -= deduction;
+        changeLeft -= deduction;
+      }
+      if (cents > 0) splitPayments[payment.method] = fromCents((toCents(splitPayments[payment.method]) || 0) + cents);
+    });
+    const cashReceived = fromCents(payments.filter(p => p.method === 'cash').reduce((sum, p) => sum + toCents(p.amount), 0));
+    return {
+      payment_method: effectivePayments.length > 1 ? 'split' : effectivePayments[0]?.method || 'cash',
+      payment_status: 'paid',
+      split_payments: effectivePayments.length > 1 ? splitPayments : undefined,
+      cash_received: cashReceived || undefined,
+      change_for: change > 0 ? cashReceived : undefined,
+      change_amount: change || 0,
+    };
+  };
+
+  const ensureFinancialEntry = async order => {
+    const existing = await base44.entities.Account.filter({ order_id: order.id }).catch(() => []);
+    if (existing.length) return existing[0];
+    const today = new Date().toISOString().slice(0, 10);
+    return base44.entities.Account.create({
+      description: `Venda PDV • Pedido #${order.order_number}`,
+      type: 'receivable', amount: Number(order.total) || 0, due_date: today,
+      status: 'received', paid_date: today, category: 'Receita',
+      notes: 'Lançamento automático do PDV. O valor informado não inclui troco.',
+      source: 'pdv', order_id: order.id, is_recurring: false,
+    });
+  };
 
   const handleLaunchOnTable = async () => {
-    if (cart.length === 0 || !selectedTableId || selectedTableId === 'balcao') return;
+    if (submittingRef.current || cart.length === 0 || !selectedTableId || selectedTableId === 'balcao') return;
+    submittingRef.current = true;
     setSaving(true);
     try {
       const table = tables.find(t => t.id === selectedTableId);
@@ -147,8 +199,8 @@ export default function PDV() {
           else merged.push({ ...cartItem });
         });
         const newSub = merged.reduce((s, i) => s + i.unit_price * i.quantity, 0);
-        await base44.entities.Order.update(existing.id, { items: merged, subtotal: newSub, total: newSub });
-        setSuccess(existing.order_number);
+        const updated = await base44.entities.Order.update(existing.id, { items: merged, subtotal: newSub, total: newSub });
+        setSuccess({ ...existing, ...updated, items: merged, subtotal: newSub, total: newSub });
       } else {
         const orderNum = String(Date.now()).slice(-6);
         const order = await base44.entities.Order.create({
@@ -167,25 +219,26 @@ export default function PDV() {
           created_via_pdv: true,
         });
         await base44.entities.Table.update(selectedTableId, { status: 'open', current_order_id: order.id, current_order_number: order.order_number });
-        setSuccess(order.order_number);
+        setSuccess(order);
       }
       setSuccessMode('launch');
       setCart([]);
       setSelectedTableId('');
-    } catch (_) {}
+    } catch (_) { submittingRef.current = false; }
     setSaving(false);
   };
 
   const handleSubmit = async () => {
-    if (cart.length === 0 || remaining !== 0) return;
+    if (submittingRef.current || cart.length === 0 || !paymentComplete) return;
+    submittingRef.current = true;
     setSaving(true);
     try {
+      const paymentData = getPaymentData();
       if (editingOrder) {
-        await base44.entities.Order.update(editingOrder.id, {
+        const updated = await base44.entities.Order.update(editingOrder.id, {
           items: cart.map(i => ({ product_id: i.product_id, product_name: i.product_name, product_image: i.product_image, quantity: i.quantity, unit_price: i.unit_price, notes: i.notes })),
           subtotal, total,
-          payment_method: payments[0]?.method || 'cash',
-          payment_status: (payments[0]?.method === 'cash' || payments[0]?.method === 'to_arrange') ? 'pending' : 'paid',
+          ...paymentData,
           status: 'confirmed',
           order_notes: orderNotes + (payments.length > 1 ? `\nPagamento dividido: ${payments.map(p => `${PAYMENT_OPTIONS.find(o => o.id === p.method)?.label || p.method} R$ ${(parseFloat(p.amount) || 0).toFixed(2)}`).join(' + ')}` : ''),
         });
@@ -193,7 +246,9 @@ export default function PDV() {
           await base44.entities.Table.update(selectedTableId, { status: 'free', current_order_id: '', current_order_number: '' });
         }
         setSuccessMode('finalize');
-        setSuccess(editingOrder.order_number);
+        const completedOrder = { ...editingOrder, ...updated, total, subtotal, ...paymentData };
+        await ensureFinancialEntry(completedOrder);
+        setSuccess(completedOrder);
         setEditingOrder(null);
         setCart([]);
         setPayments([{ method: 'cash', amount: '' }]);
@@ -239,8 +294,7 @@ export default function PDV() {
         subtotal,
         delivery_fee: orderType === 'delivery' ? parseFloat(deliveryFee) || 0 : 0,
         total,
-        payment_method: payments[0]?.method || 'cash',
-        payment_status: (payments[0]?.method === 'cash' || payments[0]?.method === 'to_arrange') ? 'pending' : 'paid',
+        ...paymentData,
         delivery_method: orderType,
         delivery_address: orderType === 'delivery' ? `${customerForm.street}, ${customerForm.number}${customerForm.apt ? ' - ' + customerForm.apt : ''}${customerForm.condo ? ' (' + customerForm.condo + ')' : ''}` : '',
         delivery_city: customerForm.city,
@@ -252,37 +306,59 @@ export default function PDV() {
         created_via_pdv: true,
       });
 
+      await ensureFinancialEntry(order);
+
       if (selectedTableId && selectedTableId !== 'balcao') {
         await base44.entities.Table.update(selectedTableId, { status: 'open', current_order_id: order.id, current_order_number: order.order_number });
       }
       setSuccessMode('create');
-      setSuccess(order.order_number);
+      setSuccess(order);
       setCart([]);
       setSelectedCustomer(null);
       setShowNewCustomer(false);
       setPayments([{ method: 'cash', amount: '' }]);
       setSelectedTableId('');
       setEditingOrder(null);
-    } catch (_) {}
+    } catch (_) { submittingRef.current = false; }
     setSaving(false);
   };
 
-  if (success) {
-    const title = successMode === 'launch' ? 'Itens lançados na comanda!' : successMode === 'finalize' ? 'Comanda finalizada!' : 'Pedido lançado!';
-    const msg = successMode === 'launch' ? `Itens adicionados à comanda #${success}` : successMode === 'finalize' ? `Comanda #${success} fechada com sucesso` : `Pedido #${success} criado com sucesso`;
-    return (
-      <div className="flex flex-col items-center justify-center py-20 space-y-4">
-        <div className={`w-16 h-16 rounded-full flex items-center justify-center ${successMode === 'launch' ? 'bg-orange-100' : 'bg-green-100'}`}>
-          <Check size={32} className={successMode === 'launch' ? 'text-orange-600' : 'text-green-600'} />
-        </div>
-        <h2 className="font-heading font-bold text-xl">{title}</h2>
-        <p className="text-sm text-muted-foreground">{msg}</p>
-        <button onClick={() => { setSuccess(null); setSuccessMode('create'); }} className="px-6 py-2.5 bg-primary text-white rounded-xl text-sm font-bold hover:bg-primary/90 transition-colors">
-          Novo pedido
-        </button>
-      </div>
-    );
-  }
+  const closeSuccess = useCallback(() => {
+    setSuccess(null);
+    setSuccessMode('create');
+    submittingRef.current = false;
+  }, []);
+
+  const confirmPrint = useCallback(async () => {
+    if (!success) return;
+    await printOrder(success);
+    closeSuccess();
+  }, [success, closeSuccess]);
+
+  const cancelCurrentAction = useCallback(() => {
+    if (success) return closeSuccess();
+    if (showNewCustomer || showCustomerResults) {
+      setShowNewCustomer(false);
+      setShowCustomerResults(false);
+      return;
+    }
+    if (cart.length && window.confirm('Deseja cancelar o pedido atual e limpar o carrinho?')) {
+      setCart([]);
+      setPayments([{ method: 'cash', amount: '' }]);
+      setOrderNotes('');
+    }
+  }, [success, closeSuccess, showNewCustomer, showCustomerResults, cart.length]);
+
+  useEffect(() => {
+    const onKeyDown = event => {
+      if (event.key === 'F4') { event.preventDefault(); addPayment(); return; }
+      if (event.key === 'F9') { event.preventDefault(); handleSubmit(); return; }
+      if (event.key === 'Escape') { event.preventDefault(); cancelCurrentAction(); return; }
+      if (event.key === 'Enter' && success) { event.preventDefault(); confirmPrint(); }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  });
 
   if (loading) return <div className="flex justify-center py-20"><Loader2 className="animate-spin text-primary" size={32} /></div>;
 
@@ -457,28 +533,26 @@ export default function PDV() {
           <div className="bg-card rounded-2xl border border-border/50 p-4 space-y-3">
             <h2 className="font-heading font-semibold text-sm">Pagamento</h2>
             {payments.map((pay, idx) => (
-              <div key={idx} className="flex items-center gap-2">
-                <select value={pay.method} onChange={e => updatePayment(idx, 'method', e.target.value)} className={inp + ' flex-1'}>
-                  {PAYMENT_OPTIONS.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
-                </select>
-                <input type="number" step="0.01" placeholder="0,00" value={pay.amount} onChange={e => updatePayment(idx, 'amount', e.target.value)} className={inp + ' w-24'} />
-                {payments.length > 1 && (
-                  <button onClick={() => removePayment(idx)} className="text-red-400 p-2 flex-shrink-0"><Trash2 size={14} /></button>
-                )}
+              <div key={idx} className="space-y-2 rounded-xl border border-gray-100 p-2.5">
+                <div className="flex items-center gap-2">
+                  <select aria-label={`Forma de pagamento ${idx + 1}`} value={pay.method} onChange={e => updatePayment(idx, 'method', e.target.value)} className={inp + ' flex-1'}>
+                    {PAYMENT_OPTIONS.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
+                  </select>
+                  <input aria-label={pay.method === 'cash' ? 'Valor recebido' : 'Valor pago'} type="number" min="0" step="0.01" placeholder="0,00" value={pay.amount} onChange={e => updatePayment(idx, 'amount', e.target.value)} className={inp + ' w-28'} />
+                  {payments.length > 1 && <button type="button" aria-label="Remover pagamento" onClick={() => removePayment(idx)} className="text-red-400 p-2 flex-shrink-0"><Trash2 size={14} /></button>}
+                </div>
+                {pay.method === 'cash' && <div><p className="text-[11px] font-semibold text-gray-500 mb-1.5">Valor recebido</p><div className="grid grid-cols-3 gap-2">
+                  <button type="button" onClick={() => updatePayment(idx, 'amount', fromCents(Math.max(0, totalCents - (paidCents - toCents(pay.amount)))).toFixed(2))} className="px-2 py-2 rounded-lg bg-gray-50 border border-gray-200 text-xs font-semibold hover:border-primary hover:text-primary">Valor exato</button>
+                  <button type="button" onClick={() => updatePayment(idx, 'amount', '50.00')} className="px-2 py-2 rounded-lg bg-gray-50 border border-gray-200 text-xs font-semibold hover:border-primary hover:text-primary">R$ 50</button>
+                  <button type="button" onClick={() => updatePayment(idx, 'amount', '100.00')} className="px-2 py-2 rounded-lg bg-gray-50 border border-gray-200 text-xs font-semibold hover:border-primary hover:text-primary">R$ 100</button>
+                </div></div>}
               </div>
             ))}
-            <button onClick={() => setPayments([...payments, { method: 'cash', amount: '' }])} className="flex items-center gap-1 text-xs text-primary font-medium hover:underline">
-              <Plus size={12} /> Adicionar forma de pagamento
-            </button>
-            {remaining !== 0 ? (
-              <div className={`text-xs font-semibold px-3 py-2 rounded-xl ${remaining > 0 ? 'bg-orange-50 text-orange-600' : 'bg-red-50 text-red-600'}`}>
-                {remaining > 0 ? `Falta pagar: R$ ${remaining.toFixed(2)}` : `Excedido: R$ ${Math.abs(remaining).toFixed(2)}`}
-              </div>
-            ) : (
-              <div className="text-xs font-semibold px-3 py-2 rounded-xl bg-green-50 text-green-600">
-                ✓ Pagamento completo (R$ {total.toFixed(2)})
-              </div>
-            )}
+            <button type="button" onClick={addPayment} className="flex items-center gap-1 text-xs text-primary font-semibold hover:underline"><Plus size={12} /> Adicionar forma de pagamento <kbd className="ml-auto rounded bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-500">F4</kbd></button>
+            {changeCents > 0 && <div className="text-sm font-bold px-3 py-2.5 rounded-xl bg-green-50 text-green-700">Troco: R$ {change.toFixed(2)}</div>}
+            {remainingCents > 0 && <div className="text-xs font-semibold px-3 py-2 rounded-xl bg-orange-50 text-orange-700">Falta pagar: R$ {remaining.toFixed(2)}</div>}
+            {invalidExcessCents > 0 && <div className="text-xs font-semibold px-3 py-2 rounded-xl bg-red-50 text-red-700">Valor excedido: R$ {fromCents(invalidExcessCents).toFixed(2)}. Troco apenas para Dinheiro.</div>}
+            {paymentComplete && <div className="text-xs font-semibold px-3 py-2 rounded-xl bg-green-50 text-green-700">Pagamento completo</div>}
 
             {orderType === 'delivery' && (
               <div><label className={lbl}>Taxa de entrega (R$)</label><input type="number" step="0.01" value={deliveryFee} onChange={e => setDeliveryFee(e.target.value)} className={inp} placeholder="0,00" /></div>
@@ -490,10 +564,14 @@ export default function PDV() {
               <div className="flex justify-between"><span className="text-gray-500">Subtotal</span><span>R$ {subtotal.toFixed(2)}</span></div>
               {orderType === 'delivery' && <div className="flex justify-between"><span className="text-gray-500">Entrega</span><span>R$ {(parseFloat(deliveryFee) || 0).toFixed(2)}</span></div>}
               <div className="flex justify-between font-heading font-bold text-base pt-1"><span>Total</span><span className="text-primary">R$ {total.toFixed(2)}</span></div>
+              <div className="flex justify-between"><span className="text-gray-500">Valor pago</span><span>R$ {paidAmount.toFixed(2)}</span></div>
+              <div className="flex justify-between font-semibold"><span>Restante</span><span className={remainingCents ? 'text-orange-600' : 'text-green-600'}>R$ {remaining.toFixed(2)}</span></div>
             </div>
 
+            <div className="flex items-center gap-2 rounded-xl bg-green-50 px-3 py-2 text-[11px] font-medium text-green-700"><BarChart3 size={14} />Esta venda será registrada automaticamente em Financeiro → Lançamentos.</div>
+
             {editingOrder ? (
-              <button onClick={handleSubmit} disabled={saving || cart.length === 0 || remaining !== 0} className="w-full py-3 bg-green-600 text-white rounded-xl font-bold text-sm hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
+              <button onClick={handleSubmit} disabled={saving || cart.length === 0 || !paymentComplete} className="w-full py-3 bg-green-600 text-white rounded-xl font-bold text-sm hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
                 {saving ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
                 {saving ? 'Finalizando...' : 'Finalizar comanda'}
               </button>
@@ -505,15 +583,35 @@ export default function PDV() {
                     {saving ? 'Lançando...' : 'Lançar na mesa'}
                   </button>
                 )}
-                <button onClick={handleSubmit} disabled={saving || cart.length === 0 || remaining !== 0} className="w-full py-3 bg-primary text-white rounded-xl font-bold text-sm hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
+                <button onClick={handleSubmit} disabled={saving || cart.length === 0 || !paymentComplete} className="w-full py-3 bg-primary text-white rounded-xl font-bold text-sm hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
                   {saving ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
                   {saving ? 'Lançando...' : 'Lançar pedido'}
                 </button>
               </div>
             )}
+            <div className="rounded-xl border border-gray-200 bg-gray-50/70 p-3">
+              <div className="mb-2 flex items-center gap-2 text-xs font-semibold"><Keyboard size={14} />Atalhos do teclado</div>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                <button type="button" onClick={addPayment} className="rounded-lg px-2 py-1.5 text-left text-[10px] hover:bg-white"><kbd className="font-bold">F4</kbd> Adicionar pagamento</button>
+                <button type="button" onClick={handleSubmit} disabled={!paymentComplete || saving} className="rounded-lg px-2 py-1.5 text-left text-[10px] hover:bg-white disabled:opacity-50"><kbd className="font-bold">F9</kbd> Lançar pedido</button>
+                <button type="button" onClick={success ? confirmPrint : handleSubmit} disabled={!success && (!paymentComplete || saving)} className="rounded-lg px-2 py-1.5 text-left text-[10px] hover:bg-white disabled:opacity-50"><kbd className="font-bold">Enter</kbd> Confirmar</button>
+                <button type="button" onClick={cancelCurrentAction} className="rounded-lg px-2 py-1.5 text-left text-[10px] hover:bg-white"><kbd className="font-bold">Esc</kbd> Cancelar/fechar</button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
+
+      {success && <div data-peddi-modal="" className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/45 p-4" onClick={closeSuccess}>
+        <div role="dialog" aria-modal="true" aria-labelledby="pdv-success-title" className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl sm:p-7" onClick={event => event.stopPropagation()}>
+          <button type="button" aria-label="Fechar" onClick={closeSuccess} className="ml-auto flex h-9 w-9 items-center justify-center rounded-full text-gray-400 hover:bg-gray-100"><X size={20} /></button>
+          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-green-100 text-green-600"><Check size={40} /></div>
+          <div className="mt-4 text-center"><h2 id="pdv-success-title" className="font-heading text-xl font-bold">{successMode === 'launch' ? 'Itens lançados com sucesso!' : 'Pedido lançado com sucesso!'}</h2><p className="mt-1 text-sm text-gray-500">Pedido #{success.order_number} salvo com sucesso.</p></div>
+          <div className="my-5 border-t border-gray-100 pt-5 text-center text-sm font-semibold">Deseja imprimir a etiqueta deste pedido?</div>
+          <div className="grid grid-cols-2 gap-3"><button type="button" onClick={closeSuccess} className="rounded-xl border border-gray-300 px-4 py-3 text-sm font-bold hover:bg-gray-50">Não</button><button type="button" onClick={confirmPrint} className="flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-white hover:bg-primary/90"><Printer size={17} />Sim</button></div>
+          <p className="mt-3 text-center text-[11px] text-gray-400">Enter para imprimir • Esc para fechar</p>
+        </div>
+      </div>}
     </div>
   );
 }
