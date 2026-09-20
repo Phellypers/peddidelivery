@@ -15,7 +15,7 @@ import BirthdayPromoNotifier from '@/components/storefront/BirthdayPromoNotifier
 import AbandonedCartNotifier from '@/components/storefront/AbandonedCartNotifier';
 import { Loader2, Search, AlignJustify, Heart, MapPin, MessageCircle, House, Bell } from 'lucide-react';
 import NotificationBell from '@/components/storefront/NotificationBell';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '@/lib/AuthContext';
 import { emitLiveEvent } from '@/lib/liveSession';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
@@ -25,6 +25,7 @@ import '@/components/storefront/Storefront.css';
 import { getStoreTheme } from '@/lib/storeTheme';
 import { getBannerProductIds } from '@/lib/bannerProducts';
 import { isPublicDemo } from '@/lib/presentationDemo';
+import { storefrontStoreRef, withStore } from '@/lib/storefrontTenant';
 
 const CAT_BADGE_COLORS = {
   red: 'bg-red-500', green: 'bg-green-500', orange: 'bg-orange-500',
@@ -39,6 +40,8 @@ const SPECIAL_SECTIONS = {
 
 export default function Home() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const storeRef = storefrontStoreRef(location.search);
   const { bannerId } = useParams();
   const [store, setStore] = useState(null);
   const [categories, setCategories] = useState([]);
@@ -55,13 +58,20 @@ export default function Home() {
   const demoAccountNotice = () => window.dispatchEvent(new CustomEvent('peddi-demo-action', { detail: 'Login, notificações e atendimento não gravam dados no modo demonstração.' }));
 
   const loadData = useCallback(() => {
-    return loadPublicCatalog().then(({ store: currentStore, categories: cats, products: prods }) => {
+    return loadPublicCatalog(storeRef).then(({ store: currentStore, categories: cats, products: prods }) => {
       setStore(currentStore);
       setCategories(cats);
       setProducts(prods.filter(p => !p.is_paused));
       setLoading(false);
     });
-  }, []);
+  }, [storeRef]);
+
+  useEffect(() => {
+    if (!store?.id || storeRef) return;
+    const params = new URLSearchParams(location.search);
+    params.set('store', store.id);
+    navigate(`${location.pathname}?${params}`, { replace: true });
+  }, [store?.id, storeRef, location.pathname, location.search, navigate]);
 
   useEffect(() => {
     loadData();
@@ -126,7 +136,7 @@ export default function Home() {
 
   const showBannerCampaign = banner => {
     const index = (store?.banners || []).indexOf(banner);
-    navigate(`/loja/campanha/${encodeURIComponent(banner.id || `index-${index}`)}`);
+    navigate(withStore(`/loja/campanha/${encodeURIComponent(banner.id || `index-${index}`)}`, store?.id || storeRef));
     window.scrollTo({ top: 0, behavior: 'instant' });
   };
 
@@ -147,7 +157,7 @@ export default function Home() {
       <CartDrawer />
       <main className="mx-auto min-h-screen max-w-2xl bg-white">
         <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-gray-100 bg-white/95 px-4 py-3 backdrop-blur">
-          <Link to="/loja" aria-label="Voltar ao cardápio" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-gray-700 hover:bg-gray-100"><span aria-hidden="true">←</span></Link>
+          <Link to={withStore('/loja', store?.id || storeRef)} aria-label="Voltar ao cardápio" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-gray-700 hover:bg-gray-100"><span aria-hidden="true">←</span></Link>
           <div className="min-w-0"><p className="text-xs text-gray-500">{store?.name}</p><h1 className="break-words font-heading text-lg font-bold text-gray-900">{campaignBanner?.title || 'Campanha promocional'}</h1></div>
         </header>
         {campaignBanner && <section aria-label={`Campanha ${campaignBanner.title || ''}`} className="px-4 pt-4">
@@ -199,7 +209,7 @@ export default function Home() {
         <header className="peddi-store-header">
           <div className="peddi-store-orange">
             <button type="button" aria-label="Abrir menu do cardápio" onClick={() => setMenuOpen(true)}><AlignJustify size={27} /></button>
-            <div className="flex items-center gap-3">{publicDemo ? <><button type="button" aria-label="Chat indisponível na demonstração" onClick={demoAccountNotice} className="flex h-11 w-11 items-center justify-center"><MessageCircle size={27} /></button><button type="button" aria-label="Notificações indisponíveis na demonstração" onClick={demoAccountNotice} className="flex h-11 w-11 items-center justify-center"><Bell size={27} /></button></> : <>{user ? <button type="button" aria-label="Conversar com a loja" onClick={() => setChatOpen(true)}><MessageCircle size={27} /></button> : <Link to="/login?returnTo=/loja" aria-label="Entrar para conversar com a loja" className="flex h-11 w-11 items-center justify-center"><MessageCircle size={27} /></Link>}{user ? <NotificationBell /> : <Link to="/login?returnTo=/loja" aria-label="Entrar para ver notificações" className="flex h-11 w-11 items-center justify-center"><Bell size={27} /></Link>}</>}</div>
+            <div className="flex items-center gap-3">{publicDemo ? <><button type="button" aria-label="Chat indisponível na demonstração" onClick={demoAccountNotice} className="flex h-11 w-11 items-center justify-center"><MessageCircle size={27} /></button><button type="button" aria-label="Notificações indisponíveis na demonstração" onClick={demoAccountNotice} className="flex h-11 w-11 items-center justify-center"><Bell size={27} /></button></> : <>{user ? <button type="button" aria-label="Conversar com a loja" onClick={() => setChatOpen(true)}><MessageCircle size={27} /></button> : <Link to={`/login?store=${encodeURIComponent(store?.id || storeRef)}&returnTo=${encodeURIComponent(withStore('/loja', store?.id || storeRef))}`} aria-label="Entrar para conversar com a loja" className="flex h-11 w-11 items-center justify-center"><MessageCircle size={27} /></Link>}{user ? <NotificationBell /> : <Link to={`/login?store=${encodeURIComponent(store?.id || storeRef)}&returnTo=${encodeURIComponent(withStore('/loja', store?.id || storeRef))}`} aria-label="Entrar para ver notificações" className="flex h-11 w-11 items-center justify-center"><Bell size={27} /></Link>}</>}</div>
           </div>
           <div className="peddi-store-profile">
             <div className="peddi-store-logo"><StoriesRing store={store} isAdmin={false} onUpdateStore={setStore} /></div>

@@ -15,19 +15,22 @@ test('manager login rejects customer accounts and administrative APIs remain pro
     const password='PermissionTest@2026',hash=await bcrypt.hash(password,10);
     const users=[];
     for(const role of ['customer','manager','peddi_admin'])users.push((await query('INSERT INTO users(business_id,store_id,email,password_hash,name,role) VALUES($1,$2,$3,$4,$5,$6) RETURNING id,email,role',[business,store,`${crypto.randomUUID()}@integration.peddi.local`,hash,'Permission Test',role])).rows[0]);
-    const login=async(email:string,context?:string)=>{
-      const response=await fetch(base+'/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password,context})});
+    const login=async(email:string,context?:string,storeId?:string)=>{
+      const response=await fetch(base+'/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password,context,storeId})});
       return {status:response.status,body:await response.json()};
     };
     const demoWrite=await fetch(base+'/auth/login',{method:'POST',headers:{'Content-Type':'application/json','X-Peddi-Demo':'ephemeral'},body:JSON.stringify({email:'nobody@example.com',password:'not-used'})});
     assert.equal(demoWrite.status,403);
     const customer=users[0];
+    assert.equal((await login(customer.email)).status,403);
     assert.equal((await login(customer.email,'manager')).status,403);
     assert.equal((await query('SELECT count(*) FROM refresh_tokens WHERE user_id=$1',[customer.id])).rows[0].count,'0');
-    const customerLogin=await login(customer.email,'customer');assert.equal(customerLogin.status,200);
+    assert.equal((await login(customer.email,'customer',crypto.randomUUID())).status,403);
+    const customerLogin=await login(customer.email,'customer',store);assert.equal(customerLogin.status,200);
     assert.equal((await fetch(base+'/admin/couriers',{headers:{Authorization:`Bearer ${customerLogin.body.accessToken}`}})).status,403);
     assert.equal((await fetch(base+'/admin/couriers')).status,401);
     for(const user of users.slice(1)){
+      assert.equal((await login(user.email)).status,403);
       assert.equal((await login(user.email,'customer')).status,403);
       const result=await login(user.email,'manager');assert.equal(result.status,200);
       assert.equal((await fetch(base+'/admin/couriers',{headers:{Authorization:`Bearer ${result.body.accessToken}`}})).status,200);

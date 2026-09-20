@@ -10,8 +10,15 @@ import AuthLayout from "@/components/AuthLayout";
 import GoogleIcon from "@/components/GoogleIcon";
 import { toast } from "@/components/ui/use-toast";
 import { safeReturnTo } from "@/lib/authReturnTo";
+import { storefrontStoreRef } from '@/lib/storefrontTenant';
 
 export default function Register() {
+  const storeRef = storefrontStoreRef();
+  const loginParams = new URLSearchParams();
+  if (storeRef) loginParams.set('store', storeRef);
+  const requestedReturn = new URLSearchParams(window.location.search).get('returnTo');
+  if (requestedReturn) loginParams.set('returnTo', requestedReturn);
+  const loginPath = `/login${loginParams.size ? `?${loginParams}` : ''}`;
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -133,7 +140,7 @@ export default function Register() {
       footer={
         <>
           Already have an account?{" "}
-          <Link to="/login" className="text-primary font-medium hover:underline">
+          <Link to={loginPath} className="text-primary font-medium hover:underline">
             Log in
           </Link>
         </>

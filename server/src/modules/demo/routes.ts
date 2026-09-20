@@ -39,7 +39,11 @@ demoRouter.use(async (request:AuthRequest,response,next)=>{
   }
   if (request.auth?.storeId) request.localStoreId=request.auth.storeId;
   else {
-    const result=await query("SELECT id FROM stores WHERE slug='loja-demo' AND active=true LIMIT 1");
+    const requested=String(request.header('x-peddi-store')||'').trim();
+    const result=requested
+      ? await query('SELECT id FROM stores WHERE active=true AND (id::text=$1 OR slug=$1) LIMIT 1',[requested])
+      : await query("SELECT id FROM stores WHERE slug='loja-demo' AND active=true LIMIT 1");
+    if(requested&&!result.rowCount)return response.status(404).json({error:'Estabelecimento não encontrado.'});
     if (!result.rowCount) return response.status(503).json({error:'Loja demo não encontrada. Execute o seed.'});
     request.localStoreId=result.rows[0].id;
   }

@@ -69,7 +69,9 @@ export const AuthProvider = ({ children }) => {
 
   const navigateToLogin = () => {
     const loginPath = window.location.pathname.startsWith('/admin') ? '/gestor/login' : '/login';
-    window.location.href = `${loginPath}?returnTo=${encodeURIComponent(window.location.pathname)}`;
+    const current = `${window.location.pathname}${window.location.search}`;
+    const store = new URLSearchParams(window.location.search).get('store');
+    window.location.href = `${loginPath}?${store ? `store=${encodeURIComponent(store)}&` : ''}returnTo=${encodeURIComponent(current)}`;
   };
 
   return (

@@ -1,5 +1,6 @@
 import { peddiApi, saveSession } from '@/services/api/peddiApi';
 import { demoCreate, demoDelete, demoList, demoUpdate, isPresentationDemo, isPublicDemo, resetPresentationDemo } from '@/lib/presentationDemo';
+import { storefrontStoreRef } from '@/lib/storefrontTenant';
 
 let registration;
 let demoVisitor;
@@ -11,7 +12,8 @@ const visitor = () => {
 };
 const headers = () => {
   const token = localStorage.getItem('peddi_access_token');
-  return { 'X-Peddi-Visitor': visitor(), ...(token ? { Authorization: `Bearer ${token}` } : {}) };
+  const storeRef = storefrontStoreRef();
+  return { 'X-Peddi-Visitor': visitor(), ...(storeRef ? { 'X-Peddi-Store': storeRef } : {}), ...(token ? { Authorization: `Bearer ${token}` } : {}) };
 };
 async function call(path, method = 'GET', data, extraHeaders = {}) {
   try {
@@ -166,7 +168,7 @@ export function createLocalClient() {
       logout: destination => {resetPresentationDemo();localStorage.removeItem('peddi_access_token');localStorage.removeItem('peddi_refresh_token');if(destination)window.location.href='/login';},
       redirectToLogin: destination => {window.location.href=`/login?returnTo=${encodeURIComponent(destination || window.location.pathname)}`;},
       register: async data => { const result = await call('/api/v1/demo/register','POST',{...data,role:window.location.pathname==='/'?'manager':window.location.pathname.startsWith('/entregador')?'courier':'customer'});registration=data;return result; },
-      verifyOtp: async data => {if(data.otpCode!=='000000'||!registration||data.email!==registration.email)throw new Error('Use o código de teste 000000 após cadastrar a conta.');const result=await peddiApi.login(registration.email,registration.password);saveSession(result);registration=undefined;return {...result,access_token:result.accessToken};},
+      verifyOtp: async data => {if(data.otpCode!=='000000'||!registration||data.email!==registration.email)throw new Error('Use o código de teste 000000 após cadastrar a conta.');const role=registration.role||'customer';const result=await peddiApi.login(registration.email,registration.password,role==='manager'?'manager':role==='courier'?'courier':'customer',role==='customer'?storefrontStoreRef():undefined);saveSession(result);registration=undefined;return {...result,access_token:result.accessToken};},
       resendOtp: async () => ({demo:true,message:'Código de confirmação local: 000000.'}),
       loginWithProvider: () => {window.dispatchEvent(new CustomEvent('peddi-api-error',{detail:'Login Google depende da integração externa. No teste local, use email e senha.'}));},
       resetPasswordRequest: email => call('/api/v1/demo/reset-request','POST',{email}),

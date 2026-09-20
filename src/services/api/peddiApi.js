@@ -56,7 +56,7 @@ async function request(path, options = {}, retried = false) {
 export const peddiApi = {
   request,
   isConfigured: true,
-  login: (email, password, context) => request('/api/v1/auth/login', { method: 'POST', body: JSON.stringify({ email, password, ...(context ? { context } : {}) }) }),
+  login: (email, password, context, storeId) => request('/api/v1/auth/login', { method: 'POST', body: JSON.stringify({ email, password, ...(context ? { context } : {}), ...(storeId ? { storeId } : {}) }) }),
   me: (token) => request('/api/v1/me', { headers: { Authorization: `Bearer ${token}` } }),
   updatePreferences: (preferences) => request('/api/v1/me/preferences', {
     method: 'PATCH',
@@ -84,10 +84,14 @@ export const demoCatalog = {
   ],
 };
 
-export async function loadPublicCatalog() {
+export async function loadPublicCatalog(storeRef = '') {
   try {
     const stores = await peddiApi.stores();
-    const store = stores.stores?.find(store => store.slug === 'loja-demo') || stores.stores?.[0];
+    const available = stores.stores || [];
+    const store = storeRef
+      ? available.find(store => store.id === storeRef || store.slug === storeRef)
+      : available.find(store => store.slug === 'loja-demo') || available[0];
+    if (storeRef && !store) throw new Error('Loja não encontrada ou indisponível.');
     if (store) {
       const catalog = await peddiApi.catalog(store.id);
       return { store, categories: catalog.categories.map(category => ({ ...category, is_featured: category.is_featured ?? true, is_active: category.is_active ?? true })), products: catalog.products.map(product => ({ ...product, category_ids: product.category_ids ?? (product.categoryId ? [product.categoryId] : []), is_published: true })) };

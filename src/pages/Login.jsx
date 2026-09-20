@@ -1,21 +1,41 @@
-import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import { Link, useLocation } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { LogIn, Mail, Lock, Loader2, Eye, EyeOff } from "lucide-react";
+import { LogIn, Mail, Lock, Loader2, Eye, EyeOff, Store } from "lucide-react";
 import AuthLayout from "@/components/AuthLayout";
 import GoogleIcon from "@/components/GoogleIcon";
 import { safeReturnTo } from "@/lib/authReturnTo";
 import { peddiApi, saveSession } from '@/services/api/peddiApi';
+import { storefrontStoreRef } from '@/lib/storefrontTenant';
+import { getStoreTheme } from '@/lib/storeTheme';
 
 export default function Login({ managerOnly = false }) {
+  const location = useLocation();
+  const storeRef = managerOnly ? '' : storefrontStoreRef(location.search);
+  const registerParams = new URLSearchParams();
+  if (storeRef) registerParams.set('store', storeRef);
+  const requestedReturn = new URLSearchParams(location.search).get('returnTo');
+  if (requestedReturn) registerParams.set('returnTo', requestedReturn);
+  const registerPath = `/register${registerParams.size ? `?${registerParams}` : ''}`;
+  const [store, setStore] = useState(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+
+  useEffect(() => {
+    if (managerOnly || !storeRef) return;
+    let active = true;
+    peddiApi.stores().then(({ stores = [] }) => {
+      const selected = stores.find(item => item.id === storeRef || item.slug === storeRef);
+      if (active) setStore(selected || null);
+    }).catch(() => { if (active) setStore(null); });
+    return () => { active = false; };
+  }, [managerOnly, storeRef]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -24,7 +44,8 @@ export default function Login({ managerOnly = false }) {
     try {
       let destination = safeReturnTo();
       if (peddiApi.isConfigured) {
-        const result = await peddiApi.login(email, password, managerOnly ? 'manager' : 'customer');
+        if (!managerOnly && !store?.id) throw new Error('Acesse o login pelo cardápio da loja para continuar.');
+        const result = await peddiApi.login(email, password, managerOnly ? 'manager' : 'customer', store?.id);
         saveSession(result);
         if (result.user.role === 'courier') destination = '/entregador';
         if (managerOnly) destination = destination === '/admin' || destination.startsWith('/admin/') ? destination : '/admin';
@@ -46,13 +67,16 @@ export default function Login({ managerOnly = false }) {
 
   return (
     <AuthLayout
-      icon={LogIn}
-      title={managerOnly ? 'Acesso do gestor' : 'Welcome back'}
-      subtitle={managerOnly ? 'Entre com sua conta administrativa PEDDI.' : 'Log in to your account'}
+      icon={managerOnly ? LogIn : Store}
+      logoUrl={!managerOnly ? store?.logo_url : ''}
+      brandName={!managerOnly ? store?.name : ''}
+      theme={!managerOnly && store ? getStoreTheme(store) : undefined}
+      title={managerOnly ? 'Acesso do gestor' : 'Entre na sua conta'}
+      subtitle={managerOnly ? 'Entre com sua conta administrativa PEDDI.' : store ? `Acesse o cardápio da ${store.name}` : 'Abra este acesso pelo cardápio da loja.'}
       footer={
         managerOnly ? <Link to="/" className="text-primary font-medium">Voltar ao site da PEDDI</Link> : <>
           Don't have an account?{" "}
-          <Link to="/register" className="text-primary font-medium hover:underline">
+          <Link to={registerPath} className="text-primary font-medium hover:underline">
             Create one
           </Link>
         </>

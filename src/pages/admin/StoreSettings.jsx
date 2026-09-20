@@ -75,6 +75,7 @@ export default function StoreSettings() {
   const lbl = "block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wide";
   const section = "bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-4";
   const previewTheme = getStoreTheme(form);
+  const publicMenuUrl = typeof window !== 'undefined' && storeId ? `${window.location.origin}/loja?store=${encodeURIComponent(storeId)}` : '';
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6 max-w-2xl">
@@ -104,9 +105,9 @@ export default function StoreSettings() {
         <p className="text-xs text-gray-400 mb-3">Compartilhe este link com seus clientes. Eles poderão acessar o catálogo, cadastrar-se, fazer pedidos, ver stories e receber promoções — sem acesso ao painel administrativo.</p>
         <div className="flex items-center gap-2">
           <div className="flex-1 px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-600 truncate">
-            {typeof window !== 'undefined' ? window.location.origin + '/loja' : ''}
+            {publicMenuUrl}
           </div>
-          <button type="button" onClick={() => { if (navigator.clipboard) navigator.clipboard.writeText(window.location.origin + '/loja'); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
+          <button type="button" onClick={() => { if (navigator.clipboard) navigator.clipboard.writeText(publicMenuUrl); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
             className="flex items-center gap-1.5 px-4 py-2.5 bg-primary text-white rounded-xl text-sm font-medium hover:bg-primary/90 transition-colors flex-shrink-0">
             {copied ? <><Check size={15} /> Copiado!</> : <><Copy size={15} /> Copiar</>}
           </button>

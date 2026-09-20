@@ -2,9 +2,10 @@ import React from 'react';
 import { Heart, ShoppingCart } from 'lucide-react';
 import { useCart } from '@/lib/CartContext';
 import { useWishlist } from '@/lib/WishlistContext';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import ProductRating from '@/components/storefront/ProductRating';
 import { getPriceDropBadge } from '@/lib/productHighlights';
+import { storefrontStoreRef, withStore } from '@/lib/storefrontTenant';
 
 const BADGE_COLORS = {
   red: 'bg-red-500',
@@ -19,6 +20,8 @@ export default function ProductCard({ product }) {
   const { addItem } = useCart();
   const { isWishlisted, toggleWishlist } = useWishlist();
   const navigate = useNavigate();
+  const location = useLocation();
+  const storeRef = storefrontStoreRef(location.search);
   const hasPromo = product.promo_price && product.promo_price < product.price;
   const wishlisted = isWishlisted(product.id);
   const displayPrice = hasPromo ? product.promo_price : product.price;
@@ -28,7 +31,7 @@ export default function ProductCard({ product }) {
 
   return (
     <div data-product-id={product.id} className="peddi-product-card bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 flex flex-col">
-      <Link to={`/item/${product.id}`} className="block relative">
+      <Link to={withStore(`/item/${product.id}`, storeRef)} className="block relative">
         <div className="aspect-square overflow-hidden bg-gray-100">
           <img
             src={product.images?.[0] || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400'}
@@ -76,7 +79,7 @@ export default function ProductCard({ product }) {
 
         <div className="mt-auto flex items-center gap-2 pt-1.5">
           <button
-            onClick={(e) => { e.preventDefault(); e.stopPropagation(); addItem(product); navigate('/checkout'); }}
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); addItem(product); navigate(withStore('/checkout', storeRef)); }}
             className="flex-1 h-9 rounded-xl bg-primary text-white text-xs font-bold flex items-center justify-center hover:bg-primary/90 transition-colors whitespace-nowrap"
           >
             Comprar

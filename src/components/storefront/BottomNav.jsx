@@ -4,31 +4,35 @@ import './Storefront.css';
 import { useCart } from '@/lib/CartContext';
 import { Link, useLocation } from 'react-router-dom';
 import { isPublicDemo } from '@/lib/presentationDemo';
+import { useAuth } from '@/lib/AuthContext';
+import { storefrontStoreRef, withStore } from '@/lib/storefrontTenant';
 
 export default function BottomNav() {
   const { totalItems, setIsOpen } = useCart();
   const location = useLocation();
+  const { isAuthenticated } = useAuth();
+  const storeRef = storefrontStoreRef(location.search);
   const publicDemo = isPublicDemo();
   const unavailable = () => window.dispatchEvent(new CustomEvent('peddi-demo-action', { detail: 'Esta área exige uma conta de cliente e não faz parte da demonstração.' }));
 
   const navItems = [
-    { icon: Home, label: 'Início', path: '/loja' },
-    { icon: Search, label: 'Buscar', path: '/buscar' },
+    { icon: Home, label: 'Início', path: withStore('/loja', storeRef) },
+    { icon: Search, label: 'Buscar', path: withStore('/buscar', storeRef) },
     { icon: ShoppingCart, label: 'Carrinho', action: () => setIsOpen(true), badge: totalItems },
-    { icon: ClipboardList, label: 'Pedidos', ...(publicDemo ? { action: unavailable } : { path: '/meus-pedidos' }) },
-    { icon: User, label: 'Perfil', ...(publicDemo ? { action: unavailable } : { path: '/perfil' }) },
+    { icon: ClipboardList, label: 'Pedidos', ...(publicDemo ? { action: unavailable } : { path: withStore('/meus-pedidos', storeRef) }) },
+    { icon: User, label: 'Perfil', ...(publicDemo ? { action: unavailable } : isAuthenticated ? { path: withStore('/perfil', storeRef) } : { path: `/login?store=${encodeURIComponent(storeRef)}&returnTo=${encodeURIComponent(withStore('/perfil', storeRef))}` }) },
   ];
 
   return (
     <nav aria-label="Navegação do cliente" className="peddi-client-nav fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-200 pb-safe">
       <div className="flex items-center justify-around h-14">
         {navItems.map(item => {
-          const isActive = item.path && location.pathname === item.path;
+          const isActive = item.path && location.pathname === item.path.split('?')[0];
           const Icon = item.icon;
           const Wrapper = item.action ? 'button' : Link;
           const props = item.action ? { onClick: item.action } : {
             to: item.path,
-            ...(item.path === '/buscar' ? { state: { from: location.pathname } } : {}),
+            ...(item.path?.startsWith('/buscar') ? { state: { from: `${location.pathname}${location.search}` } } : {}),
           };
 
           return (

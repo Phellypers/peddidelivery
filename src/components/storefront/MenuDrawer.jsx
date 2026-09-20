@@ -5,6 +5,8 @@ import { X, Star, Tag, Flame, UserRound, Heart, House, ChefHat, ChevronRight, Pa
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { isPublicDemo } from '@/lib/presentationDemo';
+import { storefrontStoreRef, withStore } from '@/lib/storefrontTenant';
+import { useAuth } from '@/lib/AuthContext';
 
 const quickSections = [
   { id: '__most_ordered__', label: 'Mais Pedidos', icon: Flame },
@@ -14,6 +16,7 @@ const quickSections = [
 const rowClass = active => `relative flex min-h-14 w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left text-sm font-semibold transition-colors ${active ? 'bg-green-50 text-green-700 before:absolute before:inset-y-3 before:left-0 before:w-1 before:rounded-full before:bg-green-500' : 'bg-gray-50 text-gray-800 hover:bg-gray-100'}`;
 
 export default function MenuDrawer({ open, onClose, categories, activeCategory, onSelectCategory, store }) {
+  const { isAuthenticated } = useAuth();
   const drawer = useRef(null);
   useEffect(() => {
     if (!open) return;
@@ -38,6 +41,8 @@ export default function MenuDrawer({ open, onClose, categories, activeCategory, 
   const sectionTitle = 'mb-3 text-[11px] font-bold uppercase tracking-[0.14em] text-gray-500';
   const footerClass = 'flex min-h-12 items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50';
   const demoUnavailable = () => { onClose(); window.dispatchEvent(new CustomEvent('peddi-demo-action', { detail: 'Esta área exige uma conta de cliente e não faz parte da demonstração.' })); };
+  const storeRef = store?.id || storefrontStoreRef();
+  const profilePath = isAuthenticated ? withStore('/perfil', storeRef) : `/login?store=${encodeURIComponent(storeRef)}&returnTo=${encodeURIComponent(withStore('/perfil', storeRef))}`;
   return createPortal(
     <AnimatePresence>
       {open && <>
@@ -59,7 +64,7 @@ export default function MenuDrawer({ open, onClose, categories, activeCategory, 
               {visibleCategories.map(category => { const cover = getCategoryCover(category); return <button type="button" key={category.id} onClick={() => select(category.id)} aria-pressed={activeCategory === category.id} className={rowClass(activeCategory === category.id)}><span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white text-green-600">{cover ? <img src={cover} alt="" className="h-full w-full object-cover" /> : <Package size={22} />}</span><span className="min-w-0 flex-1 break-words">{category.name}</span><ChevronRight size={18} className="shrink-0" /></button>; })}
             </div></section>
             <footer className="mt-5 space-y-1 border-t border-gray-100 pt-4">
-              {isPublicDemo() ? <><button type="button" onClick={demoUnavailable} className={`${footerClass} w-full`}><Heart size={22} /><span className="flex-1 text-left">Favoritos</span><ChevronRight size={18} /></button><button type="button" onClick={demoUnavailable} className={`${footerClass} w-full`}><UserRound size={22} /><span className="flex-1 text-left">Minha Conta</span><ChevronRight size={18} /></button></> : <><Link to="/favoritos" onClick={onClose} className={footerClass}><Heart size={22} /><span className="flex-1">Favoritos</span><ChevronRight size={18} /></Link><Link to="/perfil" onClick={onClose} className={footerClass}><UserRound size={22} /><span className="flex-1">Minha Conta</span><ChevronRight size={18} /></Link></>}
+              {isPublicDemo() ? <><button type="button" onClick={demoUnavailable} className={`${footerClass} w-full`}><Heart size={22} /><span className="flex-1 text-left">Favoritos</span><ChevronRight size={18} /></button><button type="button" onClick={demoUnavailable} className={`${footerClass} w-full`}><UserRound size={22} /><span className="flex-1 text-left">Minha Conta</span><ChevronRight size={18} /></button></> : <><Link to={withStore('/favoritos', storeRef)} onClick={onClose} className={footerClass}><Heart size={22} /><span className="flex-1">Favoritos</span><ChevronRight size={18} /></Link><Link to={profilePath} onClick={onClose} className={footerClass}><UserRound size={22} /><span className="flex-1">Minha Conta</span><ChevronRight size={18} /></Link></>}
             </footer>
           </div>
         </motion.aside>
