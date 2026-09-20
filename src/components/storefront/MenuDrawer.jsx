@@ -4,6 +4,7 @@ import { getCategoryCover } from '@/lib/categoryCovers';
 import { X, Star, Tag, Flame, UserRound, Heart, House, ChefHat, ChevronRight, Package } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
+import { isPublicDemo } from '@/lib/presentationDemo';
 
 const quickSections = [
   { id: '__most_ordered__', label: 'Mais Pedidos', icon: Flame },
@@ -36,6 +37,7 @@ export default function MenuDrawer({ open, onClose, categories, activeCategory, 
     .sort((a,b) => Number(Boolean(b.is_featured)) - Number(Boolean(a.is_featured)) || Number(a.sort_order || 0) - Number(b.sort_order || 0));
   const sectionTitle = 'mb-3 text-[11px] font-bold uppercase tracking-[0.14em] text-gray-500';
   const footerClass = 'flex min-h-12 items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50';
+  const demoUnavailable = () => { onClose(); window.dispatchEvent(new CustomEvent('peddi-demo-action', { detail: 'Esta área exige uma conta de cliente e não faz parte da demonstração.' })); };
   return createPortal(
     <AnimatePresence>
       {open && <>
@@ -57,8 +59,7 @@ export default function MenuDrawer({ open, onClose, categories, activeCategory, 
               {visibleCategories.map(category => { const cover = getCategoryCover(category); return <button type="button" key={category.id} onClick={() => select(category.id)} aria-pressed={activeCategory === category.id} className={rowClass(activeCategory === category.id)}><span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white text-green-600">{cover ? <img src={cover} alt="" className="h-full w-full object-cover" /> : <Package size={22} />}</span><span className="min-w-0 flex-1 break-words">{category.name}</span><ChevronRight size={18} className="shrink-0" /></button>; })}
             </div></section>
             <footer className="mt-5 space-y-1 border-t border-gray-100 pt-4">
-              <Link to="/favoritos" onClick={onClose} className={footerClass}><Heart size={22} /><span className="flex-1">Favoritos</span><ChevronRight size={18} /></Link>
-              <Link to="/perfil" onClick={onClose} className={footerClass}><UserRound size={22} /><span className="flex-1">Minha Conta</span><ChevronRight size={18} /></Link>
+              {isPublicDemo() ? <><button type="button" onClick={demoUnavailable} className={`${footerClass} w-full`}><Heart size={22} /><span className="flex-1 text-left">Favoritos</span><ChevronRight size={18} /></button><button type="button" onClick={demoUnavailable} className={`${footerClass} w-full`}><UserRound size={22} /><span className="flex-1 text-left">Minha Conta</span><ChevronRight size={18} /></button></> : <><Link to="/favoritos" onClick={onClose} className={footerClass}><Heart size={22} /><span className="flex-1">Favoritos</span><ChevronRight size={18} /></Link><Link to="/perfil" onClick={onClose} className={footerClass}><UserRound size={22} /><span className="flex-1">Minha Conta</span><ChevronRight size={18} /></Link></>}
             </footer>
           </div>
         </motion.aside>

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { X, Gift, Star, Bell } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
+import { isPublicDemo } from '@/lib/presentationDemo';
 
 export default function SignupPopup({ store, user }) {
   const [visible, setVisible] = useState(false);
@@ -16,7 +17,7 @@ export default function SignupPopup({ store, user }) {
   const style = popup.style || 'modern'; // modern | minimal | fun
 
   // Only show if enabled and user is not logged in
-  const shouldShow = enabled && !user;
+  const shouldShow = enabled && !user && !isPublicDemo();
 
   useEffect(() => {
     if (!shouldShow) return;

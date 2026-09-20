@@ -18,6 +18,7 @@ import NotificationSounds from '@/components/NotificationSounds';
 import MobilePreview from '@/components/MobilePreview';
 import DemoNotice from '@/components/DemoNotice';
 import { AppNavigationTracker } from '@/components/navigation/SafeBackButton';
+import PublicDemoGuard from '@/components/PublicDemoGuard';
 
 const AuthenticatedApp = () => {
   const { user, isAuthenticated, isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -31,6 +32,7 @@ const AuthenticatedApp = () => {
   }
 
   if (location.pathname==='/admin' || location.pathname.startsWith('/admin/')) {
+    if (user?.demoMode === 'presentation') return <Navigate replace to="/loja?demo=1" />;
     if (!isAuthenticated || !['manager','peddi_admin'].includes(user?.role)) return <Navigate replace to={`/gestor/login?returnTo=${encodeURIComponent(location.pathname+location.search)}`}/>;
   }
 
@@ -90,6 +92,7 @@ function App() {
           <WishlistProvider>
             <Router>
               <AppNavigationTracker />
+              <PublicDemoGuard />
               <NotificationSounds />
               <ScrollToTop />
               <DemoNotice />

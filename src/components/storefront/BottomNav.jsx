@@ -3,17 +3,20 @@ import { Home, Search, ShoppingCart, ClipboardList, User } from 'lucide-react';
 import './Storefront.css';
 import { useCart } from '@/lib/CartContext';
 import { Link, useLocation } from 'react-router-dom';
+import { isPublicDemo } from '@/lib/presentationDemo';
 
 export default function BottomNav() {
   const { totalItems, setIsOpen } = useCart();
   const location = useLocation();
+  const publicDemo = isPublicDemo();
+  const unavailable = () => window.dispatchEvent(new CustomEvent('peddi-demo-action', { detail: 'Esta área exige uma conta de cliente e não faz parte da demonstração.' }));
 
   const navItems = [
     { icon: Home, label: 'Início', path: '/loja' },
     { icon: Search, label: 'Buscar', path: '/buscar' },
     { icon: ShoppingCart, label: 'Carrinho', action: () => setIsOpen(true), badge: totalItems },
-    { icon: ClipboardList, label: 'Pedidos', path: '/meus-pedidos' },
-    { icon: User, label: 'Perfil', path: '/perfil' },
+    { icon: ClipboardList, label: 'Pedidos', ...(publicDemo ? { action: unavailable } : { path: '/meus-pedidos' }) },
+    { icon: User, label: 'Perfil', ...(publicDemo ? { action: unavailable } : { path: '/perfil' }) },
   ];
 
   return (

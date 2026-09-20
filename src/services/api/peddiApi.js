@@ -31,14 +31,14 @@ async function refreshSession() {
 
 async function request(path, options = {}, retried = false) {
   const method = String(options.method || 'GET').toUpperCase();
-  if (isPresentationDemo() && !['GET', 'HEAD', 'OPTIONS'].includes(method) && !path.startsWith('/api/v1/auth/')) {
+  if (isPresentationDemo() && !['GET', 'HEAD', 'OPTIONS'].includes(method)) {
     simulateExternalAction('Ação simulada. Nenhuma informação foi enviada ou gravada fora desta sessão.');
     return { demo: true, temporary: true, deleted: 0 };
   }
   const response = await fetch(`${apiUrl}${path}`, {
     signal: AbortSignal.timeout(15000),
     ...options,
-    headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+    headers: { 'Content-Type': 'application/json', ...(isPresentationDemo() ? { 'X-Peddi-Demo': 'ephemeral' } : {}), ...(options.headers || {}) },
   });
   const body = await response.json().catch(() => ({}));
   if (response.status === 401 && options.headers?.Authorization && !retried && await refreshSession()) {

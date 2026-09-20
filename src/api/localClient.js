@@ -1,8 +1,10 @@
 import { peddiApi, saveSession } from '@/services/api/peddiApi';
-import { demoCreate, demoDelete, demoList, demoUpdate, isPresentationDemo, resetPresentationDemo } from '@/lib/presentationDemo';
+import { demoCreate, demoDelete, demoList, demoUpdate, isPresentationDemo, isPublicDemo, resetPresentationDemo } from '@/lib/presentationDemo';
 
 let registration;
+let demoVisitor;
 const visitor = () => {
+  if (isPublicDemo()) return demoVisitor ||= crypto.randomUUID();
   let value = localStorage.getItem('peddi_visitor');
   if (!value) { value = crypto.randomUUID(); localStorage.setItem('peddi_visitor', value); }
   return value;

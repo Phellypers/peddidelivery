@@ -14,6 +14,7 @@ authRouter.post('/auth/login', async (request, response) => {
   const result = await query<{ id: string; email: string; name: string; role: string; business_id: string | null; store_id: string | null; password_hash: string }>('SELECT id, email, name, role, business_id, store_id, password_hash FROM users WHERE email = $1 AND active = true', [String(email).trim().toLowerCase()]);
   const user = result.rows[0];
   if (!user || !(await bcrypt.compare(String(password), user.password_hash))) return response.status(401).json({ error: 'Credenciais invalidas.' });
+  if (context==='manager' && user.email==='designer.demo@peddi.app') return response.status(403).json({error:'A demonstração pública permite testar somente o cardápio digital.'});
   if (context==='manager' && !['manager','peddi_admin'].includes(user.role)) return response.status(403).json({error:'Este acesso é exclusivo para gestores. Use o login do cliente ou do entregador.'});
   if (user.role==='courier' && !await courierHasAccess(user.id,user.store_id)) return response.status(403).json({error:'Cadastro de entregador não aprovado ou acesso desativado.'});
   if (context==='customer' && ['manager','peddi_admin'].includes(user.role)) return response.status(403).json({error:'Contas de gestor devem entrar pelo acesso exclusivo do painel.'});

@@ -25,6 +25,12 @@ if (process.env.NODE_ENV !== 'production') {
 app.use(cors({ origin: clientOrigins }));
 app.use(express.json({ limit: '1mb' }));
 app.use(rateLimit);
+app.use((request, response, next) => {
+  if (request.header('x-peddi-demo') === 'ephemeral' && !['GET', 'HEAD', 'OPTIONS'].includes(request.method)) {
+    return response.status(403).json({ error: 'O modo demonstração não grava dados reais.' });
+  }
+  next();
+});
 app.use('/api/v1/admin', catalogRouter);
 app.use('/api/v1',courierRouter);
 app.use('/api/v1',courierApplicationRouter);

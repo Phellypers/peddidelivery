@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { peddiApi } from '@/services/api/peddiApi';
-import { resetPresentationDemo } from '@/lib/presentationDemo';
+import { isPublicDemo, resetPresentationDemo } from '@/lib/presentationDemo';
 
 const AuthContext = createContext();
 
@@ -15,6 +15,15 @@ export const AuthProvider = ({ children }) => {
 
   const checkAppState = async () => {
     setAuthError(null);
+    if (isPublicDemo()) {
+      localStorage.removeItem('peddi_access_token');
+      localStorage.removeItem('peddi_refresh_token');
+      setUser(null);
+      setIsAuthenticated(false);
+      setIsLoadingAuth(false);
+      setAuthChecked(true);
+      return;
+    }
     const token = localStorage.getItem('peddi_access_token');
     if (token) {
       try {

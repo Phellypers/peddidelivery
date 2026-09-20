@@ -1,6 +1,7 @@
 export const PRESENTATION_DEMO_EMAIL = 'designer.demo@peddi.app';
 
 const collections = new Map();
+let publicDemo = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('demo') === '1';
 
 const clone = value => value == null ? value : structuredClone(value);
 
@@ -16,7 +17,21 @@ function tokenPayload() {
 }
 
 export function isPresentationDemo() {
-  return tokenPayload()?.demoMode === 'presentation';
+  return publicDemo || tokenPayload()?.demoMode === 'presentation';
+}
+
+export function isPublicDemo() {
+  return publicDemo;
+}
+
+export function startPublicDemo() {
+  publicDemo = true;
+  collections.clear();
+}
+
+export function stopPublicDemo() {
+  publicDemo = false;
+  collections.clear();
 }
 
 export function resetPresentationDemo() {

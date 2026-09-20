@@ -101,9 +101,9 @@ export default function Landing() {
             <button onClick={() => setShowForm(true)} className="bg-primary text-white px-8 py-3.5 rounded-2xl font-bold text-sm hover:bg-primary/90 transition-colors flex items-center justify-center gap-2">
               Criar minha loja grátis <ArrowRight size={16} />
             </button>
-            <Link to="/loja" className="border border-gray-200 text-gray-700 px-8 py-3.5 rounded-2xl font-bold text-sm hover:bg-gray-50 transition-colors">
+            <a href="/loja?demo=1" className="border border-gray-200 text-gray-700 px-8 py-3.5 rounded-2xl font-bold text-sm hover:bg-gray-50 transition-colors">
               Ver demonstração
-            </Link>
+            </a>
           </div>
         </motion.div>
         <motion.div initial={{ opacity: 0, x: 24 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.15 }}>

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { peddiApi } from '@/services/api/peddiApi';
 import { useAuth } from '@/lib/AuthContext';
+import { isPublicDemo, stopPublicDemo } from '@/lib/presentationDemo';
 
 export default function DemoNotice() {
   const { pathname } = useLocation();
@@ -21,10 +22,11 @@ export default function DemoNotice() {
     window.addEventListener('peddi-demo-action', action);
     return () => { window.removeEventListener('peddi-api-error', failed); window.removeEventListener('peddi-demo-email', email); window.removeEventListener('peddi-demo-action', action); };
   }, []);
-  const presentation = user?.demoMode === 'presentation';
+  const publicDemo = isPublicDemo();
+  const presentation = publicDemo || user?.demoMode === 'presentation';
   if (!demo && !error && !presentation) return null;
   return <div className={`relative z-[60] border-b px-4 py-2 text-xs ${presentation ? 'border-amber-200 bg-amber-50 text-amber-900' : 'border-blue-200 bg-blue-50 text-blue-900'}`}>
-    {presentation && <p className="font-medium">Modo apresentação: explore e altere livremente. Nenhuma mudança desta sessão será gravada no banco ou enviada para serviços externos.</p>}
+    {presentation && <div className="flex items-center justify-between gap-3"><p className="font-medium">Modo demonstração: teste o cardápio livremente. Nada desta sessão será gravado.</p>{publicDemo&&<button type="button" className="shrink-0 rounded-lg border border-amber-300 px-3 py-1 font-semibold" onClick={()=>{stopPublicDemo();window.location.href='/';}}>Sair da demonstração</button>}</div>}
     {actionMessage && <p role="status" className="mt-1">{actionMessage} <button type="button" onClick={() => setActionMessage('')} className="ml-2 underline">Fechar</button></p>}
     {demo && <p>Teste local: cadastros salvos no PostgreSQL. Conta gestor demo sem expiração. Emails são simulados; pagamentos, WhatsApp e Google dependem de integração. Código de confirmação local: 000000.</p>}
     {emailMessage && <p role="status">{emailMessage}</p>}

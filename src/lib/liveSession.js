@@ -1,4 +1,5 @@
 import { base44 } from '@/api/base44Client';
+import { isPresentationDemo } from '@/lib/presentationDemo';
 
 const SESSION_KEY = 'peddi_live_session_id';
 const RECORD_KEY = 'peddi_live_record_id';
@@ -8,6 +9,7 @@ const STAGE_KEY = 'peddi_live_stage';
 const STAGE_ORDER = ['navegando', 'interessado', 'carrinho', 'checkout', 'concluida'];
 
 function getSessionId() {
+  if (isPresentationDemo()) return 'demo_' + Math.random().toString(36).slice(2, 10);
   let id = sessionStorage.getItem(SESSION_KEY);
   if (!id) {
     id = 's_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
@@ -34,6 +36,7 @@ async function getUserInfo() {
 
 let pending = Promise.resolve();
 export function emitLiveEvent(stage, extra = {}, options = {}) {
+  if (isPresentationDemo()) return Promise.resolve({ demo: true, temporary: true });
   // Serialize writes from the same tab so product/cart effects share one session.
   pending = pending.then(() => writeLiveEvent(stage, extra, options));
   return pending;

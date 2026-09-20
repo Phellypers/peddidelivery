@@ -24,6 +24,7 @@ import BottomNav from '@/components/storefront/BottomNav';
 import '@/components/storefront/Storefront.css';
 import { getStoreTheme } from '@/lib/storeTheme';
 import { getBannerProductIds } from '@/lib/bannerProducts';
+import { isPublicDemo } from '@/lib/presentationDemo';
 
 const CAT_BADGE_COLORS = {
   red: 'bg-red-500', green: 'bg-green-500', orange: 'bg-orange-500',
@@ -50,6 +51,8 @@ export default function Home() {
   const [activeBanner, setActiveBanner] = useState(null);
 
   const { user } = useAuth();
+  const publicDemo = isPublicDemo();
+  const demoAccountNotice = () => window.dispatchEvent(new CustomEvent('peddi-demo-action', { detail: 'Login, notificações e atendimento não gravam dados no modo demonstração.' }));
 
   const loadData = useCallback(() => {
     return loadPublicCatalog().then(({ store: currentStore, categories: cats, products: prods }) => {
@@ -196,7 +199,7 @@ export default function Home() {
         <header className="peddi-store-header">
           <div className="peddi-store-orange">
             <button type="button" aria-label="Abrir menu do cardápio" onClick={() => setMenuOpen(true)}><AlignJustify size={27} /></button>
-            <div className="flex items-center gap-3">{user ? <button type="button" aria-label="Conversar com a loja" onClick={() => setChatOpen(true)}><MessageCircle size={27} /></button> : <Link to="/login?returnTo=/loja" aria-label="Entrar para conversar com a loja" className="flex h-11 w-11 items-center justify-center"><MessageCircle size={27} /></Link>}{user ? <NotificationBell /> : <Link to="/login?returnTo=/loja" aria-label="Entrar para ver notificações" className="flex h-11 w-11 items-center justify-center"><Bell size={27} /></Link>}</div>
+            <div className="flex items-center gap-3">{publicDemo ? <><button type="button" aria-label="Chat indisponível na demonstração" onClick={demoAccountNotice} className="flex h-11 w-11 items-center justify-center"><MessageCircle size={27} /></button><button type="button" aria-label="Notificações indisponíveis na demonstração" onClick={demoAccountNotice} className="flex h-11 w-11 items-center justify-center"><Bell size={27} /></button></> : <>{user ? <button type="button" aria-label="Conversar com a loja" onClick={() => setChatOpen(true)}><MessageCircle size={27} /></button> : <Link to="/login?returnTo=/loja" aria-label="Entrar para conversar com a loja" className="flex h-11 w-11 items-center justify-center"><MessageCircle size={27} /></Link>}{user ? <NotificationBell /> : <Link to="/login?returnTo=/loja" aria-label="Entrar para ver notificações" className="flex h-11 w-11 items-center justify-center"><Bell size={27} /></Link>}</>}</div>
           </div>
           <div className="peddi-store-profile">
             <div className="peddi-store-logo"><StoriesRing store={store} isAdmin={false} onUpdateStore={setStore} /></div>

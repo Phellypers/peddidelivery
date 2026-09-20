@@ -19,6 +19,8 @@ test('manager login rejects customer accounts and administrative APIs remain pro
       const response=await fetch(base+'/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password,context})});
       return {status:response.status,body:await response.json()};
     };
+    const demoWrite=await fetch(base+'/auth/login',{method:'POST',headers:{'Content-Type':'application/json','X-Peddi-Demo':'ephemeral'},body:JSON.stringify({email:'nobody@example.com',password:'not-used'})});
+    assert.equal(demoWrite.status,403);
     const customer=users[0];
     assert.equal((await login(customer.email,'manager')).status,403);
     assert.equal((await query('SELECT count(*) FROM refresh_tokens WHERE user_id=$1',[customer.id])).rows[0].count,'0');

@@ -28,6 +28,7 @@ export function blockPresentationDemoWrites(request: AuthRequest, response: Resp
 
 export function requireRoles(...roles: string[]) {
   return (request: AuthRequest, response: Response, next: NextFunction) => {
+    if (request.auth?.demoMode === 'presentation' && ['manager','peddi_admin'].includes(request.auth.role)) return response.status(403).json({ error: 'A demonstração pública não libera acesso ao painel do gestor.' });
     if (!request.auth || !roles.includes(request.auth.role)) return response.status(403).json({ error: 'Perfil sem permissao.' });
     next();
   };
