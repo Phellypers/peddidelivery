@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { productService, ingredientService } from '@/services/api/catalog';
 import { calculateRecipeItemCost, calculateRecipeCost, UNITS, UNIT_LABELS } from '@/lib/recipeCost';
-import { X, Plus, Trash2, Loader2, ImageIcon } from 'lucide-react';
+import { X, Plus, Trash2, Loader2, ImageIcon, ArrowLeft } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { ensureBannerIds, getBannerProductIds, withBannerProductIds } from '@/lib/bannerProducts';
 
@@ -35,7 +35,7 @@ const emptyCustomField = () => ({ label: '', type: 'text', options: [], required
 const emptyVariation = () => ({ name: '', options: [{ label: '', price_modifier: 0 }] });
 const emptyAddon = () => ({ name: '', price: 0, max_qty: 1 });
 
-export default function ProductForm({ product, categories, onClose, onSave }) {
+export default function ProductForm({ product, categories, onClose, onSave, page = false }) {
   const [tab, setTab] = useState('basic');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -46,14 +46,14 @@ export default function ProductForm({ product, categories, onClose, onSave }) {
 
   useEffect(() => {
     const priorOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
+    if (!page) document.body.style.overflow = 'hidden';
     const handleKeyDown = event => { if (event.key === 'Escape' && !saving && !uploadingImg) onClose(); };
     window.addEventListener('keydown', handleKeyDown);
     return () => {
       document.body.style.overflow = priorOverflow;
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [onClose, saving, uploadingImg]);
+  }, [onClose, saving, uploadingImg, page]);
 
   const [form, setForm] = useState(() => {
     const draft = sessionStorage.getItem('peddi_product_draft');
@@ -281,35 +281,40 @@ export default function ProductForm({ product, categories, onClose, onSave }) {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      data-peddi-modal="product" className="fixed inset-0 z-50 flex items-stretch justify-center bg-black/50 backdrop-blur-sm sm:items-center sm:p-4"
+      data-peddi-modal={page ? undefined : 'product'} className={page ? 'w-full' : 'fixed inset-0 z-50 flex items-stretch justify-center bg-black/50 backdrop-blur-sm sm:items-center sm:p-4'}
     >
       <motion.div
         initial={{ y: 30, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         exit={{ y: 30, opacity: 0 }}
-        role="dialog"
-        aria-modal="true"
+        role={page ? undefined : 'dialog'}
+        aria-modal={page ? undefined : 'true'}
         aria-labelledby="product-form-title"
-        className="peddi-product-form flex h-[100dvh] w-full flex-col overflow-hidden bg-white shadow-2xl sm:h-[min(900px,calc(100dvh-32px))] sm:max-w-4xl sm:rounded-3xl sm:border sm:border-gray-100"
+        className={page ? 'peddi-product-form w-full' : 'peddi-product-form flex h-[100dvh] w-full flex-col overflow-hidden bg-white shadow-2xl sm:h-[min(900px,calc(100dvh-32px))] sm:max-w-4xl sm:rounded-3xl sm:border sm:border-gray-100'}
       >
         {/* Header */}
-        <div className="peddi-modal-header flex flex-shrink-0 items-center justify-between gap-3 border-b border-gray-100 px-4 py-3 sm:px-6 sm:py-4">
-          <div className="min-w-0">
+        <div className={`peddi-modal-header flex flex-shrink-0 items-center justify-between gap-3 px-4 py-3 sm:px-6 sm:py-4 ${page ? '' : 'border-b border-gray-100'}`}>
+          <div className="flex min-w-0 items-center gap-3">
+            {page && <button type="button" onClick={onClose} aria-label="Voltar para produtos" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-gray-200 bg-white hover:bg-gray-50"><ArrowLeft size={19}/></button>}
+            {page && product?.images?.[0] && <img src={product.images[0]} alt="" className="hidden h-14 w-14 rounded-xl object-cover sm:block"/>}
+            <div className="min-w-0">
             <h2 id="product-form-title" className="truncate font-heading text-lg font-bold text-gray-900 sm:text-xl">{product ? 'Editar Produto' : 'Novo Produto'}</h2>
             <p className="mt-0.5 truncate text-xs text-gray-500">{product?.name || 'Cadastre as informações para publicar no cardápio'}</p>
+            </div>
           </div>
           <div className="flex flex-shrink-0 items-center gap-2">
-            <span className="hidden rounded-full bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary sm:inline">Etapa {activeTabIndex + 1} de {TABS.length}</span>
-            <button type="button" aria-label="Fechar cadastro de produto" onClick={onClose} className="flex h-11 w-11 items-center justify-center rounded-xl text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900">
+            {!page && <span className="hidden rounded-full bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary sm:inline">Etapa {activeTabIndex + 1} de {TABS.length}</span>}
+            <button type="button" aria-label="Fechar cadastro de produto" onClick={onClose} className={`${page ? 'hidden' : 'flex'} h-11 w-11 items-center justify-center rounded-xl text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900`}>
               <X size={20} />
             </button>
           </div>
         </div>
 
-        <div className="h-1 flex-shrink-0 bg-gray-100"><div className="h-full bg-primary transition-[width] duration-300" style={{ width: `${((activeTabIndex + 1) / TABS.length) * 100}%` }} /></div>
+        {!page && <div className="h-1 flex-shrink-0 bg-gray-100"><div className="h-full bg-primary transition-[width] duration-300" style={{ width: `${((activeTabIndex + 1) / TABS.length) * 100}%` }} /></div>}
 
         {/* Tabs */}
-        <div role="tablist" aria-label="Seções do produto" className="peddi-product-tabs flex flex-shrink-0 gap-1 overflow-x-auto border-b border-gray-100 px-3 sm:px-5">
+        <div className={page ? 'grid gap-4 lg:grid-cols-[230px_minmax(0,1fr)]' : ''}>
+        <div role="tablist" aria-label="Seções do produto" className={page ? 'peddi-product-tabs flex gap-1 overflow-x-auto rounded-2xl border border-gray-200 bg-white p-3 lg:flex-col lg:overflow-visible' : 'peddi-product-tabs flex flex-shrink-0 gap-1 overflow-x-auto border-b border-gray-100 px-3 sm:px-5'}>
           {TABS.map(t => (
             <button
               key={t.id}
@@ -318,10 +323,10 @@ export default function ProductForm({ product, categories, onClose, onSave }) {
               aria-selected={tab === t.id}
               aria-controls={`product-panel-${t.id}`}
               onClick={() => setTab(t.id)}
-              className={`flex-shrink-0 whitespace-nowrap px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+              className={`flex-shrink-0 whitespace-nowrap rounded-xl px-4 py-3 text-left text-sm font-medium transition-colors ${
                 tab === t.id
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-gray-500 hover:text-gray-800'
+                  ? 'bg-primary/10 text-primary'
+                  : 'text-gray-500 hover:bg-gray-50 hover:text-gray-800'
               }`}
             >
               {t.label}
@@ -329,10 +334,11 @@ export default function ProductForm({ product, categories, onClose, onSave }) {
           ))}
         </div>
 
-        <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+        <form onSubmit={handleSubmit} className={page ? 'flex min-w-0 flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white' : 'flex min-h-0 flex-1 flex-col'}>
           {error && <p role="alert" className="px-6 pt-4 text-sm text-red-600">{error}</p>}
           {sessionExpired && <a href="/gestor/login?returnTo=/admin/catalogo" className="block px-6 py-2 text-sm text-primary underline">Entrar novamente e recuperar este cadastro</a>}
-          <div id={`product-panel-${tab}`} role="tabpanel" className="peddi-product-form-content min-h-0 flex-1 space-y-5 overflow-y-auto p-4 sm:p-6">
+          {page && <div className="border-b border-gray-100 px-5 py-4"><h3 className="font-heading text-lg font-bold text-gray-900">{TABS[activeTabIndex]?.label}</h3><p className="text-sm text-gray-500">Edite somente os dados desta seção.</p></div>}
+          <div id={`product-panel-${tab}`} role="tabpanel" className={`peddi-product-form-content min-h-0 flex-1 space-y-5 p-4 sm:p-6 ${page ? '' : 'overflow-y-auto'}`}>
 
             {/* ── TAB: Informações ── */}
             {tab === 'basic' && (
@@ -865,6 +871,7 @@ export default function ProductForm({ product, categories, onClose, onSave }) {
             </button>
           </div>
         </form>
+        </div>
       </motion.div>
     </motion.div>
   );

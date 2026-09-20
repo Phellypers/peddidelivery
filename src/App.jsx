@@ -1,6 +1,6 @@
 import { Suspense } from 'react';
 import {
-  PageNotFound, Login, Register, ForgotPassword, ResetPassword, Landing, Home, DelivererMap, DelivererApp, DelivererRegister, ProductDetail, Checkout, Favorites, SearchPage, CustomerProfile, AdminLayout, Dashboard, Catalog, Estoque, Orders, Categories, Promotions, StoreSettings, Deliverers, Customers, Marketing, Banners, PDV, Financeiro, Comments, ChatAdmin, MyPeddi, Tables, MyOrders, MyData, OrderTracking, OAuthConsent
+  PageNotFound, Login, Register, ForgotPassword, ResetPassword, Landing, Home, DelivererMap, DelivererApp, DelivererRegister, ProductDetail, Checkout, Favorites, SearchPage, CustomerProfile, AdminLayout, Dashboard, Catalog, Estoque, Orders, Categories, Promotions, StoreSettings, Deliverers, Customers, Marketing, Banners, PDV, Financeiro, Comments, ChatAdmin, MyPeddi, Tables, MyOrders, MyData, OrderTracking, OAuthConsent, HelpCenter
 } from '@/routes/pages';
 import PageLoading from '@/components/PageLoading';
 import { ThemeProvider } from 'next-themes';
@@ -76,6 +76,7 @@ const AuthenticatedApp = () => {
         <Route path="entregadores" element={<Deliverers />} />
         <Route path="mapa-entregadores" element={<DelivererMap />} />
         <Route path="configuracoes" element={<StoreSettings />} />
+        <Route path="ajuda" element={<HelpCenter />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>

@@ -1,11 +1,12 @@
 import React, { Suspense, useState } from 'react';
 import PageLoading from '@/components/PageLoading';
 import { Link, Outlet, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Package, ShoppingCart, Tag, FolderOpen, Settings, Menu, X, ChevronLeft, Bike, Users, Megaphone, Image, Monitor, Wallet, UtensilsCrossed, MapPin, MessageSquare, MessageCircle, Boxes } from 'lucide-react';
+import { LayoutDashboard, Package, ShoppingCart, Tag, FolderOpen, Settings, Menu, X, ChevronLeft, Bike, Users, Megaphone, Image, Monitor, Wallet, UtensilsCrossed, MapPin, MessageSquare, MessageCircle, Boxes, Headphones, ExternalLink } from 'lucide-react';
 import NewOrderNotifier from '@/components/admin/NewOrderNotifier';
 import ChatBadge from '@/components/admin/ChatBadge';
 import ManagerOnboarding from '@/components/admin/ManagerOnboarding';
 import peddiLogo from '../../../Logo Peddi/logo3.png';
+import AdminNotifications from '@/components/admin/AdminNotifications';
 
 const navItems = [
   { icon: Settings, label: 'Minha PEDDI', path: '/admin/minha-peddi' },
@@ -73,6 +74,7 @@ export default function AdminLayout() {
         </nav>
 
         <div className="shrink-0 border-t border-border p-3 pb-safe">
+          <div className="mb-2 rounded-2xl border border-primary/10 bg-primary/5 p-3"><div className="flex gap-3"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary"><Headphones size={19}/></span><div><strong className="text-sm">Central de ajuda</strong><p className="mt-1 text-xs leading-5 text-muted-foreground">Tutoriais, dúvidas frequentes e orientações.</p></div></div><Link to="/admin/ajuda" onClick={()=>setSidebarOpen(false)} className="mt-3 flex min-h-10 items-center justify-center gap-2 rounded-xl border border-primary bg-white text-xs font-bold text-primary hover:bg-primary hover:text-white">Abrir central de ajuda <ExternalLink size={14}/></Link></div>
           <Link to="/loja" className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors">
             <ChevronLeft size={18} />
             Ver vitrine
@@ -86,6 +88,7 @@ export default function AdminLayout() {
             <Menu size={20} />
           </button>
           <div className="flex-1" />
+          <AdminNotifications />
           <Link to="/loja" className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1">
             <ChevronLeft size={14} /> Ver vitrine
           </Link>

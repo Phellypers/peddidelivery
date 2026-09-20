@@ -37,3 +37,4 @@ export const MyOrders = lazy(() => import('@/pages/MyOrders'));
 export const MyData = lazy(() => import('@/pages/MyData'));
 export const OrderTracking = lazy(() => import('@/pages/OrderTracking'));
 export const OAuthConsent = lazy(() => import('@/pages/OAuthConsent'));
+export const HelpCenter = lazy(() => import('@/pages/admin/HelpCenter'));

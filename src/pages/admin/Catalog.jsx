@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { productService, loadAdminCatalog } from '@/services/api/catalog';
 import { Plus, Search, MoreVertical, Edit, Trash2, Copy, Eye, EyeOff, Star, Loader2, Pause, Play, CheckSquare, Square, Grid2X2 } from 'lucide-react';
-import { AnimatePresence } from 'framer-motion';
 import ProductForm from '@/components/admin/ProductForm';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { useSearchParams } from 'react-router-dom';
 
 function ProductActions({ product, onEdit, onDuplicate, onPause, onPublish, onDelete, compact = false }) {
   return (
@@ -26,6 +26,7 @@ function ProductActions({ product, onEdit, onDuplicate, onPause, onPublish, onDe
 }
 
 export default function Catalog() {
+  const [urlParams, setUrlParams] = useSearchParams();
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -43,6 +44,11 @@ export default function Catalog() {
       const data = await loadAdminCatalog();
       setProducts(data.products);
       setCategories(data.categories);
+      const editId = urlParams.get('edit');
+      if (editId) {
+        const match = data.products.find(item => item.id === editId);
+        if (match) { setEditingProduct(match); setShowForm(true); }
+      }
     } catch (err) {
       setError(err.message || 'Não foi possível carregar os produtos.');
     } finally {
@@ -98,6 +104,10 @@ export default function Catalog() {
   const getCategoryName = (catId) => categories.find(c => c.id === catId)?.name || '';
   const toggleSelect = (id) => setSelected(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   const allFilteredSelected = filteredProducts.length > 0 && filteredProducts.every(p => selected.includes(p.id));
+
+  if (showForm) return <ProductForm page product={editingProduct} categories={categories}
+    onClose={() => { sessionStorage.removeItem('peddi_product_draft'); setShowForm(false); setEditingProduct(null); if(urlParams.has('edit')){urlParams.delete('edit');setUrlParams(urlParams,{replace:true});} }}
+    onSave={() => { setShowForm(false); setEditingProduct(null); if(urlParams.has('edit')){urlParams.delete('edit');setUrlParams(urlParams,{replace:true});} loadData(); }} />;
 
   return (
     <div className="space-y-6">
@@ -265,17 +275,6 @@ export default function Catalog() {
           )}
         </div>
       )}
-
-      <AnimatePresence>
-        {showForm && (
-          <ProductForm
-            product={editingProduct}
-            categories={categories}
-            onClose={() => { sessionStorage.removeItem('peddi_product_draft'); setShowForm(false); setEditingProduct(null); }}
-            onSave={() => { setShowForm(false); setEditingProduct(null); loadData(); }}
-          />
-        )}
-      </AnimatePresence>
 
       <AlertDialog open={Boolean(deleteCandidate)} onOpenChange={open => { if (!open) setDeleteCandidate(null); }}>
         <AlertDialogContent>

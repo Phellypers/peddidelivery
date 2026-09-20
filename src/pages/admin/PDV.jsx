@@ -14,6 +14,8 @@ const MONTHS = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov
 export default function PDV() {
   const [customers, setCustomers] = useState([]);
   const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [categoryFilter, setCategoryFilter] = useState('');
   const [loading, setLoading] = useState(true);
 
   const [customerSearch, setCustomerSearch] = useState('');
@@ -46,10 +48,12 @@ export default function PDV() {
       base44.entities.CustomerProfile.list('-total_orders'),
       base44.entities.Product.list('-created_date'),
       base44.entities.Table.list('sort_order'),
-    ]).then(async ([custs, prods, tbls]) => {
+      base44.entities.Category.filter({is_active:true},'sort_order'),
+    ]).then(async ([custs, prods, tbls, cats]) => {
       setCustomers(custs);
       setProducts(prods);
       setTables(tbls);
+      setCategories(cats);
       const urlParams = new URLSearchParams(window.location.search);
       const tableParam = urlParams.get('table');
       const orderParam = urlParams.get('order');
@@ -103,7 +107,7 @@ export default function PDV() {
   };
 
   const filteredProducts = products.filter(p =>
-    !productSearch || p.name?.toLowerCase().includes(productSearch.toLowerCase())
+    (!productSearch || p.name?.toLowerCase().includes(productSearch.toLowerCase())) && (!categoryFilter || p.category_ids?.includes(categoryFilter))
   );
 
   const addToCart = (product) => {
@@ -302,7 +306,7 @@ export default function PDV() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1.08fr)_minmax(420px,.92fr)]">
         {/* Left: Customer + Products */}
         <div className="space-y-4">
           {/* Customer section */}
@@ -372,20 +376,21 @@ export default function PDV() {
 
           {/* Product search + list */}
           <div className="bg-card rounded-2xl border border-border/50 p-4 space-y-3">
-            <h2 className="font-heading font-semibold text-sm">Adicionar produtos</h2>
+            <h2 className="font-heading font-semibold text-sm">Produtos</h2>
             <div className="relative">
               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
               <input value={productSearch} onChange={e => setProductSearch(e.target.value)} placeholder="Buscar produto..." className={inp + ' pl-9'} />
             </div>
-            <div className="max-h-64 overflow-y-auto space-y-1">
+            <div className="flex gap-2 overflow-x-auto pb-1"><button onClick={()=>setCategoryFilter('')} className={`rounded-full px-4 py-2 text-xs font-semibold ${!categoryFilter?'bg-primary text-white':'bg-gray-100 text-gray-600'}`}>Todos</button>{categories.map(category=><button key={category.id} onClick={()=>setCategoryFilter(category.id)} className={`whitespace-nowrap rounded-full px-4 py-2 text-xs font-semibold ${categoryFilter===category.id?'bg-primary text-white':'bg-gray-100 text-gray-600'}`}>{category.name}</button>)}</div>
+            <div className="grid max-h-[520px] grid-cols-1 gap-3 overflow-y-auto md:grid-cols-2">
               {filteredProducts.map(p => (
-                <button key={p.id} onClick={() => addToCart(p)} className="flex items-center gap-2 w-full p-2 rounded-xl hover:bg-gray-50 transition-colors text-left">
-                  <img src={p.images?.[0] || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=60'} alt="" className="w-9 h-9 rounded-lg object-cover flex-shrink-0" />
+                <button key={p.id} onClick={() => addToCart(p)} className="flex items-center gap-3 rounded-xl border border-gray-200 bg-white p-3 text-left transition hover:border-primary/40 hover:shadow-sm">
+                  <img src={p.images?.[0] || '/vite.svg'} alt="" className="h-16 w-16 flex-shrink-0 rounded-xl bg-gray-50 object-cover" />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{p.name}</p>
-                    <p className="text-xs text-primary font-bold">R$ {(p.promo_price || p.price)?.toFixed(2)}</p>
+                    <p className="truncate text-sm font-bold">{p.name}</p><p className="mt-1 line-clamp-2 text-xs leading-5 text-gray-500">{p.description}</p>
+                    <p className="mt-1 text-sm text-primary font-bold">R$ {(p.promo_price || p.price)?.toFixed(2)}</p>
                   </div>
-                  <Plus size={16} className="text-primary flex-shrink-0" />
+                  <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-white"><Plus size={17}/></span>
                 </button>
               ))}
               {filteredProducts.length === 0 && <p className="text-sm text-gray-400 text-center py-4">Nenhum produto encontrado</p>}

@@ -9,7 +9,7 @@ import { courierView } from '../couriers/data.js';
 import { validateDeliveryAddress } from '../../../../src/lib/deliveryArea.js';
 import { getSplitPaymentStatus } from '../../../../src/lib/splitPayment.js';
 
-export const entityNames = new Set(['Account','Campaign','CashbackRule','Category','ChatMessage','City','Coupon','CustomerProfile','Deliverer','DelivererRating','Ingredient','LiveSession','Notification','Order','Product','PromoMessage','ReactivationCampaign','Review','ReviewComment','Store','SupportTicket','Table','UpsellGroup','User']);
+export const entityNames = new Set(['Account','Campaign','CashbackRule','Category','ChatMessage','City','Coupon','CustomerProfile','Deliverer','DelivererRating','HelpArticle','Ingredient','LiveSession','Notification','Order','Product','PromoMessage','ReactivationCampaign','Review','ReviewComment','Store','SupportTicket','Table','UpsellGroup','User']);
 const schemaCache = new Map<string, Record<string, any>>();
 export function defaults(entity: string) {
   if (!schemaCache.has(entity)) {
