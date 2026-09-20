@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Plus, Trash2, Upload, Loader2, ToggleLeft, ToggleRight, Link, Save } from 'lucide-react';
 import { ensureBannerIds, getBannerProductIds, withBannerProductIds } from '@/lib/bannerProducts';
+import PromoMessageManager from '@/components/admin/PromoMessageManager';
 
 export default function Banners() {
   const [store, setStore] = useState(null);
@@ -172,6 +173,7 @@ export default function Banners() {
           {saving ? <Loader2 size={18} className="animate-spin" /> : <><Save size={18} /> Salvar todos os banners</>}
         </button>
       )}
+      <PromoMessageManager />
     </div>
   );
 }

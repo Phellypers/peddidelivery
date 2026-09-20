@@ -236,93 +236,12 @@ function WhatsAppTab() {
   );
 }
 
-// ─── Tab: Banner Header ──────────────────────────────────────────────────────────
-function PromoBannerTab() {
-  const [messages, setMessages] = useState([]);
-  const [showForm, setShowForm] = useState(false);
-  const [editMsg, setEditMsg] = useState(null);
-  const [form, setForm] = useState({ text: '', is_active: true, start_date: '', end_date: '', sort_order: 0 });
-
-  const load = () => base44.entities.PromoMessage.list('sort_order').then(setMessages);
-  useEffect(() => { load(); }, []);
-
-  const save = async () => {
-    if (editMsg) await base44.entities.PromoMessage.update(editMsg.id, form);
-    else await base44.entities.PromoMessage.create(form);
-    setShowForm(false); setEditMsg(null);
-    setForm({ text: '', is_active: true, start_date: '', end_date: '', sort_order: 0 });
-    load();
-  };
-
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">Mensagens rotativas no topo do cardápio</p>
-        <button onClick={() => { setShowForm(true); setEditMsg(null); setForm({ text: '', is_active: true, start_date: '', end_date: '', sort_order: 0 }); }} className="flex items-center gap-1.5 px-3 py-2 bg-primary text-white rounded-xl text-sm font-bold">
-          <Plus size={15} /> Nova mensagem
-        </button>
-      </div>
-
-      {showForm && (
-        <div className="bg-muted/50 rounded-2xl p-5 space-y-3 border border-border">
-          <textarea value={form.text} onChange={e => setForm(p => ({ ...p, text: e.target.value }))} placeholder="Texto da mensagem promocional *" rows={2} className="w-full px-3 py-2.5 bg-white rounded-xl text-sm border border-border/50 focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none" />
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-xs text-muted-foreground mb-1 block">Início (opcional)</label>
-              <input type="date" value={form.start_date || ''} onChange={e => setForm(p => ({ ...p, start_date: e.target.value }))} className="w-full px-3 py-2.5 bg-white rounded-xl text-sm border border-border/50 focus:outline-none focus:ring-2 focus:ring-primary/20" />
-            </div>
-            <div>
-              <label className="text-xs text-muted-foreground mb-1 block">Fim (opcional)</label>
-              <input type="date" value={form.end_date || ''} onChange={e => setForm(p => ({ ...p, end_date: e.target.value }))} className="w-full px-3 py-2.5 bg-white rounded-xl text-sm border border-border/50 focus:outline-none focus:ring-2 focus:ring-primary/20" />
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <button onClick={save} disabled={!form.text} className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-primary text-white rounded-xl text-sm font-bold disabled:opacity-50">
-              <Save size={15} /> Salvar
-            </button>
-            <button onClick={() => { setShowForm(false); setEditMsg(null); }} className="px-4 py-2.5 bg-muted rounded-xl text-sm"><X size={15} /></button>
-          </div>
-        </div>
-      )}
-
-      <div className="space-y-2">
-        {messages.map(m => (
-          <div key={m.id} className="bg-card rounded-2xl border border-border/50 p-4 flex items-center gap-3">
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">{m.text}</p>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                {m.start_date && `De ${new Date(m.start_date).toLocaleDateString('pt-BR')}`}
-                {m.start_date && m.end_date && ' '}
-                {m.end_date && `até ${new Date(m.end_date).toLocaleDateString('pt-BR')}`}
-                {!m.start_date && !m.end_date && 'Sem prazo definido'}
-              </p>
-            </div>
-            <button onClick={() => base44.entities.PromoMessage.update(m.id, { is_active: !m.is_active }).then(load)}>
-              {m.is_active ? <ToggleRight size={26} className="text-green-500" /> : <ToggleLeft size={26} className="text-gray-300" />}
-            </button>
-            <button onClick={() => { setEditMsg(m); setForm({ text: m.text, is_active: m.is_active, start_date: m.start_date || '', end_date: m.end_date || '', sort_order: m.sort_order || 0 }); setShowForm(true); }} className="p-1.5 hover:bg-accent rounded-lg">
-              <Edit2 size={15} className="text-muted-foreground" />
-            </button>
-            <button onClick={() => base44.entities.PromoMessage.delete(m.id).then(load)} className="p-1.5 hover:bg-destructive/10 rounded-lg">
-              <Trash2 size={15} className="text-destructive" />
-            </button>
-          </div>
-        ))}
-        {messages.length === 0 && !showForm && (
-          <p className="text-center text-sm text-muted-foreground py-8">Nenhuma mensagem criada ainda</p>
-        )}
-      </div>
-    </div>
-  );
-}
-
 // ─── Main Marketing Page ──────────────────────────────────────────────────────
 const TABS = [
   { id: 'campaigns', label: 'Campanhas', icon: Gift },
   { id: 'dispatch', label: 'Disparos', icon: Send },
   { id: 'reactivation', label: 'Reativação', icon: UserCheck },
   { id: 'upsell', label: 'Upsell/Cross-sell', icon: ShoppingBag },
-  { id: 'banners', label: 'Banner Header', icon: Megaphone },
   { id: 'fidelity', label: 'Fidelidade', icon: Award },
   { id: 'automation', label: 'Automações', icon: Zap },
   { id: 'whatsapp', label: 'WhatsApp', icon: Megaphone },
@@ -408,7 +327,6 @@ export default function Marketing() {
 
       {tab === 'dispatch' && <MarketingDispatch />}
       {tab === 'upsell' && <UpsellTab products={products} />}
-      {tab === 'banners' && <PromoBannerTab />}
       {tab === 'fidelity' && <FidelityTab products={products} />}
       {tab === 'automation' && <AutomationTab />}
       {tab === 'reactivation' && <ReactivationTab />}
