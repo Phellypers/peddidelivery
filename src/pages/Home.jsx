@@ -59,13 +59,14 @@ export default function Home() {
   const demoAccountNotice = () => window.dispatchEvent(new CustomEvent('peddi-demo-action', { detail: 'Login, notificações e atendimento não gravam dados no modo demonstração.' }));
 
   const loadData = useCallback(() => {
-    return Promise.all([loadPublicCatalog(storeRef),base44.entities.Coupon.filter({is_active:true})]).then(([{ store: currentStore, categories: cats, products: prods },activePromotions]) => {
+    setLoading(true);
+    const catalogRequest=loadPublicCatalog(storeRef).then(({ store: currentStore, categories: cats, products: prods }) => {
       setStore(currentStore);
       setCategories(cats);
       setProducts(prods.filter(p => !p.is_paused));
-      setPromotions(activePromotions);
-      setLoading(false);
     });
+    const promotionRequest=base44.entities.Coupon.filter({is_active:true}).then(setPromotions).catch(()=>setPromotions([]));
+    return Promise.allSettled([catalogRequest,promotionRequest]).finally(()=>setLoading(false));
   }, [storeRef]);
 
   useEffect(() => {
