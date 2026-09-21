@@ -117,9 +117,10 @@ export default function Checkout() {
   const cityNotFound = addressValidation.reason === 'outside_area';
   const cityFee = deliveryArea?.delivery_fee_type === 'fixed' ? Number(deliveryArea.delivery_fee_value||0) : null;
 
-  const deliveryFee = form.deliveryMethod === 'delivery'
-    ? (cityFee !== null ? cityFee : (store?.free_shipping_above && subtotal >= store.free_shipping_above ? 0 : (store?.flat_delivery_fee || 6.90)))
-    : 0;
+  const regularDeliveryFee = form.deliveryMethod === 'delivery' ? (cityFee !== null ? cityFee : Number(store?.flat_delivery_fee || 6.90)) : 0;
+  const freeShippingDiscount = form.deliveryMethod === 'delivery' && cityFee === null && Number(store?.free_shipping_above||0)>0 && subtotal >= Number(store.free_shipping_above)
+    ? regularDeliveryFee : 0;
+  const deliveryFee = Math.max(0,regularDeliveryFee-freeShippingDiscount);
 
   const pixDiscount = (!form.splitPayment && form.paymentMethod === 'pix') ? (subtotal * (store?.pix_discount_percent || 5) / 100) : 0;
 
@@ -167,10 +168,16 @@ export default function Checkout() {
     });
   }
 
-  const originalTotal = subtotal + deliveryFee;
-  const discountsApplied = couponDiscount + pixDiscount + campaignDiscount;
+  const discountBreakdown = [
+    couponDiscount>0&&{key:'coupon',label:`Cupom ${appliedCoupon?.code||form.couponCode.toUpperCase()}`,value:couponDiscount},
+    pixDiscount>0&&{key:'pix',label:'Desconto Pix',value:pixDiscount},
+    campaignDiscount>0&&{key:'campaign',label:appliedCampaign?.name||'Promoção aplicada',value:campaignDiscount},
+    freeShippingDiscount>0&&{key:'shipping',label:'Frete grátis',value:freeShippingDiscount},
+  ].filter(Boolean);
+  const originalTotal = subtotal + regularDeliveryFee;
+  const discountsApplied = discountBreakdown.reduce((sum,benefit)=>sum+benefit.value,0);
   const total = Math.max(0, Math.round((originalTotal - discountsApplied) * 100) / 100);
-  const savings = originalTotal - total;
+  const savings = Math.round(discountsApplied*100)/100;
   const splitPaymentStatus = getSplitPaymentStatus(total, form.splitAmounts);
   const paymentIsValid = !form.splitPayment || splitPaymentStatus.isValid;
 
@@ -597,10 +604,7 @@ export default function Checkout() {
           </div>
           <div className="border-t border-border pt-3 space-y-2 text-sm">
             <div className="flex justify-between gap-3"><span className="text-muted-foreground">Subtotal dos produtos</span><span className="shrink-0 tabular-nums">{formatMoney(subtotal)}</span></div>
-            <div className="flex justify-between gap-3 text-green-600"><span>Descontos aplicados</span><span className="shrink-0 tabular-nums">{savings > 0 ? '-' : ''}{formatMoney(savings)}</span></div>
-            {couponDiscount > 0 && <div className="flex justify-between gap-3 text-xs text-muted-foreground"><span>Cupom</span><span className="shrink-0 tabular-nums">-{formatMoney(couponDiscount)}</span></div>}
-            {pixDiscount > 0 && <div className="flex justify-between gap-3 text-xs text-muted-foreground"><span>Desconto Pix</span><span className="shrink-0 tabular-nums">-{formatMoney(pixDiscount)}</span></div>}
-            {campaignDiscount > 0 && <div className="flex justify-between gap-3 text-xs text-muted-foreground"><span className="min-w-0 break-words">Campanha{appliedCampaign ? `: ${appliedCampaign.name}` : ''}</span><span className="shrink-0 tabular-nums">-{formatMoney(campaignDiscount)}</span></div>}
+            {discountBreakdown.map(benefit=><div key={benefit.key} className="flex justify-between gap-3 text-green-600"><span className="min-w-0 break-words">{benefit.label}</span><span className="shrink-0 tabular-nums">- {formatMoney(benefit.value)}</span></div>)}
             {form.deliveryMethod === 'delivery' && <div className="flex justify-between"><span className="text-muted-foreground">Taxa de entrega</span><span className="tabular-nums">{deliveryFee === 0 ? 'Grátis' : formatMoney(deliveryFee)}</span></div>}
             {savings > 0 && <div className="flex justify-between gap-3 text-muted-foreground"><span>Total antes dos descontos</span><span className="shrink-0 tabular-nums line-through">{formatMoney(originalTotal)}</span></div>}
             <div aria-live="polite" aria-atomic="true" className="flex justify-between gap-3 font-heading font-bold text-lg pt-2 border-t border-border">
