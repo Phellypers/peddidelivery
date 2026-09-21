@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useLocation, useParams } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { useCart } from '@/lib/CartContext';
 import { useWishlist } from '@/lib/WishlistContext';
@@ -13,10 +13,12 @@ import { useAuth } from '@/lib/AuthContext';
 import { emitLiveEvent } from '@/lib/liveSession';
 import { isProductAvailable } from '@/lib/productAvailability';
 import SafeBackButton from '@/components/navigation/SafeBackButton';
+import { APP_ROUTE_PREVIOUS_KEY, isSafeBackDestination } from '@/lib/safeNavigation';
 
 export default function ProductDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { addItem, setIsOpen } = useCart();
   const { isWishlisted, toggleWishlist } = useWishlist();
   const [product, setProduct] = useState(null);
@@ -314,7 +316,13 @@ export default function ProductDetail() {
                 {added ? <><Check size={16} /> Adicionado!</> : <><ShoppingCart size={16} /> Carrinho</>}
               </button>
               <button
-                onClick={() => { if (handleAdd()) navigate('/checkout'); }}
+                onClick={() => {
+                  if (!handleAdd()) return;
+                  const current=`${location.pathname}${location.search}${location.hash}`;
+                  const trackedOrigin=sessionStorage.getItem(APP_ROUTE_PREVIOUS_KEY);
+                  const returnTo=isSafeBackDestination(location.state?.from,current)?location.state.from:(isSafeBackDestination(trackedOrigin,current)?trackedOrigin:'/loja');
+                  navigate('/checkout',{state:{from:current,returnTo}});
+                }}
                 className="flex-1 flex items-center justify-center gap-1.5 py-3 rounded-xl font-heading font-bold text-sm bg-primary text-primary-foreground hover:bg-primary/90 transition-all"
               >
                 <ShoppingBag size={16} /> Comprar · R$ {totalPrice.toFixed(2)}

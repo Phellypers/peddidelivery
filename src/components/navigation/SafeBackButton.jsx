@@ -1,17 +1,18 @@
 import React, { useEffect } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useNavigationType } from 'react-router-dom';
 import { APP_ROUTE_CURRENT_KEY, APP_ROUTE_PREVIOUS_KEY, isSafeAppRoute, isSafeBackDestination } from '@/lib/safeNavigation';
 
 export function AppNavigationTracker() {
   const location = useLocation();
+  const navigationType = useNavigationType();
 
   useEffect(() => {
     const route = `${location.pathname}${location.search}${location.hash}`;
     if (!isSafeAppRoute(route)) return;
     const current = sessionStorage.getItem(APP_ROUTE_CURRENT_KEY);
-    if (current && current !== route && isSafeAppRoute(current)) sessionStorage.setItem(APP_ROUTE_PREVIOUS_KEY, current);
+    if (navigationType !== 'REPLACE' && current && current !== route && isSafeAppRoute(current)) sessionStorage.setItem(APP_ROUTE_PREVIOUS_KEY, current);
     sessionStorage.setItem(APP_ROUTE_CURRENT_KEY, route);
-  }, [location.pathname, location.search, location.hash]);
+  }, [location.pathname, location.search, location.hash, navigationType]);
 
   return null;
 }
@@ -26,7 +27,9 @@ export function useSafeBack(fallback = '/loja') {
     const trackedOrigin = sessionStorage.getItem(APP_ROUTE_PREVIOUS_KEY);
     const destination = [stateOrigin, trackedOrigin, fallback]
       .find(route => isSafeBackDestination(route, current)) || (isSafeAppRoute(fallback) ? fallback : '/loja');
-    navigate(destination, { replace: true });
+    const returnTo = location.state?.returnTo;
+    const state = isSafeBackDestination(returnTo, destination) ? { from: returnTo } : undefined;
+    navigate(destination, { replace: true, state });
   };
 }
 
