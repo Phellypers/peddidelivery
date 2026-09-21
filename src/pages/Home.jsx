@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { base44 } from '@/api/base44Client';
 import CartDrawer from '@/components/storefront/CartDrawer';
 import ChatWidget from '@/components/storefront/ChatWidget';
 import ProductCard from '@/components/storefront/ProductCard';
@@ -65,7 +66,10 @@ export default function Home() {
       setCategories(cats);
       setProducts(prods.filter(p => !p.is_paused));
     });
-    const promotionRequest=base44.entities.Coupon.filter({is_active:true}).then(setPromotions).catch(()=>setPromotions([]));
+    const promotionRequest=Promise.resolve()
+      .then(()=>base44.entities.Coupon.filter({is_active:true}))
+      .then(setPromotions)
+      .catch(()=>setPromotions([]));
     return Promise.allSettled([catalogRequest,promotionRequest]).finally(()=>setLoading(false));
   }, [storeRef]);
 
