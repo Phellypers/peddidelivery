@@ -80,6 +80,58 @@ const publicReads=new Set(['Product','Category','Store','City','Campaign','Coupo
 const publicWrites=new Set(['Order','LiveSession','ChatMessage','SupportTicket','Review','ReviewComment']);
 const customerWrites=new Set(['Order','LiveSession','ChatMessage','SupportTicket','Review','ReviewComment','CustomerProfile','Deliverer','DelivererRating','Notification','User']);
 const bodyObject=z.record(z.string(),z.unknown());
+
+function promotionCustomerKey(data:Record<string,any>){
+  if(data.customer_user_id)return `user:${data.customer_user_id}`;
+  if(data.customer_email)return `email:${String(data.customer_email).trim().toLowerCase()}`;
+  if(data.visitor_id)return `visitor:${data.visitor_id}`;
+  return '';
+}
+function promotionIds(data:Record<string,any>){
+  return Array.from(new Set([...(Array.isArray(data.promotion_ids)?data.promotion_ids:[]),...(Array.isArray(data.applied_promotion_ids)?data.applied_promotion_ids:[])].filter(value=>z.string().uuid().safeParse(value).success)));
+}
+async function validateOrderPromotions(client:any,tenant:string,data:Record<string,any>){
+  const code=String(data.coupon_code||'').trim().toUpperCase();
+  const ids=promotionIds(data);
+  if(!code&&!ids.length)return;
+  const result=await client.query("SELECT id,data FROM app_records WHERE store_id=$1 AND entity_name='Coupon' AND (id=ANY($2::uuid[]) OR upper(data->>'code')=$3) FOR UPDATE",[tenant,ids,code]);
+  const customerKey=promotionCustomerKey(data);
+  for(const row of result.rows){
+    const promo=row.data||{},today=new Date().toISOString().slice(0,10);
+    if(promo.is_active===false||(promo.start_date&&promo.start_date>today)||(promo.expires_at&&promo.expires_at<today))throw new Error('Esta promoção não está disponível.');
+    const totalLimit=promo.limit_total===false?0:Number(promo.total_usage_limit||promo.max_uses||0);
+    if(totalLimit&&Number(promo.uses_count||0)>=totalLimit)throw new Error('Limite atingido');
+    const customerLimit=promo.limit_per_customer===false?0:Number(promo.per_customer_limit||0);
+    if(customerLimit&&customerKey&&Number(promo.usage_by_customer?.[customerKey]||0)>=customerLimit)throw new Error('Você já atingiu o limite de uso desta promoção.');
+    if(promo.allow_stacking===false&&(result.rows.length>1||(Array.isArray(data.campaign_ids)&&data.campaign_ids.length)))throw new Error('Esta promoção não pode ser usada junto com outra promoção.');
+  }
+  if(code&&!result.rows.some((row:any)=>String(row.data?.code||'').toUpperCase()===code))throw new Error('Cupom inválido.');
+  data.promotion_ids=Array.from(new Set([...ids,...result.rows.map((row:any)=>row.id)]));
+}
+async function syncPromotionUsage(client:any,tenant:string,orderId:string,prior:Record<string,any>|undefined,current:Record<string,any>){
+  const wasEligible=Boolean(prior)&&prior!.status!=='cancelled'&&(prior!.status==='delivered'||prior!.payment_status==='paid');
+  const isEligible=current.status!=='cancelled'&&(current.status==='delivered'||current.payment_status==='paid');
+  if(wasEligible===isEligible)return;
+  const order=await client.query('SELECT details FROM orders WHERE id=$1 AND store_id=$2 FOR UPDATE',[orderId,tenant]);
+  const details=order.rows[0]?.details||current;
+  if(isEligible&&details.promotion_usage_recorded)return;
+  if(!isEligible&&!details.promotion_usage_recorded)return;
+  const ids=promotionIds(details);
+  if(!ids.length)return;
+  const records=await client.query("SELECT id,data FROM app_records WHERE store_id=$1 AND entity_name='Coupon' AND id=ANY($2::uuid[]) FOR UPDATE",[tenant,ids]);
+  const customerKey=promotionCustomerKey(details),delta=isEligible?1:-1;
+  for(const row of records.rows){
+    const promo=row.data||{},usage={...(promo.usage_by_customer||{})};
+    const totalLimit=promo.limit_total===false?0:Number(promo.total_usage_limit||promo.max_uses||0);
+    const customerLimit=promo.limit_per_customer===false?0:Number(promo.per_customer_limit||0);
+    if(isEligible&&totalLimit&&Number(promo.uses_count||0)>=totalLimit)throw new Error('Limite atingido');
+    if(isEligible&&customerLimit&&customerKey&&Number(usage[customerKey]||0)>=customerLimit)throw new Error('Você já atingiu o limite de uso desta promoção.');
+    if(customerKey)usage[customerKey]=Math.max(0,Number(usage[customerKey]||0)+delta);
+    const uses=Math.max(0,Number(promo.uses_count||0)+delta);
+    await client.query('UPDATE app_records SET data=data||$4::jsonb,updated_at=now() WHERE id=$1 AND store_id=$2 AND entity_name=$3',[row.id,tenant,'Coupon',JSON.stringify({uses_count:uses,usage_by_customer:usage,limit_reached:Boolean(totalLimit&&uses>=totalLimit)})]);
+  }
+  await client.query("UPDATE orders SET details=details||$3::jsonb,updated_at=now() WHERE id=$1 AND store_id=$2",[orderId,tenant,JSON.stringify({promotion_usage_recorded:isEligible,promotion_usage_recorded_at:isEligible?new Date().toISOString():null})]);
+}
 demoRouter.use('/entities/:entity',(request:AuthRequest,response,next)=>{
   const entity=String(request.params.entity);
   if (!entityNames.has(entity)) return response.status(404).json({error:'Entidade não encontrada.'});
@@ -191,6 +243,9 @@ async function saveEntity(request:AuthRequest,response:express.Response){
               || (request.body.status && request.body.status!=='cancelled')) throw new Error('Cliente só pode editar ou cancelar um pedido ainda não preparado.');
           }
         }
+        data.customer_user_id=data.customer_user_id||(request.auth&&!isManager(request)?request.auth.userId:'');
+        data.visitor_id=data.visitor_id||String(request.headers['x-peddi-visitor']||'');
+        if(!id)await validateOrderPromotions(client,tenant,data);
         if (id) {
           await client.query('SELECT id FROM orders WHERE id=$1 AND store_id=$2 FOR UPDATE',[id,tenant]);
           if (!isManager(request) && prior!.customer_email!==request.auth?.email && prior!.deliverer_user_id!==request.auth?.userId && prior!.visitor_id!==request.headers['x-peddi-visitor']) throw new Error('Sem permissão para editar o pedido.');
@@ -204,7 +259,9 @@ async function saveEntity(request:AuthRequest,response:express.Response){
           await client.query('UPDATE orders SET status=$3,details=details||$4::jsonb,updated_at=now() WHERE id=$1 AND store_id=$2',[id,tenant,status,JSON.stringify(data)]);
         }
         await syncDelivery(client,tenant,savedId as string);
-        const savedOrder=(await readOrders(tenant,client)).find(row=>row.id===savedId);
+        let savedOrder=(await readOrders(tenant,client)).find(row=>row.id===savedId);
+        await syncPromotionUsage(client,tenant,savedId as string,prior,savedOrder!);
+        savedOrder=(await readOrders(tenant,client)).find(row=>row.id===savedId);
         if (!id) await client.query(`UPDATE idempotency_keys SET response_status=201,response_body=$4
           WHERE store_id=$1 AND actor_key=$2 AND endpoint='POST Order' AND idempotency_key=$3`,[tenant,actorKey,idempotencyKey,JSON.stringify(savedOrder)]);
         await client.query('COMMIT');
@@ -243,7 +300,7 @@ demoRouter.delete('/entities/:entity/:id',async(request:AuthRequest,response)=>{
   else if(entity==='User')await query('UPDATE users SET active=false WHERE id=$1 AND store_id=$2',[id,tenant]);
   else if(entity==='Order'){
     const client=await pool!.connect();
-    try {await client.query('BEGIN');await client.query("UPDATE orders SET status='cancelled',updated_at=now() WHERE id=$1 AND store_id=$2",[id,tenant]);await syncDelivery(client,tenant,id as string);await client.query('COMMIT');}
+    try {await client.query('BEGIN');await client.query("UPDATE orders SET status='cancelled',updated_at=now() WHERE id=$1 AND store_id=$2",[id,tenant]);await syncPromotionUsage(client,tenant,id as string,prior,{...prior,status:'cancelled'});await syncDelivery(client,tenant,id as string);await client.query('COMMIT');}
     catch(error){await client.query('ROLLBACK');throw error;}finally{client.release();}
   }
   else if(entity==='Deliverer')await archiveCourier(pool!,tenant,id as string);

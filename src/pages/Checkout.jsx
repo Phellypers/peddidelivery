@@ -208,7 +208,12 @@ export default function Checkout() {
     const coupon = coupons[0];
     if (!coupon) { setCouponError('Cupom inválido'); return; }
     if (coupon.min_order_value && subtotal < coupon.min_order_value) { setCouponError(`Pedido mínimo: R$ ${coupon.min_order_value.toFixed(2)}`); return; }
-    if (coupon.max_uses && coupon.uses_count >= coupon.max_uses) { setCouponError('Cupom esgotado'); return; }
+    const totalLimit=coupon.limit_total===false?0:Number(coupon.total_usage_limit||coupon.max_uses||0);
+    if (totalLimit && Number(coupon.uses_count||0) >= totalLimit) { setCouponError('Limite atingido'); return; }
+    const customerLimit=coupon.limit_per_customer===false?0:Number(coupon.per_customer_limit||0);
+    const customerKey=user?.id?`user:${user.id}`:(user?.email||form.email)?`email:${String(user?.email||form.email).trim().toLowerCase()}`:'';
+    if (customerLimit&&customerKey&&Number(coupon.usage_by_customer?.[customerKey]||0)>=customerLimit) { setCouponError('Você já atingiu o limite de uso desta promoção.'); return; }
+    if(coupon.allow_stacking===false&&campaignDiscount>0){setCouponError('Esta promoção não pode ser usada junto com outra promoção.');return;}
     setAppliedCoupon(coupon);
     setCouponApplied(true);
   };
@@ -222,6 +227,15 @@ export default function Checkout() {
     setSubmitError('');
     setLoading(true);
     try {
+    if(appliedCoupon){
+      const current=(await base44.entities.Coupon.filter({code:appliedCoupon.code,is_active:true}))[0];
+      const totalLimit=current?.limit_total===false?0:Number(current?.total_usage_limit||current?.max_uses||0);
+      const customerLimit=current?.limit_per_customer===false?0:Number(current?.per_customer_limit||0);
+      const customerKey=user?.id?`user:${user.id}`:(user?.email||form.email)?`email:${String(user?.email||form.email).trim().toLowerCase()}`:'';
+      if(!current)throw new Error('Esta promoção não está disponível.');
+      if(totalLimit&&Number(current.uses_count||0)>=totalLimit)throw new Error('Limite atingido');
+      if(customerLimit&&customerKey&&Number(current.usage_by_customer?.[customerKey]||0)>=customerLimit)throw new Error('Você já atingiu o limite de uso desta promoção.');
+    }
     const orderNum = String(Date.now()).slice(-6);
     const savedOrder=await base44.entities.Order.create({
       order_number: orderNum,
@@ -249,6 +263,9 @@ export default function Checkout() {
       delivery_fee: deliveryFee,
       total,
       coupon_code: couponApplied ? form.couponCode : '',
+      promotion_ids: appliedCoupon?.id?[appliedCoupon.id]:[],
+      campaign_ids: appliedCampaign?.id?[appliedCampaign.id]:[],
+      customer_user_id: user?.id||'',
       payment_method: form.splitPayment ? 'split' : form.paymentMethod,
       split_payments: form.splitPayment ? form.splitAmounts : {},
       payment_status: 'pending',

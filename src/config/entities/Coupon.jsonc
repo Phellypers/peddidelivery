@@ -30,6 +30,13 @@
       "type": "number",
       "default": 0
     },
+    "limit_per_customer": { "type": "boolean", "default": false },
+    "per_customer_limit": { "type": "number", "default": 0 },
+    "limit_total": { "type": "boolean", "default": false },
+    "total_usage_limit": { "type": "number", "default": 0 },
+    "usage_by_customer": { "type": "object" },
+    "limit_reached": { "type": "boolean", "default": false },
+    "allow_stacking": { "type": "boolean", "default": false },
     "is_active": {
       "type": "boolean",
       "default": true
