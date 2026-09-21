@@ -42,7 +42,7 @@ export default function Home() {
   const navigate = useNavigate();
   const location = useLocation();
   const storeRef = storefrontStoreRef(location.search);
-  const { bannerId } = useParams();
+  const { bannerId,promotionId } = useParams();
   const [store, setStore] = useState(null);
   const [categories, setCategories] = useState([]);
   const [products, setProducts] = useState([]);
@@ -52,16 +52,18 @@ export default function Home() {
   const [chatOpen, setChatOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [activeBanner, setActiveBanner] = useState(null);
+  const [promotions,setPromotions]=useState([]);
 
   const { user } = useAuth();
   const publicDemo = isPublicDemo();
   const demoAccountNotice = () => window.dispatchEvent(new CustomEvent('peddi-demo-action', { detail: 'Login, notificações e atendimento não gravam dados no modo demonstração.' }));
 
   const loadData = useCallback(() => {
-    return loadPublicCatalog(storeRef).then(({ store: currentStore, categories: cats, products: prods }) => {
+    return Promise.all([loadPublicCatalog(storeRef),base44.entities.Coupon.filter({is_active:true})]).then(([{ store: currentStore, categories: cats, products: prods },activePromotions]) => {
       setStore(currentStore);
       setCategories(cats);
       setProducts(prods.filter(p => !p.is_paused));
+      setPromotions(activePromotions);
       setLoading(false);
     });
   }, [storeRef]);
@@ -81,11 +83,17 @@ export default function Home() {
   const { pullDistance, refreshing, bind } = usePullToRefresh(loadData);
   const campaignBanner = bannerId ? (store?.banners || []).find((banner, index) =>
     banner.is_active && String(banner.id || `index-${index}`) === bannerId) : null;
+  const today=new Date().toISOString().slice(0,10);
+  const selectedPromotion=promotionId?promotions.find(item=>item.id===promotionId&&item.is_active!==false&&(!item.start_date||item.start_date<=today)&&(!item.expires_at||item.expires_at>=today)):null;
 
   const filteredProducts = useMemo(() => {
     let result = products;
 
-    if (bannerId) {
+    if(promotionId){
+      const ids=new Set([selectedPromotion?.product_id,...(selectedPromotion?.product_ids||[]),selectedPromotion?.benefit_product_id].filter(Boolean));
+      const categoryId=selectedPromotion?.category_id;
+      result=ids.size||categoryId?products.filter(product=>ids.has(product.id)||(categoryId&&product.category_ids?.includes(categoryId))):products;
+    } else if (bannerId) {
       const linkedIds = new Set(getBannerProductIds(campaignBanner || {}));
       result = products.filter(product => linkedIds.has(product.id));
     } else if (activeCategory === '__most_ordered__') {
@@ -104,7 +112,7 @@ export default function Home() {
       result = result.filter(p => p.category_ids?.includes(activeCategory));
     }
 
-    if (searchQuery && !bannerId) {
+    if (searchQuery && !bannerId&&!promotionId) {
       const q = searchQuery.toLowerCase();
       result = result.filter(p =>
         p.name?.toLowerCase().includes(q) ||
@@ -113,7 +121,7 @@ export default function Home() {
       );
     }
     return result;
-  }, [products, store, activeCategory, activeBanner, searchQuery, bannerId, campaignBanner]);
+  }, [products, store, activeCategory, activeBanner, searchQuery, bannerId, campaignBanner,promotionId,selectedPromotion]);
 
   if (loading) {
     return (
@@ -151,6 +159,8 @@ export default function Home() {
     setActiveCategory(category);
     window.requestAnimationFrame(() => document.getElementById('cardapio-produtos')?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
   };
+
+  if(promotionId)return <PromotionPage store={store} storeRef={storeRef} promotion={selectedPromotion} products={filteredProducts}/>;
 
   if (bannerId) return (
     <div className="peddi-storefront min-h-screen bg-white pb-28" style={{ '--store-primary': theme.primary, '--store-on-primary': theme.onPrimary, '--primary': theme.primaryHsl, '--ring': theme.primaryHsl }}>
@@ -249,7 +259,7 @@ export default function Home() {
         )}
 
         {/* ── Section Label ── */}
-        {!searchQuery && !activeCategory && <PromoHeaderBanner />}
+        {!searchQuery && !activeCategory && <PromoHeaderBanner products={products}/>}
 
         <div id="cardapio-produtos" className="flex items-center justify-between px-4 pt-4 pb-2">
           <h2 className="font-heading font-bold text-base text-gray-900">{getSectionLabel()}</h2>
@@ -292,4 +302,8 @@ export default function Home() {
       <BottomNav />
     </div>
   );
+}
+
+function PromotionPage({store,storeRef,promotion,products}){
+ return <div className="peddi-storefront min-h-screen bg-white pb-28"><CartDrawer/><main className="mx-auto min-h-screen max-w-2xl bg-white"><header className="sticky top-0 z-30 flex items-center gap-3 border-b border-gray-100 bg-white/95 px-4 py-3 backdrop-blur"><Link to={withStore('/loja',store?.id||storeRef)} aria-label="Voltar ao cardápio" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-gray-700 hover:bg-gray-100">←</Link><div className="min-w-0"><p className="text-xs text-gray-500">{store?.name}</p><h1 className="truncate font-heading text-lg font-bold text-gray-900">{promotion?.name||'Promoção'}</h1></div></header>{promotion?<><section className="mx-4 mt-4 rounded-2xl border border-green-100 bg-gradient-to-r from-green-50 to-emerald-50 p-4"><span className="text-[10px] font-bold uppercase tracking-wide text-green-700">Oferta ativa</span><h2 className="mt-1 text-lg font-bold text-gray-900">{promotion.mini_banner_text||promotion.name}</h2>{promotion.code&&<p className="mt-1 text-xs text-gray-600">Cupom: <strong>{promotion.code}</strong></p>}</section><p className="px-4 py-4 text-sm text-gray-500">{products.length} produto{products.length!==1?'s':''} nesta promoção</p>{products.length?<div className="grid grid-cols-2 gap-3 px-4">{products.map(product=><ProductCard key={product.id} product={product}/>)}</div>:<p className="px-4 py-10 text-center text-sm text-gray-500">Nenhum produto disponível nesta promoção.</p>}</>:<p className="px-4 py-10 text-center text-sm text-gray-500">Esta promoção não está disponível.</p>}</main><BottomNav/></div>
 }
