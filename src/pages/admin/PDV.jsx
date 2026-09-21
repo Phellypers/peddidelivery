@@ -8,6 +8,7 @@ const PAYMENT_OPTIONS = [
   { id: 'pix', label: 'PIX' },
   { id: 'credit_card', label: 'Cartão de crédito' },
   { id: 'debit_card', label: 'Cartão de débito' },
+  { id: 'voucher', label: 'Voucher' },
   { id: 'to_arrange', label: 'A combinar' },
 ];
 
@@ -46,6 +47,7 @@ export default function PDV() {
   const [selectedTableId, setSelectedTableId] = useState('');
   const [editingOrder, setEditingOrder] = useState(null);
   const [successMode, setSuccessMode] = useState('create');
+  const [existingAdjustment, setExistingAdjustment] = useState(0);
   const submittingRef = useRef(false);
 
   useEffect(() => {
@@ -66,7 +68,10 @@ export default function PDV() {
         try {
           const order = await base44.entities.Order.get(orderParam);
           setCart(order.items?.map(i => ({ product_id: i.product_id, product_name: i.product_name, product_image: i.product_image, quantity: i.quantity, unit_price: i.unit_price, notes: i.notes || '' })) || []);
-          setEditingOrder({ id: order.id, order_number: order.order_number });
+          const itemSubtotal = (order.items || []).reduce((sum, item) => sum + Number(item.unit_price || 0) * Number(item.quantity || 0), 0);
+          setExistingAdjustment(Number(order.total || 0) - itemSubtotal);
+          setPayments([{ method: order.payment_method === 'to_arrange' ? 'cash' : order.payment_method || 'cash', amount: Number(order.total || 0).toFixed(2) }]);
+          setEditingOrder({ ...order });
           if (order.customer_name && order.customer_name !== 'Venda avulsa') {
             setCustomerForm(p => ({ ...p, name: order.customer_name, phone: order.customer_phone || '', email: order.customer_email || '' }));
           }
@@ -128,7 +133,7 @@ export default function PDV() {
   const setItemNote = (id, note) => setCart(prev => prev.map(i => i.product_id === id ? { ...i, notes: note } : i));
 
   const subtotal = cart.reduce((s, i) => s + i.unit_price * i.quantity, 0);
-  const total = subtotal + (orderType === 'delivery' ? parseFloat(deliveryFee) || 0 : 0);
+  const total = subtotal + (orderType === 'delivery' ? parseFloat(deliveryFee) || 0 : 0) + (editingOrder ? existingAdjustment : 0);
   const totalCents = toCents(total);
   const paidCents = payments.reduce((sum, payment) => sum + toCents(payment.amount), 0);
   const hasCashPayment = payments.some(payment => payment.method === 'cash' && toCents(payment.amount) > 0);
@@ -199,7 +204,7 @@ export default function PDV() {
           else merged.push({ ...cartItem });
         });
         const newSub = merged.reduce((s, i) => s + i.unit_price * i.quantity, 0);
-        const updated = await base44.entities.Order.update(existing.id, { items: merged, subtotal: newSub, total: newSub });
+        const updated = await base44.entities.Order.update(existing.id, { items: merged, subtotal: newSub, total: newSub, table_additions_count: Number(existing.table_additions_count || 1) + 1 });
         setSuccess({ ...existing, ...updated, items: merged, subtotal: newSub, total: newSub });
       } else {
         const orderNum = String(Date.now()).slice(-6);
@@ -218,7 +223,7 @@ export default function PDV() {
           sale_origin: 'pdv_table',
           created_via_pdv: true,
         });
-        await base44.entities.Table.update(selectedTableId, { status: 'open', current_order_id: order.id, current_order_number: order.order_number });
+        await base44.entities.Table.update(selectedTableId, { status: 'open', current_order_id: order.id, current_order_number: order.order_number, opened_at: new Date().toISOString() });
         setSuccess(order);
       }
       setSuccessMode('launch');
@@ -239,11 +244,14 @@ export default function PDV() {
           items: cart.map(i => ({ product_id: i.product_id, product_name: i.product_name, product_image: i.product_image, quantity: i.quantity, unit_price: i.unit_price, notes: i.notes })),
           subtotal, total,
           ...paymentData,
-          status: 'confirmed',
+          status: 'delivered',
+          closed_at: new Date().toISOString(),
+          closed_by: 'admin',
+          closed_via: 'pdv',
           order_notes: orderNotes + (payments.length > 1 ? `\nPagamento dividido: ${payments.map(p => `${PAYMENT_OPTIONS.find(o => o.id === p.method)?.label || p.method} R$ ${(parseFloat(p.amount) || 0).toFixed(2)}`).join(' + ')}` : ''),
         });
         if (selectedTableId && selectedTableId !== 'balcao') {
-          await base44.entities.Table.update(selectedTableId, { status: 'free', current_order_id: '', current_order_number: '' });
+          await base44.entities.Table.update(selectedTableId, { status: 'free', current_order_id: '', current_order_number: '', opened_at: '', closing_started_at: '', closing_started_by: '' });
         }
         setSuccessMode('finalize');
         const completedOrder = { ...editingOrder, ...updated, total, subtotal, ...paymentData };
@@ -309,7 +317,7 @@ export default function PDV() {
       await ensureFinancialEntry(order);
 
       if (selectedTableId && selectedTableId !== 'balcao') {
-        await base44.entities.Table.update(selectedTableId, { status: 'open', current_order_id: order.id, current_order_number: order.order_number });
+        await base44.entities.Table.update(selectedTableId, { status: 'open', current_order_id: order.id, current_order_number: order.order_number, opened_at: new Date().toISOString() });
       }
       setSuccessMode('create');
       setSuccess(order);
@@ -563,6 +571,7 @@ export default function PDV() {
             <div className="border-t border-gray-100 pt-3 space-y-1 text-sm">
               <div className="flex justify-between"><span className="text-gray-500">Subtotal</span><span>R$ {subtotal.toFixed(2)}</span></div>
               {orderType === 'delivery' && <div className="flex justify-between"><span className="text-gray-500">Entrega</span><span>R$ {(parseFloat(deliveryFee) || 0).toFixed(2)}</span></div>}
+              {editingOrder && existingAdjustment !== 0 && <div className="flex justify-between"><span className="text-gray-500">Taxas e descontos da comanda</span><span>{existingAdjustment >= 0 ? '+' : '-'} R$ {Math.abs(existingAdjustment).toFixed(2)}</span></div>}
               <div className="flex justify-between font-heading font-bold text-base pt-1"><span>Total</span><span className="text-primary">R$ {total.toFixed(2)}</span></div>
               <div className="flex justify-between"><span className="text-gray-500">Valor pago</span><span>R$ {paidAmount.toFixed(2)}</span></div>
               <div className="flex justify-between font-semibold"><span>Restante</span><span className={remainingCents ? 'text-orange-600' : 'text-green-600'}>R$ {remaining.toFixed(2)}</span></div>

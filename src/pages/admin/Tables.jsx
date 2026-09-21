@@ -1,192 +1,47 @@
-import React, { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
-import { useNavigate } from 'react-router-dom';
-import { Plus, Trash2, Edit2, X, Check, Loader2, Users, UtensilsCrossed } from 'lucide-react';
+import React,{useEffect,useMemo,useState} from 'react';
+import {base44} from '@/api/base44Client';
+import {useNavigate} from 'react-router-dom';
+import {ArrowRightLeft,Check,Clock,Edit2,Grid2X2,LayoutList,Loader2,MoreVertical,Plus,ReceiptText,Search,Share2,Trash2,UserRound,Users,UtensilsCrossed,X} from 'lucide-react';
 
-const STATUS_CONFIG = {
-  free: { label: 'Livre', color: 'bg-green-50 border-green-300 text-green-700', dot: 'bg-green-500' },
-  open: { label: 'Pedido em aberto', color: 'bg-orange-50 border-orange-300 text-orange-700', dot: 'bg-orange-500' },
-  awaiting_payment: { label: 'Aguardando pgto', color: 'bg-purple-50 border-purple-300 text-purple-700', dot: 'bg-purple-500' },
+const STATUS={
+ free:{label:'Livre',badge:'bg-green-100 text-green-700',icon:'bg-green-50 text-green-600',border:'border-gray-200'},
+ open:{label:'Ocupada',badge:'bg-red-100 text-red-600',icon:'bg-red-50 text-red-500',border:'border-red-300'},
+ awaiting_payment:{label:'Aguardando fechamento',badge:'bg-amber-100 text-amber-700',icon:'bg-amber-50 text-amber-600',border:'border-amber-300'}
 };
+const money=v=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Number(v||0));
+const elapsed=v=>{if(!v)return'—';const min=Math.max(0,Math.floor((Date.now()-new Date(v).getTime())/60000));return min<60?`${min} min`:`${Math.floor(min/60)}h ${min%60} min`};
+const time=v=>v?new Date(v).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):'—';
 
-export default function Tables() {
-  const [tables, setTables] = useState([]);
-  const [orders, setOrders] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [comandaTable, setComandaTable] = useState(null);
-  const [showForm, setShowForm] = useState(false);
-  const [editTable, setEditTable] = useState(null);
-  const [form, setForm] = useState({ name: '', seats: 0 });
-  const [saving, setSaving] = useState(false);
-  const navigate = useNavigate();
-
-  const load = async () => {
-    const [tbls, ords] = await Promise.all([
-      base44.entities.Table.list('sort_order'),
-      base44.entities.Order.list('-created_date', 50),
-    ]);
-    setTables(tbls);
-    setOrders(ords);
-    setLoading(false);
-  };
-
-  useEffect(() => { load(); }, []);
-
-  const save = async () => {
-    setSaving(true);
-    if (editTable) await base44.entities.Table.update(editTable.id, form);
-    else await base44.entities.Table.create(form);
-    setSaving(false); setShowForm(false); setEditTable(null);
-    setForm({ name: '', seats: 0 });
-    load();
-  };
-
-  const freeTable = async (t) => {
-    await base44.entities.Table.update(t.id, { status: 'free', current_order_id: '', current_order_number: '' });
-    load();
-  };
-
-  const remove = async (t) => {
-    await base44.entities.Table.delete(t.id);
-    load();
-  };
-
-  const openPDV = (t) => {
-    navigate(`/admin/pdv?table=${t.id}`);
-  };
-
-  const inp = "w-full px-3 py-2.5 bg-muted rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20";
-
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="font-heading font-bold text-2xl text-foreground">Mesas e Comandas</h1>
-          <p className="text-sm text-muted-foreground mt-1">Gerencie o atendimento no salão</p>
-        </div>
-        <button onClick={() => { setEditTable(null); setForm({ name: '', seats: 0 }); setShowForm(true); }} className="flex items-center gap-2 px-4 py-2.5 bg-primary text-white rounded-xl text-sm font-semibold hover:bg-primary/90 transition-colors">
-          <Plus size={16} /> Nova mesa
-        </button>
-      </div>
-
-      {showForm && (
-        <div className="bg-card rounded-2xl border border-border/50 p-4 flex items-end gap-3 flex-wrap">
-          <div className="flex-1 min-w-[180px]">
-            <label className="text-xs font-semibold text-muted-foreground mb-1 block">Nome da mesa *</label>
-            <input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} placeholder="Ex: Mesa 01, Balcão, Terrazzo" className={inp} />
-          </div>
-          <div className="w-24">
-            <label className="text-xs font-semibold text-muted-foreground mb-1 block">Lugares</label>
-            <input type="number" min="0" value={form.seats} onChange={e => setForm(p => ({ ...p, seats: parseInt(e.target.value) || 0 }))} className={inp} />
-          </div>
-          <button onClick={save} disabled={saving || !form.name} className="px-4 py-2.5 bg-primary text-white rounded-xl text-sm font-bold disabled:opacity-50 flex items-center gap-1">
-            {saving ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />} Salvar
-          </button>
-          <button onClick={() => setShowForm(false)} className="px-3 py-2.5 bg-muted rounded-xl text-sm"><X size={15} /></button>
-        </div>
-      )}
-
-      {loading ? (
-        <div className="flex justify-center py-12"><Loader2 className="animate-spin text-primary" size={32} /></div>
-      ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-          {tables.map(t => {
-            const config = STATUS_CONFIG[t.status] || STATUS_CONFIG.free;
-            return (
-              <div key={t.id} className={`rounded-2xl border-2 p-4 space-y-3 ${config.color}`}>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <UtensilsCrossed size={18} />
-                    <p className="font-heading font-bold text-sm">{t.name}</p>
-                  </div>
-                  <div className={`w-2.5 h-2.5 rounded-full ${config.dot}`} />
-                </div>
-                {t.seats > 0 && <p className="text-xs opacity-70 flex items-center gap-1"><Users size={11} /> {t.seats} lugares</p>}
-                {(() => { const ord = orders.find(o => o.id === t.current_order_id); return (
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold">{config.label}</span>
-                    {ord ? <span className="text-xs font-bold">R$ {ord.total?.toFixed(2)}</span> : t.current_order_number && <span className="text-xs font-bold">#{t.current_order_number}</span>}
-                  </div>
-                ); })()}
-                <div className="flex gap-1 pt-1" onClick={e => e.stopPropagation()}>
-                  {t.status === 'free' ? (
-                    <button onClick={() => openPDV(t)} className="flex-1 text-xs py-1.5 bg-white/70 rounded-lg font-medium hover:bg-white transition-colors">
-                      Abrir pedido
-                    </button>
-                  ) : (
-                    <>
-                      <button onClick={() => setComandaTable(t)} className="flex-1 text-xs py-1.5 bg-white/70 rounded-lg font-medium hover:bg-white transition-colors">
-                        Ver comanda
-                      </button>
-                      <button onClick={() => openPDV(t)} className="px-2 py-1.5 bg-white/70 rounded-lg hover:bg-white transition-colors" title="Adicionar itens">
-                        <Plus size={12} />
-                      </button>
-                      <button onClick={() => freeTable(t)} className="px-2 py-1.5 bg-white/70 rounded-lg hover:bg-white transition-colors" title="Liberar mesa">
-                        <Check size={12} />
-                      </button>
-                    </>
-                  )}
-                  <button onClick={() => { setEditTable(t); setForm({ name: t.name, seats: t.seats || 0 }); setShowForm(true); }} className="px-2 py-1.5 bg-white/70 rounded-lg hover:bg-white transition-colors">
-                    <Edit2 size={12} />
-                  </button>
-                  <button onClick={() => remove(t)} className="px-2 py-1.5 bg-white/70 rounded-lg hover:bg-white transition-colors text-red-500">
-                    <Trash2 size={12} />
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-          {tables.length === 0 && (
-            <div className="col-span-full text-center py-12 text-muted-foreground">
-              <UtensilsCrossed size={32} className="mx-auto mb-3 opacity-30" />
-              <p className="text-sm">Nenhuma mesa cadastrada. Crie mesas ou áreas como "Balcão" para começar.</p>
-            </div>
-          )}
-        </div>
-      )}
-
-      {comandaTable && (() => {
-        const ord = orders.find(o => o.id === comandaTable.current_order_id);
-        if (!ord) return null;
-        return (
-          <div data-peddi-modal="" className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => setComandaTable(null)}>
-            <div className="bg-white rounded-2xl w-full max-w-md p-5 space-y-4 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-heading font-bold text-base">Comanda — {comandaTable.name}</h3>
-                  <p className="text-xs text-muted-foreground">Pedido #{ord.order_number}</p>
-                </div>
-                <button onClick={() => setComandaTable(null)}><X size={18} className="text-gray-400" /></button>
-              </div>
-              <div className="space-y-2">
-                {ord.items?.map((item, i) => (
-                  <div key={i} className="flex items-center gap-2 p-2 bg-gray-50 rounded-xl">
-                    <img src={item.product_image || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=60'} alt="" className="w-9 h-9 rounded-lg object-cover flex-shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{item.product_name}</p>
-                      {item.notes && <p className="text-xs text-orange-600 italic">"{item.notes}"</p>}
-                    </div>
-                    <span className="text-sm font-bold">{item.quantity}x</span>
-                    <span className="text-sm font-bold text-primary">R$ {(item.unit_price * item.quantity).toFixed(2)}</span>
-                  </div>
-                ))}
-              </div>
-              <div className="border-t border-gray-100 pt-3 flex justify-between font-heading font-bold text-base">
-                <span>Total</span>
-                <span className="text-primary">R$ {ord.total?.toFixed(2)}</span>
-              </div>
-              <div className="flex gap-2">
-                <button onClick={() => navigate(`/admin/pdv?table=${comandaTable.id}`)} className="flex-1 py-2.5 bg-gray-100 text-gray-700 rounded-xl text-sm font-bold hover:bg-gray-200 transition-colors flex items-center justify-center gap-1">
-                  <Plus size={14} /> Adicionar itens
-                </button>
-                <button onClick={() => navigate(`/admin/pdv?order=${ord.id}&table=${comandaTable.id}`)} className="flex-1 py-2.5 bg-green-600 text-white rounded-xl text-sm font-bold hover:bg-green-700 transition-colors flex items-center justify-center gap-1">
-                  <Check size={14} /> Finalizar
-                </button>
-              </div>
-            </div>
-          </div>
-        );
-      })()}
-    </div>
-  );
+export default function Tables(){
+ const[tables,setTables]=useState([]),[orders,setOrders]=useState([]),[loading,setLoading]=useState(true),[selected,setSelected]=useState(null),[showForm,setShowForm]=useState(false),[edit,setEdit]=useState(null),[form,setForm]=useState({name:'',seats:0}),[saving,setSaving]=useState(false),[query,setQuery]=useState(''),[filter,setFilter]=useState('all'),[view,setView]=useState('grid'),[transfer,setTransfer]=useState(null);const navigate=useNavigate();
+ const load=async()=>{const[t,o]=await Promise.all([base44.entities.Table.list('sort_order'),base44.entities.Order.list('-created_date',300)]);setTables(t);setOrders(o);setLoading(false);setSelected(current=>current?t.find(x=>x.id===current.id)||null:null)};
+ useEffect(()=>{load();const id=setInterval(load,15000);return()=>clearInterval(id)},[]);
+ const orderFor=t=>orders.find(o=>o.id===t.current_order_id);
+ const filtered=useMemo(()=>tables.filter(t=>{const o=orders.find(x=>x.id===t.current_order_id),q=query.toLowerCase();return(!q||[t.name,o?.customer_name,o?.waiter_name].some(v=>String(v||'').toLowerCase().includes(q)))&&(filter==='all'||(filter==='free'&&t.status==='free')||(filter==='open'&&t.status==='open')||(filter==='closing'&&t.status==='awaiting_payment'))}),[tables,orders,query,filter]);
+ const save=async()=>{setSaving(true);if(edit)await base44.entities.Table.update(edit.id,form);else await base44.entities.Table.create({...form,status:'free',is_active:true});setSaving(false);setShowForm(false);setEdit(null);setForm({name:'',seats:0});load()};
+ const remove=async t=>{if(t.status!=='free')return alert('Uma mesa ocupada não pode ser excluída. Feche a comanda primeiro.');if(confirm(`Excluir ${t.name}?`)){await base44.entities.Table.delete(t.id);load()}};
+ const addItems=t=>navigate('/admin/pdv?table='+encodeURIComponent(t.id));
+ const closeTab=async t=>{const o=orderFor(t);if(!o)return;await base44.entities.Table.update(t.id,{status:'awaiting_payment',closing_started_at:new Date().toISOString(),closing_started_by:'admin'});navigate(`/admin/pdv?order=${encodeURIComponent(o.id)}&table=${encodeURIComponent(t.id)}`)};
+ const doTransfer=async targetId=>{if(!transfer||!targetId)return;const target=tables.find(t=>t.id===targetId),o=orderFor(transfer);if(!target||target.status!=='free'||!o)return;await Promise.all([base44.entities.Table.update(target.id,{status:transfer.status,current_order_id:o.id,current_order_number:o.order_number,opened_at:transfer.opened_at||o.created_date}),base44.entities.Table.update(transfer.id,{status:'free',current_order_id:'',current_order_number:'',opened_at:''}),base44.entities.Order.update(o.id,{table_number:target.name})]);setTransfer(null);setSelected(target);load()};
+ const inp='h-11 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-primary/20';
+ return <div className="space-y-4"><div><h1 className="font-heading text-2xl font-bold">Mesas e Comandas</h1><p className="mt-1 text-sm text-muted-foreground">Gerencie o atendimento no salão</p></div>
+ <div className="flex flex-wrap items-center gap-2"><label className="relative min-w-[220px] flex-1 lg:max-w-sm"><Search size={18} className="absolute left-3 top-3 text-muted-foreground"/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Buscar mesa, cliente ou garçom..." className={inp+' pl-10'}/></label><div className="flex gap-1 overflow-x-auto rounded-xl">{[['all','Todas'],['free','Livres'],['open','Ocupadas'],['closing','Fechamento']].map(([id,l])=><button key={id} onClick={()=>setFilter(id)} className={'h-11 whitespace-nowrap rounded-xl px-4 text-sm font-semibold '+(filter===id?'bg-primary text-white':'border bg-white text-muted-foreground')}>{l}</button>)}</div><button onClick={()=>{setEdit(null);setForm({name:'',seats:0});setShowForm(true)}} className="flex h-11 items-center gap-2 rounded-xl bg-primary px-4 text-sm font-bold text-white"><Plus size={17}/>Nova mesa</button><div className="flex h-11 rounded-xl border bg-white p-1"><button aria-label="Visualização em grade" onClick={()=>setView('grid')} className={'rounded-lg px-2 '+(view==='grid'?'bg-primary text-white':'')}><Grid2X2 size={18}/></button><button aria-label="Visualização em lista" onClick={()=>setView('list')} className={'rounded-lg px-2 '+(view==='list'?'bg-primary text-white':'')}><LayoutList size={18}/></button></div></div>
+ {showForm&&<div className="flex flex-wrap items-end gap-3 rounded-2xl border bg-card p-4"><div className="min-w-[200px] flex-1"><label className="mb-1 block text-xs font-semibold">Nome da mesa *</label><input value={form.name} onChange={e=>setForm(x=>({...x,name:e.target.value}))} className={inp}/></div><div className="w-28"><label className="mb-1 block text-xs font-semibold">Lugares</label><input type="number" min="0" value={form.seats} onChange={e=>setForm(x=>({...x,seats:Number(e.target.value)}))} className={inp}/></div><button disabled={saving||!form.name} onClick={save} className="flex h-11 items-center gap-2 rounded-xl bg-primary px-4 font-bold text-white">{saving?<Loader2 className="animate-spin" size={16}/>:<Check size={16}/>}Salvar</button><button onClick={()=>setShowForm(false)} className="h-11 rounded-xl bg-muted px-3"><X size={17}/></button></div>}
+ {loading?<div className="flex justify-center py-16"><Loader2 className="animate-spin text-primary" size={30}/></div>:<div className={view==='grid'?'grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3':'space-y-3'}>{filtered.map(t=><TableCard key={t.id} table={t} order={orderFor(t)} view={view} onView={()=>setSelected(t)} onAdd={()=>addItems(t)} onClose={()=>closeTab(t)} onTransfer={()=>setTransfer(t)} onEdit={()=>{setEdit(t);setForm({name:t.name,seats:t.seats||0});setShowForm(true)}} onRemove={()=>remove(t)}/>)}</div>}
+ {!loading&&!filtered.length&&<div className="rounded-2xl border bg-card py-16 text-center text-sm text-muted-foreground"><UtensilsCrossed className="mx-auto mb-3 opacity-30"/><p>Nenhuma mesa encontrada.</p></div>}
+ {selected&&<TabDrawer table={selected} order={orderFor(selected)} onClose={()=>setSelected(null)} onAdd={()=>addItems(selected)} onPay={()=>closeTab(selected)} onTransfer={()=>setTransfer(selected)}/>}
+ {transfer&&<TransferModal source={transfer} targets={tables.filter(t=>t.status==='free'&&t.id!==transfer.id)} onClose={()=>setTransfer(null)} onTransfer={doTransfer}/>}
+ </div>
 }
+
+function TableCard({table:t,order:o,view,onView,onAdd,onClose,onTransfer,onEdit,onRemove}){
+ const s=STATUS[t.status]||STATUS.free,count=o?Number(o.table_additions_count||1):0,opened=t.opened_at||o?.created_date;
+ return <article className={'rounded-2xl border-2 bg-card p-4 shadow-sm '+s.border+(view==='list'?' flex flex-wrap items-center gap-4':'')}><div className="flex items-start justify-between"><div className="flex items-center gap-3"><span className={'flex h-11 w-11 items-center justify-center rounded-full '+s.icon}><UtensilsCrossed size={22}/></span><div><div className="flex flex-wrap items-center gap-2"><h2 className="font-heading font-bold">{t.name}</h2><span className={'rounded-full px-2.5 py-1 text-[11px] font-bold '+s.badge}>{s.label}</span></div>{t.seats>0&&<p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground"><Users size={12}/>{t.seats} lugares</p>}</div></div><div className="flex"><button onClick={onEdit} className="p-2 text-muted-foreground"><Edit2 size={15}/></button><button onClick={onRemove} className="p-2 text-muted-foreground hover:text-red-500"><Trash2 size={15}/></button><MoreVertical className="mt-2 text-muted-foreground" size={15}/></div></div>
+ <div className={'grid grid-cols-2 gap-x-4 gap-y-2 py-3 text-xs '+(view==='list'?'min-w-[340px] flex-1':'')}><p className="flex items-center gap-2"><UserRound size={15}/>{o?.customer_name||'—'}</p><p className="flex items-center gap-2"><ReceiptText size={15}/>{count} pedido{count!==1?'s':''}</p><p className="flex items-center gap-2"><Clock size={15}/>Aberta às {time(opened)}</p><p className="flex items-center gap-2"><Clock size={15}/>{elapsed(opened)}</p></div>
+ <div className="flex items-center justify-end gap-2 border-t py-2"><span className="text-xs text-muted-foreground">Total</span><b className={o?'text-lg text-red-500':'text-base'}>{money(o?.total)}</b></div>
+ <div className={view==='list'?'min-w-[390px] flex-1':'space-y-2'}><button onClick={onView} className="w-full rounded-xl bg-primary py-2.5 text-sm font-bold text-white">Ver comanda</button><div className="mt-2 grid grid-cols-3 gap-2"><button onClick={onAdd} className="flex items-center justify-center gap-1 rounded-lg border py-2 text-xs font-semibold"><Plus size={14}/>Adicionar</button>{t.status!=='free'?<><button onClick={onTransfer} className="flex items-center justify-center gap-1 rounded-lg border py-2 text-xs font-semibold"><ArrowRightLeft size={14}/>Transferir</button><button onClick={onClose} className="flex items-center justify-center gap-1 rounded-lg border border-red-200 py-2 text-xs font-semibold text-red-500"><ReceiptText size={14}/>Fechar</button></>:<button className="col-span-2 rounded-lg border py-2 text-xs text-muted-foreground">Mesa disponível</button>}</div></div></article>
+}
+
+function TabDrawer({table:t,order:o,onClose,onAdd,onPay,onTransfer}){const s=STATUS[t.status]||STATUS.free,sub=Number(o?.subtotal||0),fee=Number(o?.service_fee||0),discount=Number(o?.discount||0),total=Number(o?.total||sub+fee-discount),opened=t.opened_at||o?.created_date;return <div data-peddi-modal="" className="fixed inset-0 z-[70] bg-black/35" onClick={onClose}><aside className="absolute inset-y-0 right-0 flex w-full max-w-md flex-col bg-white shadow-2xl" onClick={e=>e.stopPropagation()}><header className="flex items-start justify-between border-b p-5"><div><div className="flex items-center gap-2"><h2 className="font-heading text-lg font-bold">{t.name}</h2><span className={'rounded-full px-2 py-1 text-xs font-bold '+s.badge}>{s.label}</span></div><p className="mt-1 text-xs text-muted-foreground">Comanda #{o?.order_number||'—'}</p></div><button onClick={onClose}><X/></button></header><div className="flex-1 overflow-y-auto p-5"><div className="grid grid-cols-[auto_1fr] gap-x-5 gap-y-3 border-b pb-4 text-sm"><span className="text-muted-foreground">Cliente</span><b>{o?.customer_name||'—'}</b><span className="text-muted-foreground">Garçom</span><b>{o?.waiter_name||t.waiter_name||'Não informado'}</b><span className="text-muted-foreground">Aberta em</span><b>{time(opened)} ({elapsed(opened)})</b><span className="text-muted-foreground">Nº de pedidos</span><b>{o?Number(o.table_additions_count||1):0}</b></div><h3 className="py-4 font-bold">Itens da comanda</h3><div className="space-y-2">{o?.items?.map((i,k)=><div key={k} className="grid grid-cols-[36px_1fr_auto] items-center gap-2 border-b pb-2 text-sm"><span className="rounded bg-muted px-1 py-1 text-center font-bold">{i.quantity}x</span><div><p>{i.product_name}</p>{i.notes&&<small className="text-muted-foreground">{i.notes}</small>}</div><b>{money(i.unit_price*i.quantity)}</b></div>)||<p className="text-sm text-muted-foreground">Nenhum item lançado.</p>}</div><div className="mt-5 space-y-2 border-t pt-4 text-sm"><p className="flex justify-between"><span>Subtotal</span><b>{money(sub)}</b></p>{fee>0&&<p className="flex justify-between"><span>Taxa de serviço</span><b>{money(fee)}</b></p>}{discount>0&&<p className="flex justify-between text-green-700"><span>Descontos</span><b>- {money(discount)}</b></p>}<p className="flex justify-between rounded-xl bg-green-50 p-3 text-lg font-bold text-green-700"><span>Total</span><span>{money(total)}</span></p></div></div><footer className="space-y-2 border-t p-4"><button onClick={onAdd} className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3 font-bold text-white"><Plus/>Adicionar itens</button><div className="grid grid-cols-2 gap-2"><button onClick={onPay} className="flex items-center justify-center gap-2 rounded-xl border py-2.5 text-sm font-semibold"><Share2 size={16}/>Dividir conta</button><button onClick={onTransfer} className="flex items-center justify-center gap-2 rounded-xl border py-2.5 text-sm font-semibold"><ArrowRightLeft size={16}/>Transferir mesa</button></div><button disabled={!o} onClick={onPay} className="flex w-full items-center justify-center gap-2 rounded-xl bg-red-500 py-3 font-bold text-white disabled:opacity-40"><ReceiptText/>Fechar comanda</button><p className="text-center text-[11px] text-muted-foreground">A mesa só será liberada após o pagamento ser confirmado no PDV.</p></footer></aside></div>}
+
+function TransferModal({source,targets,onClose,onTransfer}){const[target,setTarget]=useState('');return <div data-peddi-modal="" className="fixed inset-0 z-[80] flex items-center justify-center bg-black/45 p-4" onClick={onClose}><div className="w-full max-w-sm rounded-2xl bg-white p-5" onClick={e=>e.stopPropagation()}><div className="flex justify-between"><div><h3 className="font-heading font-bold">Transferir {source.name}</h3><p className="text-xs text-muted-foreground">Escolha uma mesa livre.</p></div><button onClick={onClose}><X/></button></div><select value={target} onChange={e=>setTarget(e.target.value)} className="my-5 h-11 w-full rounded-xl border px-3"><option value="">Selecione</option>{targets.map(t=><option key={t.id} value={t.id}>{t.name}</option>)}</select><div className="grid grid-cols-2 gap-2"><button onClick={onClose} className="rounded-xl bg-muted py-2.5">Cancelar</button><button disabled={!target} onClick={()=>onTransfer(target)} className="rounded-xl bg-primary py-2.5 font-bold text-white disabled:opacity-40">Transferir</button></div></div></div>}

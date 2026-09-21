@@ -20,6 +20,10 @@
     "current_order_number": {
       "type": "string"
     },
+    "opened_at": { "type": "string" },
+    "waiter_name": { "type": "string" },
+    "closing_started_at": { "type": "string" },
+    "closing_started_by": { "type": "string" },
     "seats": {
       "type": "number",
       "default": 0
