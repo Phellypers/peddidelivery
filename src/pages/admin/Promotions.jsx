@@ -1,272 +1,54 @@
-import React, { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
-import { Plus, Edit, Trash2, Loader2, X, Tag } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React,{useEffect,useMemo,useState} from 'react';
+import {base44} from '@/api/base44Client';
+import {Edit,Gift,Loader2,MoreHorizontal,Plus,Search,Tag,Trash2,Truck,X} from 'lucide-react';
+import {AnimatePresence,motion} from 'framer-motion';
 
-export default function Promotions() {
-  const [coupons, setCoupons] = useState([]);
-  const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
-  const [editing, setEditing] = useState(null);
+const TYPES=[
+ ['product_discount','Desconto em produto','Nova oferta'],['category_discount','Desconto em categoria','Nova oferta'],
+ ['combo','Combo','Novo combo'],['coupon','Cupom','Novo cupom'],['buy_x_pay_y','Leve X, pague Y','Nova oferta'],
+ ['buy_x_get_y','Compre X e ganhe Y','Nova oferta'],['free_shipping','Frete grátis','Novo frete grátis'],
+ ['minimum_order','Pedido mínimo','Nova promoção'],['schedule','Horário/Dia','Nova promoção por horário']
+].map(([id,label,title])=>({id,label,title}));
+const TM=Object.fromEntries(TYPES.map(x=>[x.id,x]));
+const EMPTY={promotion_type:'product_discount',name:'',code:'',discount_type:'percentage',value:'',min_order_value:'',max_uses:100,start_date:'',expires_at:'',product_id:'',category_id:'',product_ids:[],combo_price:'',buy_quantity:2,pay_quantity:1,benefit_product_id:'',benefit_quantity:1,eligible_region_ids:[],days_of_week:[],start_time:'',end_time:'',is_active:true,display_in_catalog:false,mini_banner_text:'',cta_label:'Ver produtos'};
+const DAYS=[['sun','Dom'],['mon','Seg'],['tue','Ter'],['wed','Qua'],['thu','Qui'],['fri','Sex'],['sat','Sáb']];
+const money=v=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Number(v||0));
+const fmtDate=v=>v?new Date(v+'T12:00:00').toLocaleDateString('pt-BR'):'Sem limite';
+const kind=i=>i.promotion_type||'coupon';
+function status(i){const n=new Date().toISOString().slice(0,10);if(!i.is_active)return['Inativa','bg-gray-100 text-gray-600'];if(i.start_date>n)return['Agendada','bg-amber-50 text-amber-700'];if(i.expires_at&&i.expires_at<n)return['Encerrada','bg-red-50 text-red-600'];return['Ativa','bg-green-50 text-green-700'];}
+function rule(i,ps,cs){const t=kind(i),d=i.discount_type==='fixed'||i.type==='fixed'?money(i.value):Number(i.value||0)+'% OFF',p=ps.find(x=>x.id===i.product_id)?.name,c=cs.find(x=>x.id===i.category_id)?.name;
+ if(t==='coupon')return d+(i.min_order_value?' • mín. '+money(i.min_order_value):'');if(t==='product_discount')return d+(p?' em '+p:'');if(t==='category_discount')return d+(c?' em '+c:'');if(t==='combo')return(i.product_ids?.length||0)+' produtos • '+money(i.combo_price);if(t==='buy_x_pay_y')return`Leve ${i.buy_quantity||2}, pague ${i.pay_quantity||1}`;if(t==='buy_x_get_y')return`Compre ${i.buy_quantity||1} e ganhe ${i.benefit_quantity||1}`;if(t==='free_shipping')return'Frete grátis'+(i.min_order_value?' acima de '+money(i.min_order_value):'');if(t==='minimum_order')return'Acima de '+money(i.min_order_value)+' • '+d;if(t==='schedule')return d+' • '+(i.start_time||'--:--')+' às '+(i.end_time||'--:--');return d;}
 
-  const load = async () => {
-    const [c, p] = await Promise.all([
-      base44.entities.Coupon.list('-created_date'),
-      base44.entities.Product.filter({ is_published: true })
-    ]);
-    setCoupons(c);
-    setProducts(p);
-    setLoading(false);
-  };
-
-  useEffect(() => { load(); }, []);
-
-  const toggleActive = async (coupon) => {
-    await base44.entities.Coupon.update(coupon.id, { is_active: !coupon.is_active });
-    load();
-  };
-
-  const deleteCoupon = async (id) => {
-    if (!confirm('Excluir este cupom?')) return;
-    await base44.entities.Coupon.delete(id);
-    load();
-  };
-
-  // Also manage promo_price on products directly
-  const promoProducts = products.filter(p => p.promo_price && p.promo_price < p.price);
-
-  return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="font-heading font-bold text-2xl text-foreground">Promoções</h1>
-        <p className="text-sm text-muted-foreground mt-1">Gerencie cupons de desconto e preços promocionais</p>
-      </div>
-
-      {/* Promo Prices from Products */}
-      <div>
-        <h2 className="font-heading font-semibold text-base text-foreground mb-3">Produtos em Promoção</h2>
-        {promoProducts.length === 0 ? (
-          <div className="bg-card rounded-2xl border border-border/50 p-6 text-center text-muted-foreground text-sm">
-            Nenhum produto com preço promocional. Edite um produto no Catálogo e defina um "Preço promocional".
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {promoProducts.map(p => {
-              const discount = Math.round((1 - p.promo_price / p.price) * 100);
-              return (
-                <div key={p.id} className="bg-card rounded-2xl border border-border/50 p-4 flex items-center gap-3">
-                  <img
-                    src={p.images?.[0] || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=80'}
-                    alt={p.name}
-                    className="w-14 h-14 rounded-xl object-cover flex-shrink-0"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm truncate">{p.name}</p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-xs text-muted-foreground line-through">R$ {p.price?.toFixed(2)}</span>
-                      <span className="text-sm font-bold text-primary">R$ {p.promo_price?.toFixed(2)}</span>
-                    </div>
-                  </div>
-                  <span className="bg-red-50 text-red-600 text-xs font-bold px-2 py-1 rounded-full flex-shrink-0">-{discount}%</span>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      {/* Coupons */}
-      <div>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="font-heading font-semibold text-base text-foreground">Cupons de Desconto</h2>
-          <button
-            onClick={() => { setEditing(null); setShowForm(true); }}
-            className="flex items-center gap-2 bg-primary text-white px-4 py-2.5 rounded-xl font-medium text-sm hover:bg-primary/90 transition-colors"
-          >
-            <Plus size={18} /> Novo Cupom
-          </button>
-        </div>
-
-        {loading ? (
-          <div className="flex justify-center py-12"><Loader2 className="animate-spin text-primary" size={32} /></div>
-        ) : coupons.length === 0 ? (
-          <div className="bg-card rounded-2xl border border-border/50 p-8 text-center text-muted-foreground">
-            <Tag size={36} className="mx-auto mb-3 opacity-30" />
-            <p>Nenhum cupom cadastrado</p>
-          </div>
-        ) : (
-          <div className="bg-card rounded-2xl border border-border/50 overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border bg-muted/30">
-                    <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase">Código</th>
-                    <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase">Desconto</th>
-                    <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase hidden sm:table-cell">Pedido Mín.</th>
-                    <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase hidden md:table-cell">Usos</th>
-                    <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase hidden md:table-cell">Validade</th>
-                    <th className="text-center py-3 px-4 text-xs font-semibold text-muted-foreground uppercase">Status</th>
-                    <th className="text-right py-3 px-4 text-xs font-semibold text-muted-foreground uppercase">Ações</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {coupons.map(coupon => (
-                    <tr key={coupon.id} className="border-b border-border/30 hover:bg-accent/30 transition-colors">
-                      <td className="py-3 px-4">
-                        <span className="font-mono font-bold text-sm bg-muted px-2 py-1 rounded-lg">{coupon.code}</span>
-                      </td>
-                      <td className="py-3 px-4 font-medium text-primary">
-                        {coupon.type === 'percentage' ? `${coupon.value}%` : `R$ ${coupon.value?.toFixed(2)}`}
-                      </td>
-                      <td className="py-3 px-4 hidden sm:table-cell text-muted-foreground">
-                        {coupon.min_order_value > 0 ? `R$ ${coupon.min_order_value?.toFixed(2)}` : '—'}
-                      </td>
-                      <td className="py-3 px-4 hidden md:table-cell text-muted-foreground">
-                        {coupon.uses_count || 0} / {coupon.max_uses || '∞'}
-                      </td>
-                      <td className="py-3 px-4 hidden md:table-cell text-muted-foreground">
-                        {coupon.expires_at ? new Date(coupon.expires_at).toLocaleDateString('pt-BR') : '—'}
-                      </td>
-                      <td className="py-3 px-4 text-center">
-                        <button onClick={() => toggleActive(coupon)}>
-                          {coupon.is_active
-                            ? <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-green-50 text-green-700">Ativo</span>
-                            : <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-muted text-muted-foreground">Inativo</span>
-                          }
-                        </button>
-                      </td>
-                      <td className="py-3 px-4 text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <button onClick={() => { setEditing(coupon); setShowForm(true); }} className="p-1.5 hover:bg-accent rounded-lg transition-colors">
-                            <Edit size={14} />
-                          </button>
-                          <button onClick={() => deleteCoupon(coupon.id)} className="p-1.5 hover:bg-red-50 text-muted-foreground hover:text-red-500 rounded-lg transition-colors">
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-      </div>
-
-      <AnimatePresence>
-        {showForm && (
-          <CouponForm
-            coupon={editing}
-            onClose={() => { setShowForm(false); setEditing(null); }}
-            onSave={() => { setShowForm(false); setEditing(null); load(); }}
-          />
-        )}
-      </AnimatePresence>
-    </div>
-  );
+export default function Promotions(){
+ const[items,setItems]=useState([]),[products,setProducts]=useState([]),[categories,setCategories]=useState([]),[regions,setRegions]=useState([]),[loading,setLoading]=useState(true),[form,setForm]=useState(false),[editing,setEditing]=useState(null),[query,setQuery]=useState(''),[filter,setFilter]=useState('all');
+ const load=async()=>{const[a,b,c,d]=await Promise.all([base44.entities.Coupon.list('-created_date'),base44.entities.Product.list('-created_date'),base44.entities.Category.list('sort_order'),base44.entities.City.list('name')]);setItems(a);setProducts(b);setCategories(c);setRegions(d);setLoading(false)};
+ useEffect(()=>{load()},[]);
+ const rows=useMemo(()=>{const used=new Set(items.filter(x=>kind(x)==='product_discount').map(x=>x.product_id));return[...items,...products.filter(p=>p.promo_price>0&&p.promo_price<p.price&&!used.has(p.id)).map(p=>({id:'product-'+p.id,source:'product',product_id:p.id,name:p.name,promotion_type:'product_discount',value:Math.round((1-p.promo_price/p.price)*100),discount_type:'percentage',is_active:true,image_url:p.images?.[0]}))]},[items,products]);
+ const filtered=rows.filter(i=>{const t=kind(i),q=query.toLowerCase();let ok=filter==='all'||filter===t||(filter==='promotions'&&t!=='coupon');if(filter==='ended')ok=status(i)[0]==='Encerrada';return ok&&(!q||[i.name,i.code,TM[t]?.label,rule(i,products,categories)].some(v=>String(v||'').toLowerCase().includes(q)))});
+ const toggle=async i=>{if(i.source==='product')await base44.entities.Product.update(i.product_id,{promo_price:null});else{await base44.entities.Coupon.update(i.id,{is_active:!i.is_active});const ms=await base44.entities.PromoMessage.filter({promotion_id:i.id}).catch(()=>[]);await Promise.all(ms.map(m=>base44.entities.PromoMessage.update(m.id,{is_active:!i.is_active&&i.display_in_catalog})));}load()};
+ const remove=async i=>{if(!confirm(`Excluir “${i.name||i.code}”?`))return;if(i.source==='product')await base44.entities.Product.update(i.product_id,{promo_price:null});else{const ms=await base44.entities.PromoMessage.filter({promotion_id:i.id}).catch(()=>[]);await Promise.all(ms.map(m=>base44.entities.PromoMessage.delete(m.id)));await base44.entities.Coupon.delete(i.id)}load()};
+ const tabs=[['all','Todas'],['promotions','Promoções'],['coupon','Cupons'],['combo','Combos'],['free_shipping','Frete grátis'],['ended','Encerradas']];
+ return <div className="space-y-5"><div className="flex flex-wrap items-start justify-between gap-4"><div><h1 className="font-heading text-2xl font-bold">Promoções</h1><p className="mt-1 text-sm text-muted-foreground">Gerencie cupons, combos, descontos, frete grátis e promoções do cardápio.</p></div><button onClick={()=>{setEditing(null);setForm(true)}} className="flex min-h-11 items-center gap-2 rounded-xl bg-primary px-5 text-sm font-bold text-white"><Plus size={18}/>Nova promoção</button></div>
+ <div className="flex flex-col gap-3 lg:flex-row lg:justify-between"><div className="flex gap-1 overflow-x-auto rounded-xl border bg-card p-1">{tabs.map(([id,l])=><button key={id} onClick={()=>setFilter(id)} className={'whitespace-nowrap rounded-lg px-4 py-2 text-xs font-semibold '+(filter===id?'bg-green-100 text-green-700':'text-muted-foreground')}>{l}</button>)}</div><label className="relative w-full lg:max-w-sm"><Search size={18} className="absolute left-3 top-3 text-muted-foreground"/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Buscar promoções, cupons ou regras..." className="h-11 w-full rounded-xl border bg-card pl-10 pr-3 text-sm"/></label></div>
+ <section className="overflow-hidden rounded-2xl border bg-card">{loading?<div className="flex justify-center py-16"><Loader2 className="animate-spin text-primary"/></div>:!filtered.length?<div className="py-16 text-center text-sm text-muted-foreground"><Tag className="mx-auto mb-3 opacity-30"/><p>Nenhuma promoção encontrada.</p></div>:<div className="overflow-x-auto"><table className="w-full min-w-[900px] text-sm"><thead><tr className="border-b bg-muted/30 text-left text-[11px] uppercase text-muted-foreground">{['Nome','Tipo','Regra','Período','Status','Exibição','Ações'].map((x,k)=><th key={x} className={'px-4 py-3 '+(k===6?'text-right':'')}>{x}</th>)}</tr></thead><tbody>{filtered.map(i=>{const t=kind(i),s=status(i),p=products.find(x=>x.id===i.product_id);return <tr key={i.id} className="border-b last:border-0 hover:bg-muted/20"><td className="px-4 py-3"><div className="flex items-center gap-3"><div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-xl border bg-muted">{i.image_url||p?.images?.[0]?<img src={i.image_url||p.images[0]} className="h-full w-full object-cover" alt=""/>:t==='free_shipping'?<Truck size={21}/>:t==='buy_x_get_y'?<Gift size={21}/>:<Tag size={21}/>}</div><div><b>{i.name||i.code||'Promoção'}</b><p className="text-xs text-muted-foreground">{i.code?'Código '+i.code:TM[t]?.label}</p></div></div></td><td className="px-4 py-3"><span className="rounded-lg bg-blue-50 px-2 py-1 text-xs font-semibold text-blue-700">{TM[t]?.label}</span></td><td className="px-4 py-3 font-medium">{rule(i,products,categories)}</td><td className="px-4 py-3 text-xs text-muted-foreground">{fmtDate(i.start_date)}<br/>até {fmtDate(i.expires_at)}</td><td className="px-4 py-3"><button onClick={()=>toggle(i)} className={'rounded-lg px-2 py-1 text-xs font-semibold '+s[1]}>{s[0]}</button></td><td className="px-4 py-3 text-xs text-muted-foreground">{i.display_in_catalog?'Banner fino':t==='coupon'?'Cupom':'Interna'}</td><td className="px-4 py-3"><div className="flex justify-end"><button onClick={()=>{setEditing(i);setForm(true)}} className="p-2"><Edit size={15}/></button><button onClick={()=>remove(i)} className="p-2 text-red-500"><Trash2 size={15}/></button><MoreHorizontal className="mt-2" size={15}/></div></td></tr>})}</tbody></table></div>}<footer className="border-t px-4 py-3 text-xs text-muted-foreground">Mostrando {filtered.length} de {rows.length} promoções</footer></section>
+ <AnimatePresence>{form&&<Drawer promotion={editing} products={products} categories={categories} regions={regions} onClose={()=>{setForm(false);setEditing(null)}} onSave={()=>{setForm(false);setEditing(null);load()}}/>}</AnimatePresence></div>
 }
 
-function CouponForm({ coupon, onClose, onSave }) {
-  const [form, setForm] = useState({
-    code: coupon?.code || '',
-    type: coupon?.type || 'percentage',
-    value: coupon?.value || '',
-    min_order_value: coupon?.min_order_value || 0,
-    max_uses: coupon?.max_uses || 100,
-    expires_at: coupon?.expires_at || '',
-    is_active: coupon?.is_active ?? true,
-  });
-  const [saving, setSaving] = useState(false);
-
-  const set = (f, v) => setForm(p => ({ ...p, [f]: v }));
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setSaving(true);
-    const data = {
-      ...form,
-      value: parseFloat(form.value) || 0,
-      min_order_value: parseFloat(form.min_order_value) || 0,
-      max_uses: parseInt(form.max_uses) || 100,
-    };
-    if (coupon) {
-      await base44.entities.Coupon.update(coupon.id, data);
-    } else {
-      await base44.entities.Coupon.create(data);
-    }
-    onSave();
-  };
-
-  const inp = "w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30";
-  const lbl = "block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wide";
-
-  return (
-    <motion.div
-      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-      data-peddi-modal="" className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
-    >
-      <motion.div
-        initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 20, opacity: 0 }}
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-md"
-      >
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-          <h2 className="font-heading font-bold text-lg">{coupon ? 'Editar Cupom' : 'Novo Cupom'}</h2>
-          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full"><X size={18} /></button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          <div>
-            <label className={lbl}>Código do cupom *</label>
-            <input
-              value={form.code}
-              onChange={e => set('code', e.target.value.toUpperCase())}
-              required className={inp}
-              placeholder="Ex: PROMO10"
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className={lbl}>Tipo</label>
-              <select value={form.type} onChange={e => set('type', e.target.value)} className={inp}>
-                <option value="percentage">Porcentagem (%)</option>
-                <option value="fixed">Valor fixo (R$)</option>
-              </select>
-            </div>
-            <div>
-              <label className={lbl}>Valor *</label>
-              <input type="number" step="0.01" min="0" value={form.value} onChange={e => set('value', e.target.value)} required className={inp} placeholder={form.type === 'percentage' ? '10' : '5,00'} />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className={lbl}>Pedido mínimo (R$)</label>
-              <input type="number" step="0.01" min="0" value={form.min_order_value} onChange={e => set('min_order_value', e.target.value)} className={inp} placeholder="0,00" />
-            </div>
-            <div>
-              <label className={lbl}>Limite de usos</label>
-              <input type="number" min="1" value={form.max_uses} onChange={e => set('max_uses', e.target.value)} className={inp} placeholder="100" />
-            </div>
-          </div>
-          <div>
-            <label className={lbl}>Válido até</label>
-            <input type="date" value={form.expires_at} onChange={e => set('expires_at', e.target.value)} className={inp} />
-          </div>
-          <label className="flex items-center gap-2 text-sm cursor-pointer">
-            <input type="checkbox" checked={form.is_active} onChange={e => set('is_active', e.target.checked)} className="w-4 h-4 rounded accent-primary" />
-            Cupom ativo
-          </label>
-
-          <div className="flex gap-3 pt-2">
-            <button type="button" onClick={onClose} className="flex-1 py-2.5 rounded-xl text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors">Cancelar</button>
-            <button type="submit" disabled={saving} className="flex-1 py-2.5 rounded-xl text-sm font-bold bg-primary text-white hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
-              {saving && <Loader2 size={15} className="animate-spin" />}
-              {saving ? 'Salvando...' : coupon ? 'Salvar' : 'Criar Cupom'}
-            </button>
-          </div>
-        </form>
-      </motion.div>
-    </motion.div>
-  );
+function Drawer({promotion,products,categories,regions,onClose,onSave}){
+ const[f,setF]=useState({...EMPTY,...promotion,product_ids:promotion?.product_ids||[],eligible_region_ids:promotion?.eligible_region_ids||[],days_of_week:promotion?.days_of_week||[]}),[saving,setSaving]=useState(false);const set=(k,v)=>setF(x=>({...x,[k]:v})),t=f.promotion_type||'coupon',meta=TM[t],inp='w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm',lbl='mb-1.5 block text-xs font-semibold text-gray-600';const toggle=(k,id)=>set(k,f[k].includes(id)?f[k].filter(x=>x!==id):[...f[k],id]);
+ const sync=async saved=>{const old=await base44.entities.PromoMessage.filter({promotion_id:saved.id}).catch(()=>[]),data={promotion_id:saved.id,text:f.mini_banner_text||f.name,cta_label:f.cta_label,is_active:!!(f.display_in_catalog&&f.is_active),start_date:f.start_date,end_date:f.expires_at,sort_order:0};if(old[0])await base44.entities.PromoMessage.update(old[0].id,data);else if(f.display_in_catalog)await base44.entities.PromoMessage.create(data)};
+ const submit=async e=>{e.preventDefault();setSaving(true);try{const num=v=>Number(v||0),data={...f,code:t==='coupon'?f.code.trim().toUpperCase():'PROMO-'+Date.now(),type:f.discount_type,value:num(t==='combo'?f.combo_price:f.value),min_order_value:num(f.min_order_value),max_uses:Number(f.max_uses)||100,buy_quantity:Number(f.buy_quantity)||1,pay_quantity:Number(f.pay_quantity)||1,benefit_quantity:Number(f.benefit_quantity)||1,combo_price:num(f.combo_price),uses_count:promotion?.uses_count||0};delete data.source;delete data.image_url;let saved=promotion?.id&&!promotion.source?await base44.entities.Coupon.update(promotion.id,data):await base44.entities.Coupon.create(data);if(t==='product_discount'&&f.product_id){const p=products.find(x=>x.id===f.product_id),price=f.discount_type==='percentage'?p.price*(1-num(f.value)/100):Math.max(0,p.price-num(f.value));await base44.entities.Product.update(p.id,{promo_price:Number(price.toFixed(2))})}await sync(saved);onSave()}finally{setSaving(false)}};
+ const SelectProduct=({field='product_id',label='Produto *'})=><div><label className={lbl}>{label}</label><select required value={f[field]} onChange={e=>set(field,e.target.value)} className={inp}><option value="">Selecione</option>{products.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></div>;
+ const Choices=({field,options,label})=><div><p className={lbl}>{label}</p><div className="flex flex-wrap gap-2">{options.map(o=><button type="button" key={o.id} onClick={()=>toggle(field,o.id)} className={'rounded-lg border px-3 py-1.5 text-xs '+(f[field].includes(o.id)?'border-primary bg-green-50 text-green-700':'bg-white')}>{o.label}</button>)}</div></div>;
+ const discount=['product_discount','category_discount','coupon','minimum_order','schedule'].includes(t);
+ return <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} data-peddi-modal="" className="fixed inset-0 z-[70] bg-black/35" onClick={onClose}><motion.aside initial={{x:520}} animate={{x:0}} exit={{x:520}} className="absolute inset-y-0 right-0 flex w-full max-w-[470px] flex-col bg-white shadow-2xl" onClick={e=>e.stopPropagation()}><header className="flex justify-between border-b px-5 py-4"><div><h2 className="font-heading text-lg font-bold">{promotion?'Editar '+meta.label.toLowerCase():meta.title}</h2><p className="text-xs text-muted-foreground">Crie uma oferta comercial para o cardápio.</p></div><button onClick={onClose}><X/></button></header><form onSubmit={submit} className="flex min-h-0 flex-1 flex-col"><div className="flex-1 space-y-4 overflow-y-auto p-5">
+ <div><label className={lbl}>Tipo de promoção *</label><select value={t} onChange={e=>set('promotion_type',e.target.value)} className={inp}>{TYPES.map(x=><option key={x.id} value={x.id}>{x.label}</option>)}</select></div><div><label className={lbl}>Nome da promoção *</label><input required value={f.name} onChange={e=>set('name',e.target.value)} className={inp}/></div>
+ {t==='coupon'&&<div><label className={lbl}>Código *</label><input required value={f.code} onChange={e=>set('code',e.target.value.toUpperCase())} className={inp}/></div>}{t==='product_discount'&&<SelectProduct/>}{t==='category_discount'&&<div><label className={lbl}>Categoria *</label><select required value={f.category_id} onChange={e=>set('category_id',e.target.value)} className={inp}><option value="">Selecione</option>{categories.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></div>}{discount&&<div className="grid grid-cols-2 gap-3"><div><label className={lbl}>Formato</label><select value={f.discount_type} onChange={e=>set('discount_type',e.target.value)} className={inp}><option value="percentage">Percentual (%)</option><option value="fixed">Valor (R$)</option></select></div><div><label className={lbl}>Valor *</label><input required type="number" min="0" step=".01" value={f.value} onChange={e=>set('value',e.target.value)} className={inp}/></div></div>}
+ {t==='combo'&&<><Choices field="product_ids" label="Produtos participantes *" options={products.map(p=>({id:p.id,label:p.name}))}/><div><label className={lbl}>Preço do combo *</label><input required type="number" min="0" step=".01" value={f.combo_price} onChange={e=>set('combo_price',e.target.value)} className={inp}/></div></>}{t==='buy_x_pay_y'&&<><SelectProduct/><div className="grid grid-cols-2 gap-3"><Num label="Quantidade levada" value={f.buy_quantity} set={v=>set('buy_quantity',v)} cls={inp}/><Num label="Quantidade paga" value={f.pay_quantity} set={v=>set('pay_quantity',v)} cls={inp}/></div></>}{t==='buy_x_get_y'&&<><SelectProduct label="Produto comprado *"/><SelectProduct field="benefit_product_id" label="Produto recebido *"/><div className="grid grid-cols-2 gap-3"><Num label="Qtd. necessária" value={f.buy_quantity} set={v=>set('buy_quantity',v)} cls={inp}/><Num label="Qtd. recebida" value={f.benefit_quantity} set={v=>set('benefit_quantity',v)} cls={inp}/></div></>}
+ {['coupon','free_shipping','minimum_order'].includes(t)&&<div><label className={lbl}>Pedido mínimo (R$)</label><input type="number" min="0" step=".01" value={f.min_order_value} onChange={e=>set('min_order_value',e.target.value)} className={inp}/></div>}{t==='coupon'&&<Num label="Limite de usos" value={f.max_uses} set={v=>set('max_uses',v)} cls={inp}/>} {t==='free_shipping'&&<Choices field="eligible_region_ids" label="Regiões elegíveis" options={regions.map(r=>({id:r.id,label:r.name}))}/>} {t==='schedule'&&<><Choices field="days_of_week" label="Dias da semana" options={DAYS.map(([id,label])=>({id,label}))}/><div className="grid grid-cols-2 gap-3"><Time label="Das" value={f.start_time} set={v=>set('start_time',v)} cls={inp}/><Time label="Até" value={f.end_time} set={v=>set('end_time',v)} cls={inp}/></div></>}
+ <div className="grid grid-cols-2 gap-3"><Time type="date" label="Válida de" value={f.start_date} set={v=>set('start_date',v)} cls={inp}/><Time type="date" label="Até" value={f.expires_at} set={v=>set('expires_at',v)} cls={inp}/></div><div className="grid grid-cols-2 gap-3"><Toggle label="Promoção ativa" value={f.is_active} set={v=>set('is_active',v)}/><Toggle label="Exibir no cardápio" value={f.display_in_catalog} set={v=>set('display_in_catalog',v)}/></div>{f.display_in_catalog&&<div className="space-y-3 rounded-xl bg-green-50 p-3"><div><label className={lbl}>Texto do mini banner *</label><input required value={f.mini_banner_text} onChange={e=>set('mini_banner_text',e.target.value)} className={inp}/></div><div><label className={lbl}>Botão / CTA *</label><input required value={f.cta_label} onChange={e=>set('cta_label',e.target.value)} className={inp}/></div><p className="text-[11px] text-green-700">Será exibida no carrossel fino abaixo dos banners principais.</p></div>}
+ </div><footer className="grid grid-cols-2 gap-3 border-t p-4"><button type="button" onClick={onClose} className="rounded-xl bg-gray-100 py-3 text-sm font-semibold">Cancelar</button><button disabled={saving} className="flex items-center justify-center gap-2 rounded-xl bg-primary py-3 text-sm font-bold text-white">{saving&&<Loader2 size={16} className="animate-spin"/>}{promotion?'Salvar alterações':'Criar '+meta.label.toLowerCase()}</button></footer></form></motion.aside></motion.div>
 }
+function Num({label,value,set,cls}){return <div><label className="mb-1.5 block text-xs font-semibold text-gray-600">{label}</label><input type="number" min="1" value={value} onChange={e=>set(e.target.value)} className={cls}/></div>}
+function Time({label,value,set,cls,type='time'}){return <div><label className="mb-1.5 block text-xs font-semibold text-gray-600">{label}</label><input type={type} value={value} onChange={e=>set(e.target.value)} className={cls}/></div>}
+function Toggle({label,value,set}){return <label className="flex items-center gap-2 rounded-xl border p-3 text-xs font-semibold"><input type="checkbox" checked={value} onChange={e=>set(e.target.checked)} className="h-4 w-4 accent-primary"/>{label}</label>}

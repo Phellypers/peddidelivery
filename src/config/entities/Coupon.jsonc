@@ -2,6 +2,8 @@
   "name": "Coupon",
   "type": "object",
   "properties": {
+    "promotion_type": { "type": "string" },
+    "name": { "type": "string" },
     "code": {
       "type": "string"
     },
@@ -35,7 +37,24 @@
     "expires_at": {
       "type": "string",
       "format": "date"
-    }
+    },
+    "start_date": { "type": "string", "format": "date" },
+    "discount_type": { "type": "string" },
+    "product_id": { "type": "string" },
+    "category_id": { "type": "string" },
+    "product_ids": { "type": "array", "items": { "type": "string" } },
+    "combo_price": { "type": "number" },
+    "buy_quantity": { "type": "number" },
+    "pay_quantity": { "type": "number" },
+    "benefit_product_id": { "type": "string" },
+    "benefit_quantity": { "type": "number" },
+    "eligible_region_ids": { "type": "array", "items": { "type": "string" } },
+    "days_of_week": { "type": "array", "items": { "type": "string" } },
+    "start_time": { "type": "string" },
+    "end_time": { "type": "string" },
+    "display_in_catalog": { "type": "boolean", "default": false },
+    "mini_banner_text": { "type": "string" },
+    "cta_label": { "type": "string" }
   },
   "required": [
     "code",

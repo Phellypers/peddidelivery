@@ -41,7 +41,7 @@ export default function ReactivationTab() {
       setProfiles(p);
       setOrders(o);
       setCampaigns(c);
-      setCoupons(cups);
+      setCoupons(cups.filter(coupon => !coupon.promotion_type || coupon.promotion_type === 'coupon'));
       setLoading(false);
     });
   }, []);

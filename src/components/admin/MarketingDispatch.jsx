@@ -42,7 +42,7 @@ export default function MarketingDispatch() {
     ]).then(([profs, ords, cups]) => {
       setProfiles(profs);
       setOrders(ords);
-      setCoupons(cups);
+      setCoupons(cups.filter(coupon => !coupon.promotion_type || coupon.promotion_type === 'coupon'));
       setLoading(false);
     });
     // Load history from localStorage

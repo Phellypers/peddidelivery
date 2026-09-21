@@ -27,11 +27,7 @@ export default function PromoHeaderBanner() {
         <Megaphone size={13} className="text-primary flex-shrink-0" />
         <div className="flex-1 overflow-hidden">
           <div className="marquee-content flex items-center gap-8 whitespace-nowrap">
-            {display.map((m, i) => (
-              <span key={i} className="text-xs font-semibold text-primary">
-                {m.text}
-              </span>
-            ))}
+            {display.map((m, i) => <span key={i} className="inline-flex items-center gap-2 text-xs font-semibold text-primary">{m.text}{m.cta_label && <a href="#cardapio-produtos" className="rounded-full bg-primary px-2 py-0.5 text-[10px] text-white">{m.cta_label}</a>}</span>)}
           </div>
         </div>
       </div>

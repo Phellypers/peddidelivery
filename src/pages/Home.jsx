@@ -221,8 +221,6 @@ export default function Home() {
         </header>
 
         {/* ── Promo Header Banner ── */}
-        <PromoHeaderBanner />
-
         <div className="peddi-store-categories overflow-x-auto scrollbar-hide">
           <div className="flex gap-3 px-4 py-4">
             <button type="button" aria-pressed={!activeCategory && !activeBanner} onClick={clearProductFilter} className={`peddi-store-category ${!activeCategory && !activeBanner ? 'active' : ''}`}>
@@ -251,6 +249,8 @@ export default function Home() {
         )}
 
         {/* ── Section Label ── */}
+        {!searchQuery && !activeCategory && <PromoHeaderBanner />}
+
         <div id="cardapio-produtos" className="flex items-center justify-between px-4 pt-4 pb-2">
           <h2 className="font-heading font-bold text-base text-gray-900">{getSectionLabel()}</h2>
           {(
