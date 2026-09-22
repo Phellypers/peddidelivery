@@ -73,16 +73,14 @@ export default function OrderTracking() {
     return()=>controller.abort();
   },[id,order?.status==='shipped']);
 
-  useEffect(()=>{if(order?.status!=='shipped'||customerLocation||!navigator.geolocation)return;
-    navigator.geolocation.getCurrentPosition(position=>setCustomerLocation([position.coords.latitude,position.coords.longitude]),()=>{}, {maximumAge:60000,timeout:8000});
-  },[order?.status,customerLocation]);
-
   if (loading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin text-primary" size={32} /></div>;
   if (!order) return <div className="min-h-screen flex items-center justify-center text-gray-400">Pedido não encontrado</div>;
 
   const isChatActive = !['delivered', 'cancelled'].includes(order.status);
-  const hasLocation = order.status==='shipped' && deliverer?.lat != null && deliverer?.lng != null && Number.isFinite(Number(deliverer.lat)) && Number.isFinite(Number(deliverer.lng));
-  const center = hasLocation ? [Number(deliverer.lat), Number(deliverer.lng)] : [-23.5505, -46.6333];
+  const updatedAt = new Date(deliverer?.location_updated_at || 0).getTime();
+  const locationIsFresh = Number.isFinite(updatedAt) && Date.now() - updatedAt <= 3 * 60 * 1000;
+  const hasLocation = order.status==='shipped' && locationIsFresh && deliverer?.lat != null && deliverer?.lng != null && Number.isFinite(Number(deliverer.lat)) && Number.isFinite(Number(deliverer.lng));
+  const center = hasLocation ? [Number(deliverer.lat), Number(deliverer.lng)] : [-14.235, -51.9253];
   const mapPoints=[...(hasLocation?[center]:[]),...(customerLocation?[customerLocation]:[])];
 
   return (

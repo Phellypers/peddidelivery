@@ -28,6 +28,8 @@ export default function DelivererApp() {
   const [completedOrders, setCompletedOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [watching, setWatching] = useState(false);
+  const [locationError, setLocationError] = useState('');
+  const [startingLocation, setStartingLocation] = useState(false);
   const [tab, setTab] = useState('deliveries');
   const [actionLoading, setActionLoading] = useState(null);
   const [profileForm, setProfileForm] = useState(null);
@@ -66,6 +68,20 @@ export default function DelivererApp() {
       setLoading(false);
     })().catch(() => { setDeliverer(null); setLoading(false); });
   }, [user]);
+
+  useEffect(() => {
+    const updateLocation = event => {
+      setLocationError('');
+      setDeliverer(previous => previous ? { ...previous, ...event.detail } : previous);
+    };
+    const showLocationError = event => { setLocationError(event.detail); setWatching(false); };
+    window.addEventListener('peddi-deliverer-location', updateLocation);
+    window.addEventListener('peddi-location-error', showLocationError);
+    return () => {
+      window.removeEventListener('peddi-deliverer-location', updateLocation);
+      window.removeEventListener('peddi-location-error', showLocationError);
+    };
+  }, []);
 
   useEffect(() => {
     if (user?.role!=='courier') return;
@@ -109,10 +125,19 @@ export default function DelivererApp() {
     return () => unsub();
   }, [user?.id]);
 
-  const startWatching = () => {
+  const startWatching = async () => {
     if (!deliverer) return;
-    startLocationTracking(deliverer.id);
-    setWatching(true);
+    setStartingLocation(true);
+    setLocationError('');
+    try {
+      await startLocationTracking(deliverer.id);
+      setWatching(true);
+    } catch (error) {
+      setWatching(false);
+      setLocationError(error.message || 'Não foi possível iniciar a localização.');
+    } finally {
+      setStartingLocation(false);
+    }
   };
 
   const stopWatching = () => {
@@ -133,7 +158,7 @@ export default function DelivererApp() {
     setActionLoading(orderId);
     await base44.entities.Order.update(orderId, { deliverer_accepted: true });
     setOrders(prev => prev.map(o => o.id === orderId ? { ...o, deliverer_accepted: true } : o));
-    if (!isTracking() && deliverer) { startLocationTracking(deliverer.id); setWatching(true); }
+    if (!isTracking() && deliverer) await startWatching();
     setActionLoading(null);
   };
 
@@ -401,13 +426,14 @@ export default function DelivererApp() {
                   {deliverer.location_updated_at && ` · ${new Date(deliverer.location_updated_at).toLocaleTimeString('pt-BR')}`}
                 </p>
               )}
+              {locationError && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{locationError}</p>}
               {watching ? (
                 <button onClick={stopWatching} className="w-full py-3 bg-red-500 text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2">
                   <Power size={16} /> Parar compartilhamento
                 </button>
               ) : (
-                <button onClick={startWatching} className="w-full py-3 bg-primary text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2">
-                  <Navigation size={16} /> Iniciar compartilhamento
+                <button onClick={startWatching} disabled={startingLocation} className="w-full py-3 bg-primary text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-60">
+                  {startingLocation ? <Loader2 size={16} className="animate-spin" /> : <Navigation size={16} />} {startingLocation ? 'Obtendo GPS...' : 'Iniciar compartilhamento'}
                 </button>
               )}
               <p className="text-[10px] text-gray-400 mt-2 text-center">A localização continua ativa em segundo plano após aceitar uma entrega.</p>

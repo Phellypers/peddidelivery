@@ -182,7 +182,7 @@ async function saveEntity(request:AuthRequest,response:express.Response){
   switch(entity){
     case 'Deliverer': {
       if (!isManager(request)) {
-        const allowed=['name','phone','vehicle','bio','email_notifications','photo_url','current_status','available','lat','lng','location_updated_at'];
+        const allowed=['name','phone','vehicle','bio','email_notifications','photo_url','current_status','available','lat','lng','location_accuracy','location_heading','location_speed','location_updated_at'];
         if (!id || prior?.user_id!==request.auth?.userId || Object.keys(request.body).some(key=>!allowed.includes(key))) return response.status(403).json({error:'Somente o gestor pode ativar ou aprovar entregadores.'});
       }
       try { response.status(id?200:201).json(await saveCourier(pool!,tenant,data,id as string|undefined)); }

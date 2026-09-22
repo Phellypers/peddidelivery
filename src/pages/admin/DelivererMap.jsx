@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { base44 } from '@/api/base44Client';
@@ -8,6 +8,28 @@ import DelivererDetailPanel from '@/components/admin/DelivererDetailPanel';
 
 const STATUS_LABELS = { available: 'Disponível', delivering: 'Em entrega', offline: 'Offline' };
 const STATUS_COLORS = { available: '#22C55E', delivering: '#3B82F6', offline: '#9CA3AF' };
+const LOCATION_MAX_AGE = 3 * 60 * 1000;
+
+function coordinates(deliverer) {
+  const lat = Number(deliverer?.lat);
+  const lng = Number(deliverer?.lng);
+  return Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180 ? [lat, lng] : null;
+}
+
+function hasFreshLocation(deliverer) {
+  const updatedAt = new Date(deliverer?.location_updated_at || 0).getTime();
+  return Boolean(coordinates(deliverer) && Number.isFinite(updatedAt) && Date.now() - updatedAt <= LOCATION_MAX_AGE);
+}
+
+function MapViewport({ points }) {
+  const map = useMap();
+  const key = points.flat().join(',');
+  useEffect(() => {
+    if (points.length > 1) map.fitBounds(points, { padding: [45, 45], maxZoom: 16 });
+    else if (points[0]) map.setView(points[0], 16);
+  }, [map, key]);
+  return null;
+}
 
 function makeIcon(status) {
   const color = STATUS_COLORS[status] || STATUS_COLORS.offline;
@@ -58,11 +80,12 @@ export default function DelivererMap() {
     return () => unsub();
   }, []);
 
-  const located = deliverers.filter(d => d.lat && d.lng);
-  const center = located[0] ? [located[0].lat, located[0].lng] : [-23.5505, -46.6333];
+  const located = deliverers.filter(hasFreshLocation);
+  const points = located.map(coordinates);
+  const center = points[0] || [-14.235, -51.9253];
 
-  const ordersForDeliverer = (delivererName) => {
-    return orders.filter(o => o.tracking_code === delivererName);
+  const ordersForDeliverer = (deliverer) => {
+    return orders.filter(o => o.deliverer_user_id === deliverer.user_id || (!o.deliverer_user_id && o.tracking_code === deliverer.name));
   };
 
   if (loading) {
@@ -88,8 +111,9 @@ export default function DelivererMap() {
            <div className="h-[300px] sm:h-[400px] lg:h-[600px]">
               <MapContainer center={center} zoom={13} style={{ height: '100%', width: '100%' }}>
                 <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution='&copy; OpenStreetMap' />
+                <MapViewport points={points} />
                 {located.map(d => (
-                  <Marker key={d.id} position={[d.lat, d.lng]} icon={makeIcon(d.current_status)}>
+                  <Marker key={d.id} position={coordinates(d)} icon={makeIcon(d.current_status)}>
                     <Popup>
                       <div style={{ minWidth: '180px' }}>
                         <p style={{ fontWeight: 'bold', fontSize: '14px', margin: 0 }}>{d.name}</p>
@@ -107,17 +131,18 @@ export default function DelivererMap() {
           <div className="relative z-10">
             <div className={`space-y-2 ${selectedDeliverer ? 'lg:hidden' : ''}`}>
             {deliverers.map(d => {
-              const dOrders = ordersForDeliverer(d.name);
-              const hasLoc = d.lat && d.lng;
+              const dOrders = ordersForDeliverer(d);
+              const hasLoc = hasFreshLocation(d);
+              const displayStatus = hasLoc ? d.current_status : 'offline';
               return (
                 <div key={d.id} onClick={() => setSelectedDeliverer(d)} className={`bg-card rounded-2xl border p-3 cursor-pointer hover:border-primary transition-colors ${hasLoc ? 'border-border/50' : 'border-border/30 opacity-60'}`}>
                   <div className="flex items-center gap-2 mb-1">
-                    <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: STATUS_COLORS[d.current_status] + '20' }}>
-                      <Bike size={16} style={{ color: STATUS_COLORS[d.current_status] }} />
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: STATUS_COLORS[displayStatus] + '20' }}>
+                      <Bike size={16} style={{ color: STATUS_COLORS[displayStatus] }} />
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-foreground truncate">{d.name}</p>
-                      <p className="text-[10px] text-muted-foreground">{STATUS_LABELS[d.current_status] || 'Offline'}</p>
+                      <p className="text-[10px] text-muted-foreground">{STATUS_LABELS[displayStatus] || 'Offline'}</p>
                     </div>
                   </div>
                   <div className="text-[10px] text-muted-foreground flex items-center gap-1">

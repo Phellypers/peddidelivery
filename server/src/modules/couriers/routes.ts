@@ -60,10 +60,11 @@ async function trackingSnapshot(request:AuthRequest,orderId:string) {
     || (request.auth!.role==='courier' && row.courier_user_id!==request.auth!.userId)) return null;
   const active=row.status==='out_for_delivery';
   const details=row.courier_details||{};
+  const coordinate=(value:unknown,min:number,max:number)=>{const parsed=Number(value);return Number.isFinite(parsed)&&parsed>=min&&parsed<=max?parsed:null;};
   return {orderId:row.id,status:row.status==='out_for_delivery'?'shipped':row.status,active,
     courier:active&&row.courier_id?{id:row.courier_id,name:details.name||'Entregador',vehicle:details.vehicle||'',photoUrl:details.photo_url||'',
-      lat:Number(details.lat)||null,lng:Number(details.lng)||null,updatedAt:details.location_updated_at||null}:null,
-    destination:{address:row.details?.delivery_address||'',lat:Number(row.details?.delivery_lat)||null,lng:Number(row.details?.delivery_lng)||null}};
+      lat:coordinate(details.lat,-90,90),lng:coordinate(details.lng,-180,180),accuracy:Number(details.location_accuracy)||null,updatedAt:details.location_updated_at||null}:null,
+    destination:{address:row.details?.delivery_address||'',lat:coordinate(row.details?.delivery_lat,-90,90),lng:coordinate(row.details?.delivery_lng,-180,180)}};
 }
 
 courierRouter.get('/deliveries/:orderId/tracking/stream',requireAuth,requireRoles('customer','manager','peddi_admin','courier'),async(request:AuthRequest,response)=>{
