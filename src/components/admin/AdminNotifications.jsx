@@ -8,12 +8,13 @@ import { useAuth } from '@/lib/AuthContext';
 const tabs = [['all','Todas'],['orders','Pedidos'],['system','Sistema'],['marketing','Marketing'],['read','Lidas']];
 const iconFor = type => type?.includes('order') ? ShoppingBag : type?.includes('deliver') ? Truck : type?.includes('product') || type?.includes('stock') ? Package : type?.includes('campaign') || type?.includes('marketing') ? Megaphone : Settings;
 const groupFor = type => type?.includes('order') || type?.includes('deliver') ? 'orders' : type?.includes('campaign') || type?.includes('marketing') ? 'marketing' : 'system';
+const isPdvOrderNotification = notification => notification.type === 'manager_order' && String(notification.order_origin || '').startsWith('pdv_');
 const relative = value => { const seconds=Math.max(1,Math.floor((Date.now()-Date.parse(value))/1000)); if(seconds<60)return'Agora mesmo';if(seconds<3600)return`${Math.floor(seconds/60)} min atrás`;if(seconds<86400)return`${Math.floor(seconds/3600)} h atrás`;return`${Math.floor(seconds/86400)} dia(s) atrás`; };
 
 export default function AdminNotifications(){
   const { user }=useAuth(); const navigate=useNavigate();
   const [open,setOpen]=useState(false),[active,setActive]=useState('all'),[items,setItems]=useState([]);
-  const load=()=>base44.entities.Notification.list('-created_date',200).then(rows=>setItems(rows.filter(n=>n.audience==='manager'||n.user_id===user?.id))).catch(()=>setItems([]));
+  const load=()=>base44.entities.Notification.list('-created_date',200).then(rows=>setItems(rows.filter(n=>(n.audience==='manager'||n.user_id===user?.id)&&!isPdvOrderNotification(n)))).catch(()=>setItems([]));
   useEffect(()=>{load();const unsub=base44.entities.Notification.subscribe(load);return unsub;},[user?.id]);
   const unread=items.filter(n=>!n.is_read).length;
   const filtered=useMemo(()=>items.filter(n=>active==='read'?n.is_read:active==='all'?!n.is_read:!n.is_read&&groupFor(n.type)===active),[items,active]);
