@@ -42,7 +42,7 @@ export default function DelivererApp() {
   const watchIdRef = useRef(null);
 
   useEffect(() => {
-    if (!user?.id) { setLoading(false); return; }
+    if (!user?.id || user.role !== 'courier') { setDeliverer(null); setLoading(false); return; }
     setLoading(true);
     (async () => {
       let dels = await base44.entities.Deliverer.filter({ user_id: user.id });
@@ -80,7 +80,7 @@ export default function DelivererApp() {
 
   // Real-time subscription
   useEffect(() => {
-    if (!user?.id) return;
+    if (!user?.id || user.role !== 'courier') return;
     const unsub = base44.entities.Order.subscribe((event) => {
       if (event.type === 'create' || event.type === 'update') {
         const o = event.data;
@@ -220,7 +220,7 @@ export default function DelivererApp() {
     : completedOrders;
 
   // ── Not authenticated ──
-  if (!isAuthenticated || !user) return <DelivererRegister/>;
+  if (!isAuthenticated || !user || user.role !== 'courier') return <DelivererRegister/>;
 
   if (loading) {
     return <div className="flex justify-center py-20"><Loader2 className="animate-spin text-primary" size={32} /></div>;
