@@ -542,14 +542,20 @@ export default function PDV() {
             <h2 className="font-heading font-semibold text-sm">Pagamento</h2>
             {payments.map((pay, idx) => (
               <div key={idx} className="space-y-2 rounded-xl border border-gray-100 p-2.5">
-                <div className="flex items-center gap-2">
-                  <select aria-label={`Forma de pagamento ${idx + 1}`} value={pay.method} onChange={e => updatePayment(idx, 'method', e.target.value)} className={inp + ' flex-1'}>
-                    {PAYMENT_OPTIONS.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
-                  </select>
-                  <input aria-label={pay.method === 'cash' ? 'Valor recebido' : 'Valor pago'} type="number" min="0" step="0.01" placeholder="0,00" value={pay.amount} onChange={e => updatePayment(idx, 'amount', e.target.value)} className={inp + ' w-28'} />
-                  {payments.length > 1 && <button type="button" aria-label="Remover pagamento" onClick={() => removePayment(idx)} className="text-red-400 p-2 flex-shrink-0"><Trash2 size={14} /></button>}
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(170px,1fr)_minmax(120px,160px)_auto] sm:items-end">
+                  <label className="min-w-0">
+                    <span className="mb-1.5 block text-[11px] font-semibold text-gray-500">Forma de pagamento</span>
+                    <select aria-label={`Forma de pagamento ${idx + 1}`} value={pay.method} onChange={e => updatePayment(idx, 'method', e.target.value)} className={inp + ' min-w-0'}>
+                      {PAYMENT_OPTIONS.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
+                    </select>
+                  </label>
+                  <label className="min-w-0">
+                    <span className="mb-1.5 block text-[11px] font-semibold text-gray-500">{pay.method === 'cash' ? 'Valor recebido' : 'Valor pago'}</span>
+                    <input aria-label={pay.method === 'cash' ? 'Valor recebido' : 'Valor pago'} type="number" min="0" step="0.01" placeholder="0,00" value={pay.amount} onChange={e => updatePayment(idx, 'amount', e.target.value)} className={inp + ' min-w-0'} />
+                  </label>
+                  {payments.length > 1 && <button type="button" aria-label="Remover pagamento" onClick={() => removePayment(idx)} className="flex h-10 w-10 items-center justify-center rounded-lg text-red-400 hover:bg-red-50 hover:text-red-600"><Trash2 size={14} /></button>}
                 </div>
-                {pay.method === 'cash' && <div><p className="text-[11px] font-semibold text-gray-500 mb-1.5">Valor recebido</p><div className="grid grid-cols-3 gap-2">
+                {pay.method === 'cash' && <div><div className="grid grid-cols-3 gap-2">
                   <button type="button" onClick={() => updatePayment(idx, 'amount', fromCents(Math.max(0, totalCents - (paidCents - toCents(pay.amount)))).toFixed(2))} className="px-2 py-2 rounded-lg bg-gray-50 border border-gray-200 text-xs font-semibold hover:border-primary hover:text-primary">Valor exato</button>
                   <button type="button" onClick={() => updatePayment(idx, 'amount', '50.00')} className="px-2 py-2 rounded-lg bg-gray-50 border border-gray-200 text-xs font-semibold hover:border-primary hover:text-primary">R$ 50</button>
                   <button type="button" onClick={() => updatePayment(idx, 'amount', '100.00')} className="px-2 py-2 rounded-lg bg-gray-50 border border-gray-200 text-xs font-semibold hover:border-primary hover:text-primary">R$ 100</button>
