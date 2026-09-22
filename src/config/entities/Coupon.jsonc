@@ -61,7 +61,8 @@
     "end_time": { "type": "string" },
     "display_in_catalog": { "type": "boolean", "default": false },
     "mini_banner_text": { "type": "string" },
-    "cta_label": { "type": "string" }
+    "cta_label": { "type": "string" },
+    "image_url": { "type": "string" }
   },
   "required": [
     "code",
