@@ -5,7 +5,7 @@ import { useAuth } from '@/lib/AuthContext';
 export default function CourierNavigationGuard({ children }) {
   const { user }=useAuth();
   const { pathname }=useLocation();
-  const allowed=['/entregador','/entregador/cadastro','/login','/forgot-password','/reset-password'];
+  const allowed=['/entregador','/entregador/cadastro','/entregador/login','/login','/forgot-password','/reset-password'];
   if (user?.role==='courier' && !allowed.includes(pathname)) return <Navigate to="/entregador" replace/>;
   return children;
 }

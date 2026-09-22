@@ -12,9 +12,9 @@ import { peddiApi, saveSession } from '@/services/api/peddiApi';
 import { storefrontStoreRef } from '@/lib/storefrontTenant';
 import { getStoreTheme } from '@/lib/storeTheme';
 
-export default function Login({ managerOnly = false }) {
+export default function Login({ managerOnly = false, courierOnly = false }) {
   const location = useLocation();
-  const storeRef = managerOnly ? '' : storefrontStoreRef(location.search);
+  const storeRef = managerOnly || courierOnly ? '' : storefrontStoreRef(location.search);
   const registerParams = new URLSearchParams();
   if (storeRef) registerParams.set('store', storeRef);
   const requestedReturn = new URLSearchParams(location.search).get('returnTo');
@@ -28,14 +28,14 @@ export default function Login({ managerOnly = false }) {
   const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
-    if (managerOnly || !storeRef) return;
+    if (managerOnly || courierOnly || !storeRef) return;
     let active = true;
     peddiApi.stores().then(({ stores = [] }) => {
       const selected = stores.find(item => item.id === storeRef || item.slug === storeRef);
       if (active) setStore(selected || null);
     }).catch(() => { if (active) setStore(null); });
     return () => { active = false; };
-  }, [managerOnly, storeRef]);
+  }, [managerOnly, courierOnly, storeRef]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -44,10 +44,10 @@ export default function Login({ managerOnly = false }) {
     try {
       let destination = safeReturnTo();
       if (peddiApi.isConfigured) {
-        if (!managerOnly && !store?.id) throw new Error('Acesse o login pelo cardápio da loja para continuar.');
-        const result = await peddiApi.login(email, password, managerOnly ? 'manager' : 'customer', store?.id);
+        if (!managerOnly && !courierOnly && !store?.id) throw new Error('Acesse o login pelo cardápio da loja para continuar.');
+        const result = await peddiApi.login(email, password, managerOnly ? 'manager' : courierOnly ? 'courier' : 'customer', store?.id);
         saveSession(result);
-        if (result.user.role === 'courier') destination = '/entregador';
+        if (courierOnly || result.user.role === 'courier') destination = '/entregador';
         if (managerOnly) destination = destination === '/admin' || destination.startsWith('/admin/') ? destination : '/admin';
         else if (result.user.role !== 'courier' && !new URLSearchParams(window.location.search).has('returnTo')) destination = '/loja';
       } else {
@@ -67,14 +67,14 @@ export default function Login({ managerOnly = false }) {
 
   return (
     <AuthLayout
-      icon={managerOnly ? LogIn : Store}
-      logoUrl={!managerOnly ? store?.logo_url : ''}
-      brandName={!managerOnly ? store?.name : ''}
-      theme={!managerOnly && store ? getStoreTheme(store) : undefined}
-      title={managerOnly ? 'Acesso do gestor' : 'Entre na sua conta'}
-      subtitle={managerOnly ? 'Entre com sua conta administrativa PEDDI.' : store ? `Acesse o cardápio da ${store.name}` : 'Abra este acesso pelo cardápio da loja.'}
+      icon={managerOnly ? LogIn : courierOnly ? LogIn : Store}
+      logoUrl={!managerOnly && !courierOnly ? store?.logo_url : ''}
+      brandName={!managerOnly && !courierOnly ? store?.name : courierOnly ? 'PEDDI Entregadores' : ''}
+      theme={!managerOnly && !courierOnly && store ? getStoreTheme(store) : undefined}
+      title={managerOnly ? 'Acesso do gestor' : courierOnly ? 'Acesso do entregador' : 'Entre na sua conta'}
+      subtitle={managerOnly ? 'Entre com sua conta administrativa PEDDI.' : courierOnly ? 'Entre com o cadastro aprovado pela loja.' : store ? `Acesse o cardápio da ${store.name}` : 'Abra este acesso pelo cardápio da loja.'}
       footer={
-        managerOnly ? <Link to="/" className="text-primary font-medium">Voltar ao site da PEDDI</Link> : <>
+        managerOnly ? <Link to="/" className="text-primary font-medium">Voltar ao site da PEDDI</Link> : courierOnly ? <Link to="/entregador" className="text-primary font-medium">Voltar para entregadores</Link> : <>
           Don't have an account?{" "}
           <Link to={registerPath} className="text-primary font-medium hover:underline">
             Create one
@@ -82,7 +82,7 @@ export default function Login({ managerOnly = false }) {
         </>
       }
     >
-      {!managerOnly && <><Button
+      {!managerOnly && !courierOnly && <><Button
         variant="outline"
         className="w-full h-12 text-sm font-medium mb-6"
         onClick={handleGoogle}
@@ -127,7 +127,7 @@ export default function Login({ managerOnly = false }) {
         </div>
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <Label htmlFor="password">{managerOnly ? 'Senha' : 'Password'}</Label>
+            <Label htmlFor="password">{managerOnly || courierOnly ? 'Senha' : 'Password'}</Label>
             <Link to="/forgot-password" className="text-xs text-primary hover:underline">
               {managerOnly ? 'Esqueci minha senha' : 'Forgot password?'}
             </Link>
@@ -161,10 +161,10 @@ export default function Login({ managerOnly = false }) {
           {loading ? (
             <>
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              {managerOnly ? 'Entrando...' : 'Logging in...'}
+              {managerOnly || courierOnly ? 'Entrando...' : 'Logging in...'}
             </>
           ) : (
-            managerOnly ? 'Entrar no painel' : "Log in"
+            managerOnly ? 'Entrar no painel' : courierOnly ? 'Entrar como entregador' : "Log in"
           )}
         </Button>
       </form>

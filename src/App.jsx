@@ -101,6 +101,7 @@ function App() {
                 {/* Auth routes always available, outside AuthenticatedApp */}
                 <Route path="/login" element={<Login />} />
                 <Route path="/gestor/login" element={<Login managerOnly />} />
+                <Route path="/entregador/login" element={<Login courierOnly />} />
                 <Route path="/register" element={<Register />} />
                 <Route path="/forgot-password" element={<ForgotPassword />} />
                 <Route path="/reset-password" element={<ResetPassword />} />

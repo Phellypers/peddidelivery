@@ -73,7 +73,7 @@ courierApplicationRouter.post('/admin/courier-applications/:id/decision', ...man
       await client.query("INSERT INTO app_records(store_id,entity_name,owner_id,data) VALUES($1,'OutboundNotification',$2,$3)", [request.auth!.storeId,row.user_id,JSON.stringify({
         type:'courier_approved',channel:'email',status:env.resendApiKey && env.notificationEmailFrom ? 'queued' : 'pending_configuration',courier_id:row.id,
         to:row.details.email,subject:'Seu cadastro de entregador foi aprovado — PEDDI',
-        text:`Olá, ${row.details.name}! Seu cadastro foi aprovado. Você já pode entrar com seu e-mail e senha para receber e acompanhar entregas: ${env.clientOrigin}/login?returnTo=/entregador`,
+        text:`Olá, ${row.details.name}! Seu cadastro foi aprovado. Você já pode entrar com seu e-mail e senha para receber e acompanhar entregas: ${env.clientOrigin}/entregador/login`,
       })]);
     }
     await client.query('COMMIT');
