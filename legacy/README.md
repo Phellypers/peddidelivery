@@ -1,1 +1,0 @@
-﻿# Exportacoes legadas da Base44`r`n`r`n- `marketing_base44_export/`: exportacao original da aplicacao marketing.`r`n- `entities_base44_export/`: schemas e componentes financeiros originais.`r`n`r`nA aplicacao executavel esta na raiz e usa `src/`. Estas pastas foram preservadas para auditoria e nao participam do build.

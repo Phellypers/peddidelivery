@@ -6,8 +6,6 @@ import PageLoading from '@/components/PageLoading';
 import { ThemeProvider } from 'next-themes';
 import CourierNavigationGuard from '@/components/deliverer/CourierNavigationGuard';
 import { Toaster } from "@/components/ui/toaster"
-import { QueryClientProvider } from '@tanstack/react-query'
-import { queryClientInstance } from '@/lib/query-client'
 import { BrowserRouter as Router, Route, Routes, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
@@ -88,7 +86,6 @@ function App() {
   const app = (
     <ThemeProvider attribute="class" defaultTheme="light" forcedTheme="light" enableSystem={false} disableTransitionOnChange>
     <AuthProvider>
-      <QueryClientProvider client={queryClientInstance}>
         <CartProvider>
           <WishlistProvider>
             <Router>
@@ -123,7 +120,6 @@ function App() {
           </WishlistProvider>
         </CartProvider>
         <Toaster />
-      </QueryClientProvider>
     </AuthProvider>
     </ThemeProvider>
   );

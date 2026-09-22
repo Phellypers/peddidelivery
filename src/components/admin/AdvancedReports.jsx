@@ -1,8 +1,6 @@
 import React, { useState, useMemo, useRef } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 import { TrendingUp, TrendingDown, Users, Repeat, DollarSign, Package, CreditCard, Clock, MapPin, Award, AlertCircle, ShoppingBag, Printer, FileDown, Loader2 } from 'lucide-react';
-import html2canvas from 'html2canvas';
-import { jsPDF } from 'jspdf';
 
 const PAYMENT_LABELS = {
   pix: 'PIX', credit_card: 'Cartão', cash: 'Dinheiro',
@@ -234,6 +232,7 @@ export default function AdvancedReports({ orders, products, customers }) {
     if (!reportRef.current) return;
     setExporting(true);
     try {
+      const [{ default: html2canvas }, { jsPDF }] = await Promise.all([import('html2canvas'), import('jspdf')]);
       const canvas = await html2canvas(reportRef.current, { scale: 2, backgroundColor: '#ffffff', useCORS: true });
       const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF('p', 'mm', 'a4');

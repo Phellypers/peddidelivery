@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { X, FileText, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { base44 } from '@/api/base44Client';
-import { jsPDF } from 'jspdf';
 
 const MONTHS = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 
@@ -53,6 +52,7 @@ export default function FinancialReportModal({ user, clientName, onClose }) {
       });
       const totalSpent = filtered.reduce((sum, o) => sum + (o.total || 0), 0);
 
+      const { jsPDF } = await import('jspdf');
       const doc = new jsPDF();
       let y = 20;
       doc.setFontSize(16);
