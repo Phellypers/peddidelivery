@@ -36,9 +36,9 @@ export default function ChatWidget({ externalOpen = false, onExternalClose, hide
   const { user, isAuthenticated } = useAuth();
   const [open, setOpen] = useState(false);
   useEffect(() => { if (externalOpen) setOpen(true); }, [externalOpen]);
-  const closeChat = () => { setOpen(false); onExternalClose?.(); };
+  const closeChat = () => { setOpen(false); setHistoryOpen(false); onExternalClose?.(); };
   const [step, setStep] = useState('reason'); // reason | chat
-  const [historyOpen, setHistoryOpen] = useState(true);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const [ticketHistory, setTicketHistory] = useState([]);
   const [ticket, setTicket] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -49,6 +49,10 @@ export default function ChatWidget({ externalOpen = false, onExternalClose, hide
   const [starting, setStarting] = useState(false);
   const scrollRef = useRef(null);
   const dragControls = useDragControls();
+
+  useEffect(() => {
+    if (open) setHistoryOpen(false);
+  }, [open]);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -198,7 +202,7 @@ export default function ChatWidget({ externalOpen = false, onExternalClose, hide
                     Histórico de atendimentos <ChevronDown size={18} className={`shrink-0 transition-transform ${historyOpen ? 'rotate-180' : ''}`}/>
                   </button>
                   {historyOpen && <div id="chat-history-list" className="max-h-[min(22dvh,180px)] space-y-2 overflow-y-auto overscroll-contain pb-2">
-                    {ticketHistory.map(previous => <button type="button" key={previous.id} aria-pressed={ticket?.id === previous.id} onClick={() => {if(ticket?.id === previous.id && step === 'chat')return;setTicket(previous);setMessages([]);setText('');setChatError('');setStep('chat');}} className={`flex min-h-24 w-full items-center gap-3 rounded-2xl border bg-white p-3 text-left transition-colors ${ticket?.id === previous.id ? 'border-[#BBF7D0]' : 'border-[#E5E7EB] hover:border-[#22C55E]'}`}>
+                    {ticketHistory.map(previous => <button type="button" key={previous.id} aria-pressed={ticket?.id === previous.id} onClick={() => {setHistoryOpen(false);if(ticket?.id === previous.id && step === 'chat')return;setTicket(previous);setMessages([]);setText('');setChatError('');setStep('chat');}} className={`flex min-h-24 w-full items-center gap-3 rounded-2xl border bg-white p-3 text-left transition-colors ${ticket?.id === previous.id ? 'border-[#BBF7D0]' : 'border-[#E5E7EB] hover:border-[#22C55E]'}`}>
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2"><p className="break-words text-sm font-bold text-[#111111]">Protocolo {previous.protocol}</p><span className={`rounded-full px-2 py-1 text-[11px] font-semibold ${previous.status === 'closed' ? 'bg-[#F3F4F6] text-[#6B7280]' : 'bg-[#ECFDF3] text-[#15803D]'}`}>{{open:'Aberto',in_progress:'Em atendimento',resolved:'Resolvido',waiting_response:'Aguardando resposta',closed:'Encerrado'}[previous.status] || 'Aberto'}</span></div>
                         <p className="mt-1 text-xs text-[#6B7280]">{REASON_LABELS[previous.reason] || previous.reason_label || 'Motivo não informado'}</p>
