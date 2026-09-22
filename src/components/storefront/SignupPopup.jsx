@@ -15,6 +15,7 @@ export default function SignupPopup({ store, user }) {
   const primaryBtn = popup.primary_btn || 'Criar conta grátis';
   const secondaryBtn = popup.secondary_btn || 'Continuar sem cadastro';
   const style = popup.style || 'modern'; // modern | minimal | fun
+  const storeQuery = store?.id ? `?store=${encodeURIComponent(store.id)}` : '';
 
   // Only show if enabled and user is not logged in
   const shouldShow = enabled && !user && !isPublicDemo();
@@ -99,7 +100,7 @@ export default function SignupPopup({ store, user }) {
 
               <div className="space-y-2.5 pt-1">
                 <Link
-                  to="/register"
+                  to={`/register${storeQuery}`}
                   onClick={dismiss}
                   className={`block w-full py-3 rounded-xl font-bold text-sm transition-all ${cfg.primaryClass}`}
                 >
@@ -113,7 +114,7 @@ export default function SignupPopup({ store, user }) {
                 </button>
               </div>
 
-              <p className="text-xs text-gray-400">Já tem conta? <Link to="/login" onClick={dismiss} className="text-primary font-medium underline">Entrar</Link></p>
+              <p className="text-xs text-gray-400">Já tem conta? <Link to={`/login${storeQuery}`} onClick={dismiss} className="text-primary font-medium underline">Entrar</Link></p>
             </div>
           </motion.div>
         </motion.div>

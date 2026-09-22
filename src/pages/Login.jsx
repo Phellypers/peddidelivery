@@ -11,6 +11,7 @@ import { safeReturnTo } from "@/lib/authReturnTo";
 import { peddiApi, saveSession } from '@/services/api/peddiApi';
 import { storefrontStoreRef } from '@/lib/storefrontTenant';
 import { getStoreTheme } from '@/lib/storeTheme';
+import peddiLogo from '../../Logo Peddi/logo3.png';
 
 export default function Login({ managerOnly = false, courierOnly = false }) {
   const location = useLocation();
@@ -68,7 +69,7 @@ export default function Login({ managerOnly = false, courierOnly = false }) {
   return (
     <AuthLayout
       icon={managerOnly ? LogIn : courierOnly ? LogIn : Store}
-      logoUrl={!managerOnly && !courierOnly ? store?.logo_url : ''}
+      logoUrl={managerOnly || courierOnly ? peddiLogo : (store?.logo_url || peddiLogo)}
       brandName={!managerOnly && !courierOnly ? store?.name : courierOnly ? 'PEDDI Entregadores' : ''}
       theme={!managerOnly && !courierOnly && store ? getStoreTheme(store) : undefined}
       title={managerOnly ? 'Acesso do gestor' : courierOnly ? 'Acesso do entregador' : 'Entre na sua conta'}
