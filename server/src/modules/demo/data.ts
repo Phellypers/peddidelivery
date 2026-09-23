@@ -27,6 +27,48 @@ export function defaults(entity: string) {
 }
 export const isManager = (request: AuthRequest) => ['manager','peddi_admin'].includes(request.auth?.role ?? '');
 export const storeId = (request: AuthRequest) => request.localStoreId!;
+const money = (value: number) => Math.round((value + Number.EPSILON) * 100) / 100;
+
+function promotionCustomerKey(data: Record<string, any>) {
+  if (data.customer_user_id) return `user:${data.customer_user_id}`;
+  if (data.customer_email) return `email:${String(data.customer_email).trim().toLowerCase()}`;
+  if (data.visitor_id) return `visitor:${data.visitor_id}`;
+  return '';
+}
+
+async function calculateCheckoutBenefits(client: PoolClient, tenant: string, data: Record<string, any>, subtotal: number, deliveryFee: number) {
+  const today = new Date().toISOString().slice(0,10);
+  const breakdown: Array<{key:string;label:string;value:number;promotion_id?:string}> = [];
+  const couponCode = String(data.coupon_code || '').trim().toUpperCase();
+  const campaigns = (await client.query("SELECT id,data FROM app_records WHERE store_id=$1 AND entity_name='Campaign' AND COALESCE((data->>'is_active')::boolean,true)=true ORDER BY id FOR UPDATE",[tenant])).rows;
+  const orderCount = data.customer_user_id ? Number((await client.query(`SELECT count(*) FROM orders WHERE store_id=$1 AND details->>'customer_user_id'=$2 AND status<>'cancelled'`,[tenant,data.customer_user_id])).rows[0]?.count||0) : 0;
+  const applicable=campaigns.map(row=>({id:row.id,...row.data})).filter((campaign:any)=>
+    (!campaign.start_date||campaign.start_date<=today)&&(!campaign.expires_at||campaign.expires_at>=today)&&
+    ((campaign.type==='cart_value'&&subtotal>=Number(campaign.min_cart_value||0))||(campaign.type==='order_count'&&orderCount>=Number(campaign.min_order_count||0)))
+  ).map((campaign:any)=>({...campaign,calculated:money(campaign.discount_type==='percentage'?subtotal*Number(campaign.discount_value||0)/100:Number(campaign.discount_value||0))})).sort((a:any,b:any)=>b.calculated-a.calculated);
+  if(applicable[0]?.calculated>0) breakdown.push({key:'campaign',label:String(applicable[0].name||'Promoção aplicada'),value:Math.min(subtotal,applicable[0].calculated),promotion_id:applicable[0].id});
+  if(couponCode){
+    const row=(await client.query("SELECT id,data FROM app_records WHERE store_id=$1 AND entity_name='Coupon' AND upper(data->>'code')=$2 ORDER BY id FOR UPDATE",[tenant,couponCode])).rows[0];
+    if(!row)throw new Error('Cupom inválido.');
+    const coupon=row.data||{},customerKey=promotionCustomerKey(data);
+    if(coupon.is_active===false||(coupon.start_date&&coupon.start_date>today)||(coupon.expires_at&&coupon.expires_at<today))throw new Error('Esta promoção não está disponível.');
+    if(subtotal<Number(coupon.min_order_value||0))throw new Error(`Pedido mínimo de R$ ${Number(coupon.min_order_value).toFixed(2)} para este cupom.`);
+    const totalLimit=coupon.limit_total===false?0:Number(coupon.total_usage_limit||coupon.max_uses||0);
+    const customerLimit=coupon.limit_per_customer===false?0:Number(coupon.per_customer_limit||0);
+    if(totalLimit&&Number(coupon.uses_count||0)>=totalLimit)throw new Error('Limite atingido');
+    if(customerLimit&&customerKey&&Number(coupon.usage_by_customer?.[customerKey]||0)>=customerLimit)throw new Error('Você já atingiu o limite de uso desta promoção.');
+    if(coupon.allow_stacking===false&&breakdown.length)throw new Error('Esta promoção não pode ser usada junto com outra promoção.');
+    const value=money((coupon.discount_type||coupon.type)==='percentage'?subtotal*Number(coupon.value||0)/100:Number(coupon.value||0));
+    if(value>0)breakdown.push({key:'coupon',label:`Cupom ${couponCode}`,value:Math.min(subtotal,value),promotion_id:row.id});
+  }
+  if(data.payment_method==='pix'){
+    const store=(await client.query('SELECT details FROM stores WHERE id=$1',[tenant])).rows[0]?.details||{};
+    const value=money(subtotal*Number(store.pix_discount_percent||5)/100);
+    if(value>0)breakdown.push({key:'pix',label:'Desconto Pix',value:Math.min(subtotal,value)});
+  }
+  const discount=money(Math.min(subtotal+deliveryFee,breakdown.reduce((sum,item)=>sum+item.value,0)));
+  return {discount,breakdown,promotionIds:breakdown.flatMap(item=>item.promotion_id?[item.promotion_id]:[])};
+}
 export function recordView(row: Record<string, any>) {
   return { ...defaults(row.entity_name), ...row.data, id: row.id, created_date: row.created_at, updated_date: row.updated_at };
 }
@@ -146,7 +188,7 @@ export async function writeOrder(client: PoolClient, tenant: string, data: Recor
     if (!item.product_id || !Number.isFinite(Number(item.quantity)) || Number(item.quantity) <= 0) throw new Error('Produto ou quantidade inválida.');
     quantityMap.set(item.product_id, (quantityMap.get(item.product_id) || 0) + Number(item.quantity));
   }
-  const productResult = await client.query('SELECT * FROM products WHERE store_id=$1 AND id=ANY($2::uuid[]) AND deleted_at IS NULL FOR UPDATE', [tenant,[...quantityMap.keys()]]);
+  const productResult = await client.query('SELECT * FROM products WHERE store_id=$1 AND id=ANY($2::uuid[]) AND deleted_at IS NULL ORDER BY id FOR UPDATE', [tenant,[...quantityMap.keys()].sort()]);
   const products = new Map(productResult.rows.map(row => [row.id,row]));
   const oldItems = orderId ? await client.query('SELECT product_id,quantity FROM order_items WHERE order_id=$1', [orderId]) : { rows:[] };
   const oldQuantity = new Map<string,number>();
@@ -184,9 +226,18 @@ export async function writeOrder(client: PoolClient, tenant: string, data: Recor
     return {...item,product_id:item.product_id,product_name:product.name,unit_price:price,quantity,subtotal:Math.round(price*quantity*100)/100};
   });
   subtotal=Math.round(subtotal*100)/100;
-  const deliveryFee=checkout&&area?.delivery_fee_type==='fixed'?Number(area.delivery_fee_value||0):Number(data.delivery_fee||0),discount=Number(data.discount||0);
+  let deliveryFee=Number(data.delivery_fee||0),discount=Number(data.discount||0),discountBreakdown=data.discount_breakdown||[];
+  if(checkout){
+    const store=(await client.query('SELECT details FROM stores WHERE id=$1',[tenant])).rows[0]?.details||{};
+    deliveryFee=data.delivery_method==='delivery'?(area?.delivery_fee_type==='fixed'?Number(area.delivery_fee_value||0):Number(store.flat_delivery_fee||0)):0;
+    if(Number(store.free_shipping_above||0)>0&&subtotal>=Number(store.free_shipping_above)&&deliveryFee>0){discountBreakdown=[{key:'shipping',label:'Frete grátis',value:money(deliveryFee)}];deliveryFee=0;}
+    const benefits=await calculateCheckoutBenefits(client,tenant,data,subtotal,deliveryFee);
+    discount=benefits.discount;discountBreakdown=[...discountBreakdown,...benefits.breakdown];
+    data.promotion_ids=benefits.promotionIds;
+    data.discount_breakdown=discountBreakdown;
+  }
   if (![deliveryFee,discount].every(n=>Number.isFinite(n)&&n>=0)) throw new Error('Frete ou desconto inválido.');
-  const total=Math.max(0,Math.round((subtotal+deliveryFee-discount)*100)/100);
+  const total=Math.max(0,money(subtotal+deliveryFee-discount));
   if (checkout) {
     if (Number(area?.min_order_value||0)>subtotal) throw new Error('Pedido abaixo do mínimo da região de entrega.');
     const methods=['pix','cash','credit_card','debit_card'];

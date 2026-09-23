@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { pool, query } from '../../db/client.js';
 import { blockPresentationDemoWrites, requireAuth, requireRoles, type AuthRequest } from '../../auth/middleware.js';
 import { syncDelivery } from '../deliveries/data.js';
+import { readOrders, writeOrder } from '../demo/data.js';
 
 export const orderRouter = Router();
 
@@ -19,27 +20,29 @@ orderRouter.post('/orders', requireAuth, blockPresentationDemoWrites, async (req
     if(!reserved.rowCount){const previous=(await client.query(`SELECT response_status,response_body FROM idempotency_keys
       WHERE store_id=$1 AND actor_key=$2 AND endpoint='POST /orders' AND idempotency_key=$3 FOR UPDATE`,[request.auth.storeId,request.auth.userId,idempotencyKey])).rows[0];
       await client.query('COMMIT');return previous?.response_body?response.status(previous.response_status||201).json(previous.response_body):response.status(409).json({error:'Este pedido já está sendo processado.'});}
-    const productIds = items.map((item: { productId: string }) => item.productId);
-    const products = await client.query<{ id: string; name: string; price: string; stock_quantity: string }>('SELECT id, name, price, stock_quantity FROM products WHERE store_id = $1 AND id = ANY($2::uuid[]) AND active = true FOR UPDATE', [request.auth.storeId, productIds]);
-    const productMap = new Map(products.rows.map(product => [product.id, product]));
-    let subtotal = 0;
-    const normalized = items.map((item: { productId: string; quantity: number }) => {
-      const product = productMap.get(item.productId); const quantity = Number(item.quantity);
-      if (!product || !Number.isFinite(quantity) || quantity <= 0 || Number(product.stock_quantity) < quantity) throw new Error('Produto inexistente ou estoque insuficiente.');
-      const lineSubtotal = Number(product.price) * quantity; subtotal += lineSubtotal;
-      return { product, quantity, lineSubtotal };
-    });
-    const deliveryFee = Number(request.body?.deliveryFee ?? 0); const discount = Math.max(0, Number(request.body?.discount ?? 0)); const total = Math.max(0, subtotal + deliveryFee - discount);
-    const customer = await client.query<{ id: string }>('SELECT id FROM customers WHERE user_id = $1', [request.auth.userId]);
-    let customerId = customer.rows[0]?.id;
-    if (!customerId) { const created = await client.query<{ id: string }>('INSERT INTO customers (user_id) VALUES ($1) RETURNING id', [request.auth.userId]); customerId = created.rows[0].id; }
-    const order = await client.query<{ id: string }>('INSERT INTO orders (store_id, customer_id, subtotal, delivery_fee, discount, total, address) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id', [request.auth.storeId, customerId, subtotal, deliveryFee, discount, total, request.body?.address ?? {}]);
-    for (const item of normalized) {
-      await client.query('INSERT INTO order_items (order_id, product_id, product_name, unit_price, quantity, subtotal) VALUES ($1, $2, $3, $4, $5, $6)', [order.rows[0].id, item.product.id, item.product.name, item.product.price, item.quantity, item.lineSubtotal]);
-      await client.query('UPDATE products SET stock_quantity = stock_quantity - $1 WHERE id = $2', [item.quantity, item.product.id]);
-    }
-    await syncDelivery(client,request.auth.storeId,order.rows[0].id);
-    const resultBody={ order: { id: order.rows[0].id, subtotal, deliveryFee, discount, total, status: 'pending' } };
+    request.localStoreId=request.auth.storeId;
+    const address=request.body?.address||{};
+    const savedId=await writeOrder(client,request.auth.storeId,{
+      items:items.map((item:Record<string,unknown>)=>({product_id:item.productId||item.product_id,quantity:item.qty||item.quantity,variation:item.variation,addons:item.addons,custom_fields:item.customFields||item.custom_fields,notes:item.notes})),
+      coupon_code:request.body?.couponCode||request.body?.coupon_code||'',
+      customer_name:request.body?.customerName||request.body?.customer_name,
+      customer_phone:request.body?.customerPhone||request.body?.customer_phone,
+      customer_email:request.auth.email,
+      customer_user_id:request.auth.userId,
+      delivery_method:request.body?.deliveryMethod||request.body?.delivery_method||'delivery',
+      delivery_address:address.address||address.street||request.body?.delivery_address,
+      delivery_city:address.city||request.body?.delivery_city,
+      delivery_neighborhood:address.neighborhood||request.body?.delivery_neighborhood,
+      delivery_state:address.state||request.body?.delivery_state,
+      delivery_zip:address.zip||address.postalCode||request.body?.delivery_zip,
+      delivery_notes:request.body?.deliveryNotes||request.body?.delivery_notes,
+      payment_method:request.body?.paymentMethod||request.body?.payment_method,
+      split_payments:request.body?.splitPayments||request.body?.split_payments,
+      sale_origin:'catalog',status:'pending',payment_status:'pending'
+    },request);
+    await syncDelivery(client,request.auth.storeId,savedId);
+    const saved=(await readOrders(request.auth.storeId,client)).find(order=>order.id===savedId)!;
+    const resultBody={order:saved};
     await client.query(`UPDATE idempotency_keys SET response_status=201,response_body=$4
       WHERE store_id=$1 AND actor_key=$2 AND endpoint='POST /orders' AND idempotency_key=$3`,[request.auth.storeId,request.auth.userId,idempotencyKey,JSON.stringify(resultBody)]);
     await client.query('COMMIT');

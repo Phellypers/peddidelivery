@@ -126,8 +126,6 @@ export default function Checkout() {
 
   // ─── Campaign discounts ───
   const activeCampaigns = campaigns.filter(c => c.is_active);
-  const totalItemQty = items.reduce((s, i) => s + i.quantity, 0);
-
   const cartValueCampaign = activeCampaigns
     .filter(c => c.type === 'cart_value' && subtotal >= (c.min_cart_value || 0))
     .sort((a, b) => {
@@ -152,21 +150,6 @@ export default function Checkout() {
 
   const campaignDiscount = Math.max(cartValueDiscount, orderCountDiscount);
   const appliedCampaign = cartValueDiscount >= orderCountDiscount ? cartValueCampaign : orderCountCampaign;
-
-  const buyGetCampaign = activeCampaigns.find(c => c.type === 'buy_x_get_y' && totalItemQty >= (c.buy_quantity || 0));
-  const campaignGifts = [];
-  if (buyGetCampaign && items.length > 0) {
-    const giftQty = Math.floor(totalItemQty / (buyGetCampaign.buy_quantity || 1)) * (buyGetCampaign.get_quantity || 1);
-    const cheapest = [...items].sort((a, b) => (a.unit_price + (a.addon_total || 0)) - (b.unit_price + (b.addon_total || 0)))[0];
-    campaignGifts.push({
-      product_id: cheapest.product_id,
-      product_name: `${cheapest.product_name} (BRINDE)`,
-      product_image: cheapest.product_image,
-      quantity: giftQty,
-      unit_price: 0,
-      notes: `Brinde: compre ${buyGetCampaign.buy_quantity} ganhe ${buyGetCampaign.get_quantity}`,
-    });
-  }
 
   const discountBreakdown = [
     couponDiscount>0&&{key:'coupon',label:`Cupom ${appliedCoupon?.code||form.couponCode.toUpperCase()}`,value:couponDiscount},
@@ -251,28 +234,15 @@ export default function Checkout() {
       customer_email: user?.email || form.email,
       customer_cpf: form.cpfOnReceipt ? form.cpf : '',
       status: 'pending',
-      items: [
-        ...items.map(i => ({
+      items: items.map(i => ({
           product_id: i.product_id,
-          product_name: i.product_name,
-          product_image: i.product_image,
           quantity: i.quantity,
-          unit_price: i.unit_price,
           variation: i.variation,
           custom_fields: i.custom_fields || {},
           addons: i.addons?.map(a => a.name) || [],
           notes: i.notes
         })),
-        ...campaignGifts,
-      ],
-      subtotal,
-      discount: couponDiscount + pixDiscount + campaignDiscount,
-      delivery_fee: deliveryFee,
-      total,
       coupon_code: couponApplied ? form.couponCode : '',
-      promotion_ids: appliedCoupon?.id?[appliedCoupon.id]:[],
-      campaign_ids: appliedCampaign?.id?[appliedCampaign.id]:[],
-      customer_user_id: user?.id||'',
       payment_method: form.splitPayment ? 'split' : form.paymentMethod,
       split_payments: form.splitPayment ? form.splitAmounts : {},
       payment_status: 'pending',
