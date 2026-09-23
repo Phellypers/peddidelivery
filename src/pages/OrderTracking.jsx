@@ -8,6 +8,7 @@ import { Loader2, ArrowLeft, Bike, Star, Navigation } from 'lucide-react';
 import DeliveryChat from '@/components/delivery/DeliveryChat';
 import SafeBackButton from '@/components/navigation/SafeBackButton';
 import { peddiApi } from '@/services/api/peddiApi';
+import { mapTileLayer } from '@/lib/mapTiles';
 
 const STATUS_LABELS = {
   pending: 'Recebido', confirmed: 'Confirmado', preparing: 'Em preparo',
@@ -128,7 +129,7 @@ export default function OrderTracking() {
             {hasLocation ? (
               <div className="h-[300px]">
                 <MapContainer center={center} zoom={15} style={{ height: '100%', width: '100%' }}>
-                  <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution='&copy; OpenStreetMap' />
+                  <TileLayer {...mapTileLayer} />
                   <FitTrackingMap points={mapPoints}/>
                   <Marker position={center} icon={makeDelivererIcon()}>
                     <Popup>

@@ -5,6 +5,7 @@ import 'leaflet/dist/leaflet.css';
 import { base44 } from '@/api/base44Client';
 import { Loader2, Bike, MapPin, Clock, Package } from 'lucide-react';
 import DelivererDetailPanel from '@/components/admin/DelivererDetailPanel';
+import { mapTileLayer } from '@/lib/mapTiles';
 
 const STATUS_LABELS = { available: 'Disponível', delivering: 'Em entrega', offline: 'Offline' };
 const STATUS_COLORS = { available: '#22C55E', delivering: '#3B82F6', offline: '#9CA3AF' };
@@ -110,7 +111,7 @@ export default function DelivererMap() {
         <div className="lg:col-span-2 bg-card rounded-2xl border border-border/50 overflow-hidden relative z-0">
            <div className="h-[300px] sm:h-[400px] lg:h-[600px]">
               <MapContainer center={center} zoom={13} style={{ height: '100%', width: '100%' }}>
-                <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution='&copy; OpenStreetMap' />
+                <TileLayer {...mapTileLayer} />
                 <MapViewport points={points} />
                 {located.map(d => (
                   <Marker key={d.id} position={coordinates(d)} icon={makeIcon(d.current_status)}>
