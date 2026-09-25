@@ -53,7 +53,7 @@ async function calculateCheckoutBenefits(client: PoolClient, tenant: string, dat
     const coupon=row.data||{},customerKey=promotionCustomerKey(data);
     if(coupon.is_active===false||(coupon.start_date&&coupon.start_date>today)||(coupon.expires_at&&coupon.expires_at<today))throw new Error('Esta promoção não está disponível.');
     if(subtotal<Number(coupon.min_order_value||0))throw new Error(`Pedido mínimo de R$ ${Number(coupon.min_order_value).toFixed(2)} para este cupom.`);
-    if(coupon.restricted_user_id&&coupon.restricted_user_id!==data.customer_user_id)throw new Error('Este cupom pertence a outro cliente.');
+    if(coupon.restricted_user_id&&coupon.restricted_user_id!==data.customer_user_id)throw new Error('Este cupom é exclusivo de outro cliente.');
     const totalLimit=coupon.limit_total===false?0:Number(coupon.total_usage_limit||coupon.max_uses||0);
     const customerLimit=coupon.limit_per_customer===false?0:Number(coupon.per_customer_limit||0);
     if(totalLimit&&Number(coupon.uses_count||0)>=totalLimit)throw new Error('Limite atingido');

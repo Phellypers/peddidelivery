@@ -3,7 +3,7 @@ import { Award, CheckCircle2, Copy, Gift, Truck } from 'lucide-react';
 
 const rewardLabel=program=>program.reward_type==='free_delivery'?'frete grátis':program.reward_type==='percentage_discount'
   ? `${Number(program.reward_value)}% OFF`:`R$ ${Number(program.reward_value).toFixed(2).replace('.',',')} OFF`;
-const couponLabel=reward=>reward.discount_type==='free_shipping'?'Frete grátis':reward.discount_type==='percentage'
+const couponLabel=reward=>reward.discount_type==='free_shipping'?'Frete grátis':reward.discount_type==='percent'
   ? `${Number(reward.discount_value)}% de desconto`:`R$ ${Number(reward.discount_value).toFixed(2).replace('.',',')} de desconto`;
 
 export default function LoyaltyProgressCard({program,progress,rewards=[]}){

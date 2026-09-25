@@ -100,7 +100,7 @@ async function validateOrderPromotions(client:any,tenant:string,data:Record<stri
   for(const row of result.rows){
     const promo=row.data||{},today=new Date().toISOString().slice(0,10);
     if(promo.is_active===false||(promo.start_date&&promo.start_date>today)||(promo.expires_at&&promo.expires_at<today))throw new Error('Esta promoção não está disponível.');
-    if(promo.restricted_user_id&&promo.restricted_user_id!==data.customer_user_id)throw new Error('Este cupom pertence a outro cliente.');
+    if(promo.restricted_user_id&&promo.restricted_user_id!==data.customer_user_id)throw new Error('Este cupom é exclusivo de outro cliente.');
     const totalLimit=promo.limit_total===false?0:Number(promo.total_usage_limit||promo.max_uses||0);
     if(totalLimit&&Number(promo.uses_count||0)>=totalLimit)throw new Error('Limite atingido');
     const customerLimit=promo.limit_per_customer===false?0:Number(promo.per_customer_limit||0);
