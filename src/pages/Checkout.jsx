@@ -570,12 +570,6 @@ export default function Checkout() {
                 <span className="shrink-0 tabular-nums">{formatMoney((item.unit_price + item.addon_total) * item.quantity)}</span>
               </div>
             ))}
-            {campaignGifts.map((g, i) => (
-              <div key={`gift-${i}`} className="flex justify-between text-green-600 font-medium">
-                <span>🎁 {g.quantity}x {g.product_name}</span>
-                <span>Grátis</span>
-              </div>
-            ))}
           </div>
           <div className="border-t border-border pt-3 space-y-2 text-sm">
             <div className="flex justify-between gap-3"><span className="text-muted-foreground">Subtotal dos produtos</span><span className="shrink-0 tabular-nums">{formatMoney(subtotal)}</span></div>
