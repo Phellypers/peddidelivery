@@ -16,6 +16,8 @@ const navItems = [
   { icon: Boxes, label: 'Estoque', path: '/admin/estoque' },
   { icon: FolderOpen, label: 'Categorias', path: '/admin/categorias' },
   { icon: ShoppingCart, label: 'Pedidos', path: '/admin/pedidos' },
+  { icon: Bike, label: 'Entregadores', path: '/admin/entregadores' },
+  { icon: MapPin, label: 'Mapa', path: '/admin/mapa-entregadores' },
   { icon: Monitor, label: 'PDV', path: '/admin/pdv' },
   { icon: UtensilsCrossed, label: 'Mesas', path: '/admin/mesas' },
   { icon: Tag, label: 'Promoções', path: '/admin/promocoes' },
@@ -25,8 +27,6 @@ const navItems = [
   { icon: MessageSquare, label: 'Comentários', path: '/admin/comentarios' },
   { icon: MessageCircle, label: 'Chat', path: '/admin/chat' },
   { icon: Wallet, label: 'Financeiro', path: '/admin/financeiro' },
-  { icon: Bike, label: 'Entregadores', path: '/admin/entregadores' },
-  { icon: MapPin, label: 'Mapa', path: '/admin/mapa-entregadores' },
   { icon: Settings, label: 'Configurações', path: '/admin/configuracoes' },
   { icon: Newspaper, label: 'Blog PEDDI', path: '/admin/blog', roles: ['peddi_admin'] },
 ];
