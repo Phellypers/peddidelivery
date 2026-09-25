@@ -1,12 +1,13 @@
 import React, { Suspense, useState } from 'react';
 import PageLoading from '@/components/PageLoading';
 import { Link, Outlet, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Package, ShoppingCart, Tag, FolderOpen, Settings, Menu, X, ChevronLeft, Bike, Users, Megaphone, Image, Monitor, Wallet, UtensilsCrossed, MapPin, MessageSquare, MessageCircle, Boxes, Headphones, ExternalLink } from 'lucide-react';
+import { LayoutDashboard, Package, ShoppingCart, Tag, FolderOpen, Settings, Menu, X, ChevronLeft, Bike, Users, Megaphone, Image, Monitor, Wallet, UtensilsCrossed, MapPin, MessageSquare, MessageCircle, Boxes, Headphones, ExternalLink, Newspaper } from 'lucide-react';
 import NewOrderNotifier from '@/components/admin/NewOrderNotifier';
 import ChatBadge from '@/components/admin/ChatBadge';
 import ManagerOnboarding from '@/components/admin/ManagerOnboarding';
 import peddiLogo from '../../../Logo Peddi/logo3.png';
 import AdminNotifications from '@/components/admin/AdminNotifications';
+import { useAuth } from '@/lib/AuthContext';
 
 const navItems = [
   { icon: Settings, label: 'Minha PEDDI', path: '/admin/minha-peddi' },
@@ -27,11 +28,13 @@ const navItems = [
   { icon: Bike, label: 'Entregadores', path: '/admin/entregadores' },
   { icon: MapPin, label: 'Mapa', path: '/admin/mapa-entregadores' },
   { icon: Settings, label: 'Configurações', path: '/admin/configuracoes' },
+  { icon: Newspaper, label: 'Blog PEDDI', path: '/admin/blog', roles: ['peddi_admin'] },
 ];
 
 export default function AdminLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
+  const { user } = useAuth();
 
   return (
     <div className="peddi-admin min-h-screen bg-background">
@@ -52,7 +55,7 @@ export default function AdminLayout() {
         </div>
 
         <nav aria-label="Navegação do gestor" className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-3 space-y-1">
-          {navItems.map(item => {
+          {navItems.filter(item => !item.roles || item.roles.includes(user?.role)).map(item => {
             const Icon = item.icon;
             const isActive = location.pathname === item.path;
             return (

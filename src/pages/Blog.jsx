@@ -1,0 +1,7 @@
+import {useEffect,useState} from 'react';
+import {Link} from 'react-router-dom';
+import {ArrowRight} from 'lucide-react';
+import peddiLogo from '../../Logo Peddi/logo3.png';
+import {listBlog} from '@/services/api/blog';
+import './Blog.css';
+export default function Blog(){const [articles,setArticles]=useState([]);useEffect(()=>{listBlog().then(r=>setArticles(r.articles)).catch(()=>setArticles([]));},[]);return <div className="blog-page"><header className="blog-header"><Link to="/"><img src={peddiLogo} alt="PEDDI"/></Link><nav><Link to="/">Início</Link><Link to="/blog">Blog</Link><Link to="/gestor/login">Entrar</Link></nav></header><main className="blog-wrap"><div className="blog-title"><span>Conteúdo PEDDI</span><h1>Novidades e ideias para seu negócio</h1><p>Atualizações da plataforma, gestão, marketing e tendências para restaurantes.</p></div><div className="blog-grid">{articles.map((a,i)=><Link to={`/blog/${a.slug}`} className={`blog-card ${i===0?'featured':''}`} key={a.id}>{a.cover_image_url?<img src={a.cover_image_url} alt=""/>:<div className="blog-cover"/>}<div><span>{a.category}</span><h2>{a.title}</h2><p>{a.excerpt}</p><b>Ler artigo <ArrowRight size={16}/></b></div></Link>)}</div>{!articles.length&&<div className="blog-empty">Os primeiros artigos serão publicados em breve.</div>}</main><footer className="blog-footer"><img src={peddiLogo} alt="PEDDI"/><p>Conteúdo para ajudar seu restaurante a vender mais.</p></footer></div>}

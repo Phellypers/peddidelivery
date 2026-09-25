@@ -26,7 +26,7 @@ export default function Landing(){
  return <div className="lp-page">
   <header className="lp-header"><div className="lp-wrap lp-nav">
     <Link to="/" className="lp-logo"><img src={peddiLogo} alt="PEDDI"/></Link>
-    <nav><a href="#inicio">Home</a><a href="#sobre">Sobre nós</a><a href="#recursos">Funcionalidades</a><a href="#planos">Planos</a><a href="#contato">Contato</a></nav>
+    <nav><a href="#inicio">Home</a><a href="#sobre">Sobre nós</a><a href="#recursos">Funcionalidades</a><a href="#planos">Planos</a><Link to="/blog">Blog</Link><a href="#contato">Contato</a></nav>
     <div className="lp-nav-actions"><Link to="/gestor/login" className="lp-login">Entrar</Link><Button>Cadastre-se</Button></div>
     <button className="lp-menu" aria-label="Abrir menu"><Menu/></button>
   </div></header>
@@ -51,7 +51,7 @@ export default function Landing(){
 
    <section className="lp-join"><div className="lp-wrap"><div className="lp-heading"><h2>Quer fazer parte?</h2><p>Cadastre seu restaurante agora e comece a vender no digital.</p></div><div className="lp-join-grid"><article><Media label="Imagem — novo restaurante"/><div><b>Sou dono de restaurante</b><Button>Quero me cadastrar</Button></div></article><article><Media label="Imagem — gestor acessando painel"/><div><b>Já tenho conta</b><Button secondary to="/gestor/login">Entrar no sistema</Button></div></article></div></div></section>
 
-   <section className="lp-section lp-content"><div className="lp-wrap"><div className="lp-heading lp-heading--left"><h2>Novidades e dicas <em>para o seu negócio.</em></h2></div><div className="lp-posts">{posts.map(([tag,title],i)=><article key={title}><Media label={`Imagem do conteúdo ${i+1}`}/><span>{tag}</span><h3>{title}</h3><a href="#contato">Ler mais <ArrowRight size={14}/></a></article>)}</div></div></section>
+   <section className="lp-section lp-content"><div className="lp-wrap"><div className="lp-heading lp-heading--left"><h2>Novidades e dicas <em>para o seu negócio.</em></h2></div><div className="lp-posts">{posts.map(([tag,title],i)=><article key={title}><Media label={`Imagem do conteúdo ${i+1}`}/><span>{tag}</span><h3>{title}</h3><Link to="/blog">Ler mais <ArrowRight size={14}/></Link></article>)}</div></div></section>
 
    <section className="lp-news"><div className="lp-wrap lp-news-inner"><Media label="Ilustração da newsletter"/><div><h2>Receba novidades e conteúdos exclusivos da PEDDI.</h2><form onSubmit={e=>e.preventDefault()}><input type="email" placeholder="Seu melhor e-mail" aria-label="Seu melhor e-mail"/><button>Inscrever</button></form></div></div></section>
   </main>
