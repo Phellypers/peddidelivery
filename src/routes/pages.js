@@ -6,7 +6,6 @@ export const Register = lazy(() => import('@/pages/Register'));
 export const ForgotPassword = lazy(() => import('@/pages/ForgotPassword'));
 export const ResetPassword = lazy(() => import('@/pages/ResetPassword'));
 export const Landing = lazy(() => import('@/pages/Landing'));
-export const LandingPreview = lazy(() => import('@/pages/LandingPreview'));
 export const Home = lazy(() => import('@/pages/Home'));
 export const DelivererMap = lazy(() => import('@/pages/admin/DelivererMap'));
 export const DelivererApp = lazy(() => import('@/pages/DelivererApp'));

@@ -1,6 +1,6 @@
 import { Suspense } from 'react';
 import {
-  PageNotFound, Login, Register, ForgotPassword, ResetPassword, Landing, LandingPreview, Home, DelivererMap, DelivererApp, DelivererRegister, ProductDetail, Checkout, Favorites, SearchPage, CustomerProfile, AdminLayout, Dashboard, Catalog, Estoque, Orders, Categories, Promotions, StoreSettings, Deliverers, Customers, Marketing, Banners, PDV, Financeiro, Comments, ChatAdmin, MyPeddi, Tables, MyOrders, MyData, OrderTracking, OAuthConsent, HelpCenter
+  PageNotFound, Login, Register, ForgotPassword, ResetPassword, Landing, Home, DelivererMap, DelivererApp, DelivererRegister, ProductDetail, Checkout, Favorites, SearchPage, CustomerProfile, AdminLayout, Dashboard, Catalog, Estoque, Orders, Categories, Promotions, StoreSettings, Deliverers, Customers, Marketing, Banners, PDV, Financeiro, Comments, ChatAdmin, MyPeddi, Tables, MyOrders, MyData, OrderTracking, OAuthConsent, HelpCenter
 } from '@/routes/pages';
 import PageLoading from '@/components/PageLoading';
 import { ThemeProvider } from 'next-themes';
@@ -97,7 +97,7 @@ function App() {
               <CourierNavigationGuard><Suspense fallback={<PageLoading />}><Routes>
                 {/* Auth routes always available, outside AuthenticatedApp */}
                 <Route path="/login" element={<Login />} />
-                <Route path="/landing-preview" element={<LandingPreview />} />
+                <Route path="/landing-preview" element={<Navigate replace to="/" />} />
                 <Route path="/gestor/login" element={<Login managerOnly />} />
                 <Route path="/entregador/login" element={<Login courierOnly />} />
                 <Route path="/register" element={<Register />} />

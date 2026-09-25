@@ -1,245 +1,61 @@
-import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { base44 } from '@/api/base44Client';
-import { Loader2, Store, ShoppingBag, Bike, BarChart3, MessageCircle, Heart, ArrowRight, Lock, Mail, X } from 'lucide-react';
-import { motion } from 'framer-motion';
-import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
-import LandingHeroCarousel from '@/components/landing/LandingHeroCarousel';
+import { ArrowRight, BarChart3, ChevronLeft, ChevronRight, CreditCard, Globe2, Megaphone, Menu, MessageCircle, PackageCheck, ShoppingBag, Star, Users } from 'lucide-react';
+import peddiLogo from '../../Logo Peddi/logo3.png';
+import './Landing.css';
 
-const SEGMENTS = [
-  'Restaurante / Lanchonete', 'Açaí / Sorveteria', 'Pizzaria', 'Mercado / Sacolão',
-  'Farmácia', 'Padaria', 'Loja de Roupas', 'Pet Shop', 'Salão / Barbearia',
-  'Hamburgueria', 'Sushi', 'Outro'
+const Button=({children,secondary=false,to='/register'})=><Link to={to} className={`lp-button ${secondary?'lp-button--secondary':''}`}>{children}<ArrowRight size={15}/></Link>;
+const Media=({label,className=''})=><div className={`lp-media ${className}`} aria-label={label}><span>{label}</span></div>;
+
+const steps=[
+  ['01','Cadastre seu restaurante','É rápido, gratuito e sem burocracia.','/Landing/como-funciona-cadastro.png','Notebook exibindo a plataforma PEDDI'],
+  ['02','Publique seu cardápio','Personalize produtos, preços e categorias.','/Landing/como-funciona-cardapio.png','Hambúrguer representando o cardápio digital'],
+  ['03','Comece a receber pedidos','Pelo site, retirada ou delivery.','/Landing/como-funciona-pedidos.png','Entregador PEDDI em uma motocicleta'],
+];
+const features=[
+  [ShoppingBag,'Cardápio digital'],[Megaphone,'Campanhas de marketing'],
+  [MessageCircle,'Atendimento integrado'],[Users,'Programa de fidelidade'],
+  [CreditCard,'Pagamentos organizados'],[BarChart3,'Gestão e relatórios'],
+];
+const posts=[
+  ['Vendas','Como aumentar suas vendas no delivery com um cardápio atrativo'],
+  ['Marketing','5 ideias de promoções para atrair mais pedidos'],
+  ['Tendências','O futuro do delivery no Brasil'],
 ];
 
-export default function Landing() {
-  const [step, setStep] = useState('form');
-  const [showForm, setShowForm] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [otp, setOtp] = useState('');
-  const [form, setForm] = useState({
-    owner_name: '', owner_cpf: '', phone: '', email: '', password: '',
-    store_name: '', segment: SEGMENTS[0], zip_code: '', address: '',
-    terms: false,
-  });
+export default function Landing(){
+ return <div className="lp-page">
+  <header className="lp-header"><div className="lp-wrap lp-nav">
+    <Link to="/" className="lp-logo"><img src={peddiLogo} alt="PEDDI"/></Link>
+    <nav><a href="#inicio">Home</a><a href="#sobre">Sobre nós</a><a href="#recursos">Funcionalidades</a><a href="#planos">Planos</a><a href="#contato">Contato</a></nav>
+    <div className="lp-nav-actions"><Link to="/gestor/login" className="lp-login">Entrar</Link><Button>Cadastre-se</Button></div>
+    <button className="lp-menu" aria-label="Abrir menu"><Menu/></button>
+  </div></header>
 
-  const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
+  <main>
+   <section id="inicio" className="lp-hero"><div className="lp-wrap lp-hero-grid">
+    <div className="lp-hero-copy"><span className="lp-eyebrow">Tecnologia para restaurantes</span><h1>Seu restaurante<br/>no digital,<br/><em>sem complicação.</em></h1><p>Cardápio digital e delivery para vender mais, sem taxas por pedido e sem mensalidades escondidas.</p><div className="lp-actions"><Button>Cadastre seu restaurante</Button><Button secondary to="/loja?demo=1">Ver como funciona</Button></div></div>
+    <div className="lp-hero-art"><div className="lp-blob"></div><img src="/Landing/hero-principal.png" alt="Profissional de restaurante apresentando o cardápio digital PEDDI" className="lp-hero-image"/><div className="lp-floating lp-floating--top"><PackageCheck/> Pedidos em tempo real</div><div className="lp-floating lp-floating--bottom"><BarChart3/> Mais controle, mais vendas</div></div>
+   </div></section>
 
-  const handleRegister = async (e) => {
-    e.preventDefault();
-    setError('');
-    if (!form.terms) { setError('Você precisa aceitar os termos de uso e política de privacidade'); return; }
-    if (form.password.length < 6) { setError('A senha deve ter no mínimo 6 caracteres'); return; }
-    setLoading(true);
-    try {
-      await base44.auth.register({ email: form.email, password: form.password });
-      setStep('otp');
-    } catch (err) {
-      setError(err.message?.includes('already') ? 'Este e-mail já está cadastrado. Faça login.' : (err.message || 'Erro ao cadastrar'));
-    } finally {
-      setLoading(false);
-    }
-  };
+   <section id="sobre" className="lp-section lp-how"><div className="lp-wrap"><div className="lp-heading"><h2>Como <em>funciona?</em></h2><p>Em poucos passos seu restaurante já está vendendo no digital.</p></div><div className="lp-steps">{steps.map(([n,title,text,image,alt],i)=><article key={n}><div className="lp-step-media"><img src={image} alt={alt} loading="lazy"/></div><b>{n}</b><h3>{title}</h3><p>{text}</p>{i<2&&<ArrowRight className="lp-step-arrow"/>}</article>)}</div></div></section>
 
-  const handleVerify = async () => {
-    setError('');
-    setLoading(true);
-    try {
-      const result = await base44.auth.verifyOtp({ email: form.email, otpCode: otp });
-      if (result?.access_token) base44.auth.setToken(result.access_token);
-      await base44.entities.Store.create({
-        name: form.store_name,
-        owner_name: form.owner_name,
-        owner_cpf: form.owner_cpf,
-        owner_email: form.email,
-        business_segment: form.segment,
-        phone: form.phone,
-        whatsapp: form.phone,
-        address: form.address,
-        zip_code: form.zip_code,
-        business_type: 'menu',
-        description: `${form.store_name} — ${form.segment}`,
-      });
-      window.location.href = '/admin';
-    } catch (err) {
-      setError(err.message || 'Código inválido');
-    } finally {
-      setLoading(false);
-    }
-  };
+   <section className="lp-trust"><div className="lp-wrap"><h2>Restaurantes que já <em>confiam na PEDDI</em></h2><div className="lp-brands" role="list" aria-label="Restaurantes parceiros">{['Rota 58','Pizza Point','Delizato','Brasa e Lenha','Jules'].map((name,index)=><span key={name} role="listitem" aria-label={name} style={{backgroundPosition:`${index*25}% center`}}/>)}</div></div></section>
 
-  return (
-    <div className="peddi-landing min-h-screen bg-white text-slate-900">
-      {/* ── Nav ── */}
-      <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100">
-        <div className="max-w-6xl mx-auto px-5 h-16 flex items-center justify-between">
-          <span className="font-heading text-2xl font-extrabold tracking-tight text-primary">PEDDI</span>
-          <div className="flex items-center gap-3">
-            <Link to="/gestor/login" className="text-sm font-medium text-gray-600 hover:text-primary transition-colors flex items-center gap-1.5">
-              <Lock size={15} /> Entrar
-            </Link>
-            <button onClick={() => setShowForm(true)} className="text-sm font-bold text-white bg-primary px-4 py-2 rounded-xl hover:bg-primary/90 transition-colors">
-              Cadastrar loja
-            </button>
-          </div>
-        </div>
-      </nav>
+   <section id="recursos" className="lp-section"><div className="lp-wrap lp-split"><div><span className="lp-eyebrow">Tudo em um só lugar</span><h2>Tudo que seu restaurante precisa para <em>vender mais.</em></h2><p>A PEDDI organiza seu atendimento, pedidos e operação para você concentrar energia no crescimento do seu negócio.</p><Button>Conheça as funcionalidades</Button></div><div className="lp-feature-art"><div className="lp-blob lp-blob--soft"></div><img src="/Landing/gestora-recursos.png" alt="Gestora de restaurante usando os recursos da PEDDI em um tablet" className="lp-feature-image" loading="lazy"/>{features.map(([Icon,label],i)=><span key={label} className={`lp-chip lp-chip--${i+1}`}><Icon size={17}/>{label}</span>)}</div></div></section>
 
-      {/* ── Hero ── */}
-      <section className="mx-auto max-w-6xl rounded-b-[2.5rem] bg-gradient-to-b from-green-50 via-white to-white px-5 pb-14 pt-10 sm:pt-14">
-        <div className="grid items-center gap-8 lg:grid-cols-[0.92fr_1.08fr] lg:gap-5">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center lg:text-left">
-          <span className="inline-block text-xs font-bold text-primary bg-primary/10 px-3 py-1 rounded-full mb-4"> Plataforma de Delivery & PDV</span>
-          <h1 className="font-heading font-extrabold text-4xl md:text-5xl text-gray-900 leading-tight max-w-2xl mx-auto lg:mx-0">
-            Sua loja online em <span className="text-primary">minutos</span>, não em dias.
-          </h1>
-          <p className="text-gray-500 text-lg mt-4 max-w-xl mx-auto lg:mx-0">
-            Cardápio digital, pedidos em tempo real, PDV completo, entregadores com rastreio e marketing automático. Tudo em um só lugar.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-3 justify-center mt-8 lg:justify-start">
-            <button onClick={() => setShowForm(true)} className="bg-primary text-white px-8 py-3.5 rounded-2xl font-bold text-sm hover:bg-primary/90 transition-colors flex items-center justify-center gap-2">
-              Criar minha loja grátis <ArrowRight size={16} />
-            </button>
-            <a href="/loja?demo=1" className="border border-gray-200 text-gray-700 px-8 py-3.5 rounded-2xl font-bold text-sm hover:bg-gray-50 transition-colors">
-              Ver demonstração
-            </a>
-          </div>
-        </motion.div>
-        <motion.div initial={{ opacity: 0, x: 24 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.15 }}>
-          <LandingHeroCarousel />
-        </motion.div>
-        </div>
-      </section>
+   <section className="lp-section lp-menu-showcase"><div className="lp-wrap lp-split lp-split--reverse"><div className="lp-feature-art"><div className="lp-blob"></div><img src="/Landing/celular-cardapio.png" alt="Cardápio digital PEDDI exibido em um celular" className="lp-phone-image" loading="lazy"/><span className="lp-cart"><ShoppingBag/></span></div><div><span className="lp-eyebrow">A cara da sua marca</span><h2>Um cardápio digital <em>com a cara do seu negócio.</em></h2><p>Personalize sua vitrine, destaque seus produtos, adicione fotos e receba pedidos de forma prática e organizada.</p><Button to="/loja?demo=1">Ver exemplo de cardápio</Button></div></div></section>
 
-      {/* ── Features grid ── */}
-      <section className="max-w-6xl mx-auto px-5 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          {[
-            { icon: Store, title: 'Catálogo Digital', desc: 'Monte seu cardápio com fotos, variações, adicionais e promoções em minutos.' },
-            { icon: ShoppingBag, title: 'Pedidos em Tempo Real', desc: 'Receba pedidos no painel com notificação sonora e Kanban visual.' },
-            { icon: BarChart3, title: 'PDV & Financeiro', desc: 'Venda no balcão, mesa ou delivery. Controle financeiro integrado.' },
-            { icon: Bike, title: 'Entregadores', desc: 'App dedicado para motoboys com rastreio em tempo real no mapa.' },
-            { icon: MessageCircle, title: 'Chat & CRM', desc: 'Converse com clientes, gerencie comentários e avaliações.' },
-            { icon: Heart, title: 'Marketing Automático', desc: 'Cashback, promoções de aniversário, carrinho abandonado e upsell.' },
-          ].map((f, i) => (
-            <motion.div key={i} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }}
-              className="rounded-3xl border border-green-100 bg-white p-6 text-left shadow-sm transition-shadow hover:-translate-y-1 hover:shadow-lg">
-              <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center mb-4">
-                <f.icon size={24} className="text-primary" />
-              </div>
-              <h3 className="font-heading font-bold text-base text-gray-900">{f.title}</h3>
-              <p className="text-sm text-gray-500 mt-1.5 leading-relaxed">{f.desc}</p>
-            </motion.div>
-          ))}
-        </div>
-      </section>
+   <section id="planos" className="lp-results"><div className="lp-wrap"><div className="lp-heading"><h2>Resultados que <em>fazem a diferença.</em></h2></div><div className="lp-stats"><div><strong>976</strong><span>restaurantes cadastrados</span></div><div><strong>12</strong><span>cidades atendidas</span></div><div><strong>1K+</strong><span>pedidos todos os dias</span></div></div></div></section>
 
-      {/* ── Registration form (modal) ── */}
-      {showForm && (
-        <div data-peddi-modal="" className="fixed inset-0 z-[60] bg-black/50 flex items-center justify-center p-4 overflow-y-auto" onClick={() => !loading && setShowForm(false)}>
-          <div className="bg-white border border-gray-100 rounded-3xl shadow-sm p-8 max-w-xl w-full my-8 relative" onClick={e => e.stopPropagation()}>
-            <button onClick={() => !loading && setShowForm(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 z-10">
-              <X size={20} />
-            </button>
-          {step === 'form' && (
-            <>
-              <div className="text-center mb-6">
-                <h2 className="font-heading font-extrabold text-2xl text-gray-900">Crie sua loja</h2>
-                <p className="text-sm text-gray-500 mt-1">Preencha os dados e comece em minutos</p>
-              </div>
-              {error && <div className="p-3 rounded-xl bg-red-50 text-red-600 text-sm mb-4">{error}</div>}
-              <form onSubmit={handleRegister} className="space-y-4">
-                <div>
-                  <label className="text-xs font-semibold text-gray-500 mb-1 block uppercase">Nome do responsável *</label>
-                  <input required value={form.owner_name} onChange={e => set('owner_name', e.target.value)} className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-xs font-semibold text-gray-500 mb-1 block uppercase">CPF *</label>
-                    <input required value={form.owner_cpf} onChange={e => set('owner_cpf', e.target.value)} placeholder="000.000.000-00" className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
-                  </div>
-                  <div>
-                    <label className="text-xs font-semibold text-gray-500 mb-1 block uppercase">Telefone *</label>
-                    <input required value={form.phone} onChange={e => set('phone', e.target.value)} placeholder="(11) 99999-9999" className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
-                  </div>
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-gray-500 mb-1 block uppercase">E-mail *</label>
-                  <input type="email" required value={form.email} onChange={e => set('email', e.target.value)} placeholder="seu@email.com" className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-gray-500 mb-1 block uppercase">Senha *</label>
-                  <input type="password" required value={form.password} onChange={e => set('password', e.target.value)} placeholder="Mínimo 6 caracteres" className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
-                </div>
-                <div className="border-t border-gray-100 pt-4">
-                  <div>
-                    <label className="text-xs font-semibold text-gray-500 mb-1 block uppercase">Nome da loja *</label>
-                    <input required value={form.store_name} onChange={e => set('store_name', e.target.value)} placeholder="Ex: Pizza Express" className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
-                  </div>
-                  <div className="mt-3">
-                    <label className="text-xs font-semibold text-gray-500 mb-1 block uppercase">Segmento *</label>
-                    <select value={form.segment} onChange={e => set('segment', e.target.value)} className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30">
-                      {SEGMENTS.map(s => <option key={s} value={s}>{s}</option>)}
-                    </select>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3 mt-3">
-                    <div>
-                      <label className="text-xs font-semibold text-gray-500 mb-1 block uppercase">CEP *</label>
-                      <input required value={form.zip_code} onChange={e => set('zip_code', e.target.value)} placeholder="00000-000" className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
-                    </div>
-                    <div>
-                      <label className="text-xs font-semibold text-gray-500 mb-1 block uppercase">Endereço *</label>
-                      <input required value={form.address} onChange={e => set('address', e.target.value)} placeholder="Rua, número" className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
-                    </div>
-                  </div>
-                </div>
-                <label className="flex items-start gap-2 text-xs text-gray-600 cursor-pointer">
-                  <input type="checkbox" checked={form.terms} onChange={e => set('terms', e.target.checked)} className="w-4 h-4 accent-primary mt-0.5" />
-                  <span>Aceito os <a href="#" className="text-primary font-medium">termos de uso</a> e a <a href="#" className="text-primary font-medium">política de privacidade</a>.</span>
-                </label>
-                <button type="submit" disabled={loading} className="w-full py-3.5 bg-primary text-white rounded-2xl font-bold text-sm hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
-                  {loading ? <Loader2 size={18} className="animate-spin" /> : <>Criar minha loja <ArrowRight size={16} /></>}
-                </button>
-              </form>
-              <p className="text-center text-xs text-gray-400 mt-4">Já tem uma loja? <Link to="/gestor/login" className="text-primary font-medium">Acessar painel</Link></p>
-            </>
-          )}
-          {step === 'otp' && (
-            <div className="text-center space-y-6">
-              <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
-                <Mail size={28} className="text-primary" />
-              </div>
-              <div>
-                <h2 className="font-heading font-extrabold text-xl">Verifique seu e-mail</h2>
-                <p className="text-sm text-gray-500 mt-1">Enviamos um código para {form.email}</p>
-              </div>
-              {error && <div className="p-3 rounded-xl bg-red-50 text-red-600 text-sm">{error}</div>}
-              <div className="flex justify-center">
-                <InputOTP maxLength={6} value={otp} onChange={setOtp} autoFocus>
-                  <InputOTPGroup>
-                    {[0,1,2,3,4,5].map(i => <InputOTPSlot key={i} index={i} />)}
-                  </InputOTPGroup>
-                </InputOTP>
-              </div>
-              <button onClick={handleVerify} disabled={loading || otp.length < 6} className="w-full py-3.5 bg-primary text-white rounded-2xl font-bold text-sm disabled:opacity-50 flex items-center justify-center gap-2">
-                {loading ? <Loader2 size={18} className="animate-spin" /> : 'Confirmar e criar loja'}
-              </button>
-              <button onClick={() => base44.auth.resendOtp(form.email)} className="text-xs text-gray-400">Reenviar código</button>
-            </div>
-          )}
-          </div>
-        </div>
-      )}
+   <section className="lp-section lp-testimonial"><div className="lp-wrap lp-split"><div><span className="lp-eyebrow">Histórias reais</span><h2>O que nossos clientes <em>dizem sobre a PEDDI.</em></h2><blockquote>“A PEDDI facilitou muito o nosso dia a dia. Hoje recebemos mais pedidos, sem pagar taxas e com um sistema simples de usar.”</blockquote><div className="lp-author"><span>MO</span><div><b>Marcos Oliveira</b><small>Restaurante Sabor Expresso</small><div className="lp-stars">★★★★★</div></div></div><div className="lp-arrows"><button><ChevronLeft/></button><button><ChevronRight/></button></div></div><Media label="Imagem — cliente PEDDI" className="lp-media--testimonial"/></div></section>
 
-      {/* ── Footer ── */}
-      <footer className="border-t border-gray-100 py-8 mt-12">
-        <div className="max-w-6xl mx-auto px-5 flex flex-col items-center gap-3">
-          <span className="font-heading text-xl font-extrabold tracking-tight text-primary">PEDDI</span>
-          <p className="text-xs text-gray-400">© {new Date().getFullYear()} PEDDI — Plataforma SaaS para lojas e restaurantes</p>
-          <Link to="/loja" className="text-xs text-gray-400 hover:text-primary transition-colors">Acessar vitrine</Link>
-        </div>
-      </footer>
-    </div>
-  );
+   <section className="lp-join"><div className="lp-wrap"><div className="lp-heading"><h2>Quer fazer parte?</h2><p>Cadastre seu restaurante agora e comece a vender no digital.</p></div><div className="lp-join-grid"><article><Media label="Imagem — novo restaurante"/><div><b>Sou dono de restaurante</b><Button>Quero me cadastrar</Button></div></article><article><Media label="Imagem — gestor acessando painel"/><div><b>Já tenho conta</b><Button secondary to="/gestor/login">Entrar no sistema</Button></div></article></div></div></section>
+
+   <section className="lp-section lp-content"><div className="lp-wrap"><div className="lp-heading lp-heading--left"><h2>Novidades e dicas <em>para o seu negócio.</em></h2></div><div className="lp-posts">{posts.map(([tag,title],i)=><article key={title}><Media label={`Imagem do conteúdo ${i+1}`}/><span>{tag}</span><h3>{title}</h3><a href="#contato">Ler mais <ArrowRight size={14}/></a></article>)}</div></div></section>
+
+   <section className="lp-news"><div className="lp-wrap lp-news-inner"><Media label="Ilustração da newsletter"/><div><h2>Receba novidades e conteúdos exclusivos da PEDDI.</h2><form onSubmit={e=>e.preventDefault()}><input type="email" placeholder="Seu melhor e-mail" aria-label="Seu melhor e-mail"/><button>Inscrever</button></form></div></div></section>
+  </main>
+
+  <footer id="contato" className="lp-footer"><div className="lp-wrap lp-footer-grid"><div><img src={peddiLogo} alt="PEDDI"/><p>Simples para pedir,<br/><strong>fácil para vender.</strong></p></div><div><b>Menu</b><a href="#inicio">Home</a><a href="#sobre">Sobre nós</a><a href="#recursos">Funcionalidades</a><a href="#planos">Planos</a></div><div><b>Contato</b><a href="mailto:contato@peddi.com.br">contato@peddi.com.br</a><span>Brasília — DF</span><div className="lp-social"><Globe2/><MessageCircle/><Star/></div></div></div><div className="lp-wrap lp-legal"><span>© {new Date().getFullYear()} PEDDI. Todos os direitos reservados.</span><span>Política de Privacidade · Termos de Uso</span></div></footer>
+ </div>
 }
