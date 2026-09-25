@@ -22,6 +22,7 @@ import { emitLiveEvent } from '@/lib/liveSession';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { loadPublicCatalog } from '@/services/api/peddiApi';
 import BottomNav from '@/components/storefront/BottomNav';
+import DemoCustomerPanel from '@/components/storefront/DemoCustomerPanel';
 import '@/components/storefront/Storefront.css';
 import { getStoreTheme } from '@/lib/storeTheme';
 import { getBannerProductIds } from '@/lib/bannerProducts';
@@ -57,7 +58,7 @@ export default function Home() {
 
   const { user } = useAuth();
   const publicDemo = isPublicDemo();
-  const demoAccountNotice = () => window.dispatchEvent(new CustomEvent('peddi-demo-action', { detail: 'Login, notificações e atendimento não gravam dados no modo demonstração.' }));
+  const openDemo = area => () => window.dispatchEvent(new CustomEvent('peddi-demo-open', { detail: area }));
 
   const loadData = useCallback(() => {
     setLoading(true);
@@ -224,7 +225,7 @@ export default function Home() {
         <header className="peddi-store-header">
           <div className="peddi-store-orange">
             <button type="button" aria-label="Abrir menu do cardápio" onClick={() => setMenuOpen(true)}><AlignJustify size={27} /></button>
-            <div className="flex items-center gap-3">{publicDemo ? <><button type="button" aria-label="Chat indisponível na demonstração" onClick={demoAccountNotice} className="flex h-11 w-11 items-center justify-center"><MessageCircle size={27} /></button><button type="button" aria-label="Notificações indisponíveis na demonstração" onClick={demoAccountNotice} className="flex h-11 w-11 items-center justify-center"><Bell size={27} /></button></> : <>{user ? <button type="button" aria-label="Conversar com a loja" onClick={() => setChatOpen(true)}><MessageCircle size={27} /></button> : <Link to={`/login?store=${encodeURIComponent(store?.id || storeRef)}&returnTo=${encodeURIComponent(withStore('/loja', store?.id || storeRef))}`} aria-label="Entrar para conversar com a loja" className="flex h-11 w-11 items-center justify-center"><MessageCircle size={27} /></Link>}{user ? <NotificationBell /> : <Link to={`/login?store=${encodeURIComponent(store?.id || storeRef)}&returnTo=${encodeURIComponent(withStore('/loja', store?.id || storeRef))}`} aria-label="Entrar para ver notificações" className="flex h-11 w-11 items-center justify-center"><Bell size={27} /></Link>}</>}</div>
+            <div className="flex items-center gap-3">{publicDemo ? <><button type="button" aria-label="Abrir demonstração do chat" onClick={openDemo('chat')} className="flex h-11 w-11 items-center justify-center"><MessageCircle size={27} /></button><button type="button" aria-label="Abrir demonstração das notificações" onClick={openDemo('notifications')} className="flex h-11 w-11 items-center justify-center"><Bell size={27} /></button></> : <>{user ? <button type="button" aria-label="Conversar com a loja" onClick={() => setChatOpen(true)}><MessageCircle size={27} /></button> : <Link to={`/login?store=${encodeURIComponent(store?.id || storeRef)}&returnTo=${encodeURIComponent(withStore('/loja', store?.id || storeRef))}`} aria-label="Entrar para conversar com a loja" className="flex h-11 w-11 items-center justify-center"><MessageCircle size={27} /></Link>}{user ? <NotificationBell /> : <Link to={`/login?store=${encodeURIComponent(store?.id || storeRef)}&returnTo=${encodeURIComponent(withStore('/loja', store?.id || storeRef))}`} aria-label="Entrar para ver notificações" className="flex h-11 w-11 items-center justify-center"><Bell size={27} /></Link>}</>}</div>
           </div>
           <div className="peddi-store-profile">
             <div className="peddi-store-logo"><StoriesRing store={store} isAdmin={false} onUpdateStore={setStore} /></div>
@@ -304,11 +305,12 @@ export default function Home() {
       <BirthdayPromoNotifier user={user} />
       <AbandonedCartNotifier user={user} />
       <ChatWidget externalOpen={chatOpen} onExternalClose={() => setChatOpen(false)} hideLauncher />
+      {publicDemo&&<DemoCustomerPanel/>}
       <BottomNav />
     </div>
   );
 }
 
 function PromotionPage({store,storeRef,promotion,products}){
- return <div className="peddi-storefront min-h-screen bg-white pb-28"><CartDrawer/><main className="mx-auto min-h-screen max-w-2xl bg-white"><header className="sticky top-0 z-30 flex items-center gap-3 border-b border-gray-100 bg-white/95 px-4 py-3 backdrop-blur"><Link to={withStore('/loja',store?.id||storeRef)} aria-label="Voltar ao cardápio" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-gray-700 hover:bg-gray-100">←</Link><div className="min-w-0"><p className="text-xs text-gray-500">{store?.name}</p><h1 className="truncate font-heading text-lg font-bold text-gray-900">{promotion?.name||'Promoção'}</h1></div></header>{promotion?<>{promotion.image_url?<section className="mx-4 mt-4 aspect-[4/1] overflow-hidden rounded-2xl border border-green-100"><img src={promotion.image_url} alt={promotion.name||'Promoção'} className="h-full w-full object-cover"/></section>:<section className="mx-4 mt-4 rounded-2xl border border-green-100 bg-gradient-to-r from-green-50 to-emerald-50 p-4"><span className="text-[10px] font-bold uppercase tracking-wide text-green-700">Oferta ativa</span><h2 className="mt-1 text-lg font-bold text-gray-900">{promotion.mini_banner_text||promotion.name}</h2>{promotion.code&&<p className="mt-1 text-xs text-gray-600">Cupom: <strong>{promotion.code}</strong></p>}</section>}<p className="px-4 py-4 text-sm text-gray-500">{products.length} produto{products.length!==1?'s':''} nesta promoção</p>{products.length?<div className="grid grid-cols-2 gap-3 px-4">{products.map(product=><ProductCard key={product.id} product={product}/>)}</div>:<p className="px-4 py-10 text-center text-sm text-gray-500">Nenhum produto disponível nesta promoção.</p>}</>:<p className="px-4 py-10 text-center text-sm text-gray-500">Esta promoção não está disponível.</p>}</main><BottomNav/></div>
+ return <div className="peddi-storefront min-h-screen bg-white pb-28"><CartDrawer/><main className="mx-auto min-h-screen max-w-2xl bg-white"><header className="sticky top-0 z-30 flex items-center gap-3 border-b border-gray-100 bg-white/95 px-4 py-3 backdrop-blur"><Link to={withStore('/loja',store?.id||storeRef)} aria-label="Voltar ao cardápio" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-gray-700 hover:bg-gray-100">←</Link><div className="min-w-0"><p className="text-xs text-gray-500">{store?.name}</p><h1 className="truncate font-heading text-lg font-bold text-gray-900">{promotion?.name||'Promoção'}</h1></div></header>{promotion?<>{promotion.image_url?<section className="mx-4 mt-4 aspect-[4/1] overflow-hidden rounded-2xl border border-green-100"><img src={promotion.image_url} alt={promotion.name||'Promoção'} className="h-full w-full object-cover"/></section>:<section className="mx-4 mt-4 rounded-2xl border border-green-100 bg-gradient-to-r from-green-50 to-emerald-50 p-4"><span className="text-[10px] font-bold uppercase tracking-wide text-green-700">Oferta ativa</span><h2 className="mt-1 text-lg font-bold text-gray-900">{promotion.mini_banner_text||promotion.name}</h2>{promotion.code&&<p className="mt-1 text-xs text-gray-600">Cupom: <strong>{promotion.code}</strong></p>}</section>}<p className="px-4 py-4 text-sm text-gray-500">{products.length} produto{products.length!==1?'s':''} nesta promoção</p>{products.length?<div className="grid grid-cols-2 gap-3 px-4">{products.map(product=><ProductCard key={product.id} product={product}/>)}</div>:<p className="px-4 py-10 text-center text-sm text-gray-500">Nenhum produto disponível nesta promoção.</p>}</>:<p className="px-4 py-10 text-center text-sm text-gray-500">Esta promoção não está disponível.</p>}</main>{isPublicDemo()&&<DemoCustomerPanel/>}<BottomNav/></div>
 }

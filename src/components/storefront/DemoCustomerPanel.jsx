@@ -1,0 +1,19 @@
+import {useEffect,useState} from 'react';
+import {Bell,ChevronRight,MessageCircle,Package,UserRound,X} from 'lucide-react';
+import {AnimatePresence,motion} from 'framer-motion';
+import {createPortal} from 'react-dom';
+
+function DemoRow({title,text}){return <div className="flex items-start gap-3 border-b border-gray-100 py-3 last:border-0"><span className="mt-1 h-2 w-2 rounded-full bg-green-500"/><div><b className="text-sm">{title}</b><p className="text-xs leading-5 text-gray-500">{text}</p></div></div>}
+const content={
+ chat:{icon:MessageCircle,title:'Atendimento',body:<><div className="rounded-2xl bg-gray-100 p-3 text-sm text-gray-700">Olá! Como podemos ajudar com seu pedido?</div><div className="ml-10 rounded-2xl bg-green-50 p-3 text-sm text-green-800">Quero acompanhar meu pedido.</div><p className="text-center text-xs text-gray-400">Conversa demonstrativa — nenhuma mensagem será enviada.</p></>},
+ notifications:{icon:Bell,title:'Notificações',body:<><DemoRow title="Pedido aceito" text="A loja aceitou seu pedido demonstrativo."/><DemoRow title="Em preparo" text="Seu pedido está sendo preparado."/><DemoRow title="Saiu para entrega" text="O entregador está a caminho."/></>},
+ orders:{icon:Package,title:'Meus pedidos',body:<><div className="rounded-2xl border border-green-100 bg-green-50 p-4"><div className="flex items-center justify-between"><b>Pedido demo #1024</b><span className="rounded-full bg-green-600 px-2 py-1 text-[10px] font-bold text-white">Em preparo</span></div><p className="mt-2 text-sm text-gray-600">2 itens · R$ 40,40</p><button className="mt-3 flex min-h-11 w-full items-center justify-between rounded-xl bg-white px-3 text-sm font-semibold text-green-700">Ver detalhes <ChevronRight size={17}/></button></div><p className="text-center text-xs text-gray-400">Pedido apenas ilustrativo.</p></>},
+ profile:{icon:UserRound,title:'Perfil',body:<><div className="flex items-center gap-3 rounded-2xl border p-4"><span className="grid h-12 w-12 place-items-center rounded-full bg-green-100 font-bold text-green-700">VD</span><div><b>Visitante da demonstração</b><p className="text-xs text-gray-500">Sessão temporária</p></div></div><DemoRow title="Meus dados" text="Dados não persistidos"/><DemoRow title="Endereços" text="Nenhum endereço salvo"/></>},
+};
+export default function DemoCustomerPanel(){
+ const[type,setType]=useState('');
+ useEffect(()=>{const open=event=>setType(event.detail);window.addEventListener('peddi-demo-open',open);return()=>window.removeEventListener('peddi-demo-open',open)},[]);
+ useEffect(()=>{if(!type)return;const close=event=>{if(event.key==='Escape')setType('')};window.addEventListener('keydown',close);return()=>window.removeEventListener('keydown',close)},[type]);
+ const panel=content[type];
+ return createPortal(<AnimatePresence>{panel&&<><motion.button aria-label="Fechar" className="fixed inset-0 z-[210] bg-black/35" onClick={()=>setType('')} initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}/><motion.section role="dialog" aria-modal="true" className="fixed inset-x-0 bottom-0 z-[220] max-h-[78dvh] overflow-y-auto rounded-t-[28px] bg-white p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] text-gray-900 shadow-2xl sm:left-1/2 sm:max-w-md sm:-translate-x-1/2" initial={{y:'100%'}} animate={{y:0}} exit={{y:'100%'}} transition={{type:'spring',damping:30,stiffness:330}}><header className="mb-5 flex items-center gap-3"><span className="grid h-11 w-11 place-items-center rounded-full bg-green-100 text-green-700"><panel.icon size={21}/></span><h2 className="flex-1 text-lg font-bold">{panel.title}</h2><button aria-label="Fechar" onClick={()=>setType('')} className="grid h-11 w-11 place-items-center rounded-xl hover:bg-gray-100"><X/></button></header><div className="space-y-3">{panel.body}</div></motion.section></>}</AnimatePresence>,document.body);
+}
