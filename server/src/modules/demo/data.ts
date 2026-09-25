@@ -53,13 +53,15 @@ async function calculateCheckoutBenefits(client: PoolClient, tenant: string, dat
     const coupon=row.data||{},customerKey=promotionCustomerKey(data);
     if(coupon.is_active===false||(coupon.start_date&&coupon.start_date>today)||(coupon.expires_at&&coupon.expires_at<today))throw new Error('Esta promoção não está disponível.');
     if(subtotal<Number(coupon.min_order_value||0))throw new Error(`Pedido mínimo de R$ ${Number(coupon.min_order_value).toFixed(2)} para este cupom.`);
+    if(coupon.restricted_user_id&&coupon.restricted_user_id!==data.customer_user_id)throw new Error('Este cupom pertence a outro cliente.');
     const totalLimit=coupon.limit_total===false?0:Number(coupon.total_usage_limit||coupon.max_uses||0);
     const customerLimit=coupon.limit_per_customer===false?0:Number(coupon.per_customer_limit||0);
     if(totalLimit&&Number(coupon.uses_count||0)>=totalLimit)throw new Error('Limite atingido');
     if(customerLimit&&customerKey&&Number(coupon.usage_by_customer?.[customerKey]||0)>=customerLimit)throw new Error('Você já atingiu o limite de uso desta promoção.');
     if(coupon.allow_stacking===false&&breakdown.length)throw new Error('Esta promoção não pode ser usada junto com outra promoção.');
-    const value=money((coupon.discount_type||coupon.type)==='percentage'?subtotal*Number(coupon.value||0)/100:Number(coupon.value||0));
-    if(value>0)breakdown.push({key:'coupon',label:`Cupom ${couponCode}`,value:Math.min(subtotal,value),promotion_id:row.id});
+    const freeShipping=(coupon.discount_type||coupon.type)==='free_shipping';
+    const value=money(freeShipping?deliveryFee:(coupon.discount_type||coupon.type)==='percentage'?subtotal*Number(coupon.value||0)/100:Number(coupon.value||0));
+    if(value>0)breakdown.push({key:'coupon',label:freeShipping?'Frete grátis':`Cupom ${couponCode}`,value:Math.min(freeShipping?deliveryFee:subtotal,value),promotion_id:row.id});
   }
   if(data.payment_method==='pix'){
     const store=(await client.query('SELECT details FROM stores WHERE id=$1',[tenant])).rows[0]?.details||{};
@@ -159,7 +161,10 @@ export async function readEntities(entity: string, request: AuthRequest) {
       const ownConversations = new Set(result.rows.filter(row => request.auth ? row.owner_id === request.auth.userId : row.visitor_id === request.headers['x-peddi-visitor']).map(row => row.data.conversation_id));
       return result.rows.filter(row => {
         if (manager) return true;
-        if (['City','Campaign','Coupon','PromoMessage','UpsellGroup','CashbackRule'].includes(entity)) return row.data.is_active !== false;
+        if (['City','Campaign','Coupon','PromoMessage','UpsellGroup','CashbackRule'].includes(entity)) {
+          if(entity==='Coupon'&&row.data.restricted_user_id&&row.data.restricted_user_id!==request.auth?.userId)return false;
+          return row.data.is_active !== false;
+        }
         if (entity === 'Review') return row.data.is_approved === true || row.owner_id === request.auth?.userId;
         if (entity === 'ReviewComment') return row.data.is_approved !== false || row.owner_id === request.auth?.userId;
         if (entity === 'Deliverer') return row.owner_id === request.auth?.userId || row.data.user_id === request.auth?.userId;

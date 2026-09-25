@@ -65,6 +65,8 @@ export const peddiApi = {
   }),
   orders: (token) => request('/api/v1/orders', { headers: { Authorization: `Bearer ${token}` } }),
   createOrder: (data, token, idempotencyKey = crypto.randomUUID()) => request('/api/v1/orders', { method:'POST', headers: { Authorization: `Bearer ${token}`, 'Idempotency-Key':idempotencyKey }, body:JSON.stringify(data) }),
+  loyaltyProgress: () => request('/api/v1/loyalty/progress', { headers: { Authorization: `Bearer ${localStorage.getItem('peddi_access_token') || ''}` } }),
+  loyaltyRewards: () => request('/api/v1/loyalty/rewards', { headers: { Authorization: `Bearer ${localStorage.getItem('peddi_access_token') || ''}` } }),
   stores: () => request('/api/v1/stores'),
   catalog: (storeId) => request(`/api/v1/stores/${storeId}/catalog`),
   trackingStream: (orderId, signal) => fetch(`${apiUrl}/api/v1/deliveries/${encodeURIComponent(orderId)}/tracking/stream`, {

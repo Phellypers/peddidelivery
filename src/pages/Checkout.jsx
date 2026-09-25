@@ -45,8 +45,6 @@ export default function Checkout() {
     changeFor: 0,
   });
   const [appliedCoupon, setAppliedCoupon] = useState(null);
-  const couponDiscount = appliedCoupon && subtotal >= Number(appliedCoupon.min_order_value || 0)
-    ? Number(appliedCoupon.type === 'percentage' ? subtotal * appliedCoupon.value / 100 : appliedCoupon.value) : 0;
   const [couponError, setCouponError] = useState('');
   const [couponApplied, setCouponApplied] = useState(false);
   useEffect(() => {
@@ -121,6 +119,12 @@ export default function Checkout() {
   const freeShippingDiscount = form.deliveryMethod === 'delivery' && cityFee === null && Number(store?.free_shipping_above||0)>0 && subtotal >= Number(store.free_shipping_above)
     ? regularDeliveryFee : 0;
   const deliveryFee = Math.max(0,regularDeliveryFee-freeShippingDiscount);
+  const couponEligible = appliedCoupon && subtotal >= Number(appliedCoupon.min_order_value || 0);
+  const couponFreeShipping = couponEligible && appliedCoupon.discount_type === 'free_shipping';
+  const couponDiscount = couponEligible && !couponFreeShipping
+    ? Number(appliedCoupon.type === 'percentage' ? subtotal * appliedCoupon.value / 100 : appliedCoupon.value)
+    : 0;
+  const couponShippingDiscount = couponFreeShipping ? deliveryFee : 0;
 
   const pixDiscount = (!form.splitPayment && form.paymentMethod === 'pix') ? (subtotal * (store?.pix_discount_percent || 5) / 100) : 0;
 
@@ -153,6 +157,7 @@ export default function Checkout() {
 
   const discountBreakdown = [
     couponDiscount>0&&{key:'coupon',label:`Cupom ${appliedCoupon?.code||form.couponCode.toUpperCase()}`,value:couponDiscount},
+    couponShippingDiscount>0&&{key:'coupon-shipping',label:`Cupom ${appliedCoupon?.code||form.couponCode.toUpperCase()} — frete grátis`,value:couponShippingDiscount},
     pixDiscount>0&&{key:'pix',label:'Desconto Pix',value:pixDiscount},
     campaignDiscount>0&&{key:'campaign',label:appliedCampaign?.name||'Promoção aplicada',value:campaignDiscount},
     freeShippingDiscount>0&&{key:'shipping',label:'Frete grátis',value:freeShippingDiscount},

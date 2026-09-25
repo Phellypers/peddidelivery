@@ -12,6 +12,8 @@ import SafeBackButton from '@/components/navigation/SafeBackButton';
 import { isProductAvailable } from '@/lib/productAvailability';
 import ProductRating from '@/components/storefront/ProductRating';
 import { getPriceDropBadge } from '@/lib/productHighlights';
+import { peddiApi } from '@/services/api/peddiApi';
+import LoyaltyProgressCard from '@/components/customer/LoyaltyProgressCard';
 
 const MONTHS = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 
@@ -253,14 +255,17 @@ export default function CustomerProfile() {
   const [deleting, setDeleting] = useState(false);
   const [loading, setLoading] = useState(true);
   const [activeHighlight, setActiveHighlight] = useState('recommended');
+  const [loyalty, setLoyalty] = useState({program:null,progress:null,rewards:[]});
 
   const loadData = async () => {
     if (!user?.id) { setLoading(false); return; }
     try {
-      const [profs, ords, prods] = await Promise.all([
+      const [profs, ords, prods, loyaltyProgress, loyaltyRewards] = await Promise.all([
         base44.entities.CustomerProfile.filter({ user_id: user.id }),
         base44.entities.Order.filter({ customer_email: user.email }, '-created_date', 100),
         base44.entities.Product.filter({ is_published: true }, '-created_date'),
+        peddiApi.loyaltyProgress().catch(()=>({program:null,progress:null})),
+        peddiApi.loyaltyRewards().catch(()=>({rewards:[]})),
       ]);
       if (profs[0]) {
         setProfile(profs[0]);
@@ -272,6 +277,7 @@ export default function CustomerProfile() {
       }
       setRecentOrders(ords);
       setProducts(prods.filter(product => !product.is_paused));
+      setLoyalty({program:loyaltyProgress.program,progress:loyaltyProgress.progress,rewards:loyaltyRewards.rewards||[]});
     } catch (_) {}
     setLoading(false);
   };
@@ -420,6 +426,8 @@ export default function CustomerProfile() {
             </section>
 
             {/* ── Highlights ── */}
+            <LoyaltyProgressCard program={loyalty.program} progress={loyalty.progress} rewards={loyalty.rewards}/>
+
             <section className="border-t border-gray-100 bg-white px-3 py-4">
               <div className="flex justify-between gap-2 overflow-x-auto scrollbar-hide">
                 {highlights.map(item => {

@@ -12,6 +12,7 @@ import { courierRouter } from './modules/couriers/routes.js';
 import { courierApplicationRouter } from './modules/couriers/applications.js';
 import { accountRouter } from './modules/account/routes.js';
 import { blogRouter } from './modules/blog/routes.js';
+import { loyaltyRouter } from './modules/loyalty/routes.js';
 
 export const app = express();
 app.set('trust proxy', 1);
@@ -38,6 +39,7 @@ app.use('/api/v1',courierApplicationRouter);
 app.use('/api/v1/demo', demoRouter);
 app.use('/api/v1/my-peddi',accountRouter);
 app.use('/api/v1',blogRouter);
+app.use('/api/v1',loyaltyRouter);
 app.use('/uploads', express.static(uploadPath, { dotfiles:'deny' }));
 
 app.get('/health', async (_request, response) => {

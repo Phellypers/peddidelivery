@@ -14,6 +14,7 @@ import { syncDelivery } from '../deliveries/data.js';
 import { resolveChatSender } from './chat-sender.js';
 import { deliveryActionEvent } from '../../../../src/lib/deliveryEvents.js';
 import { storageConfigured, uploadImage, StorageUploadError } from '../storage/client.js';
+import { processOrderDeliveryLoyalty } from '../loyalty/data.js';
 
 export const demoRouter=Router();
 demoRouter.use((request,response,next)=>(env.demoMode || env.mvpMode) ? next() : response.status(404).json({error:'Adaptador de entidades desativado.'}));
@@ -99,6 +100,7 @@ async function validateOrderPromotions(client:any,tenant:string,data:Record<stri
   for(const row of result.rows){
     const promo=row.data||{},today=new Date().toISOString().slice(0,10);
     if(promo.is_active===false||(promo.start_date&&promo.start_date>today)||(promo.expires_at&&promo.expires_at<today))throw new Error('Esta promoção não está disponível.');
+    if(promo.restricted_user_id&&promo.restricted_user_id!==data.customer_user_id)throw new Error('Este cupom pertence a outro cliente.');
     const totalLimit=promo.limit_total===false?0:Number(promo.total_usage_limit||promo.max_uses||0);
     if(totalLimit&&Number(promo.uses_count||0)>=totalLimit)throw new Error('Limite atingido');
     const customerLimit=promo.limit_per_customer===false?0:Number(promo.per_customer_limit||0);
@@ -129,6 +131,8 @@ async function syncPromotionUsage(client:any,tenant:string,orderId:string,prior:
     if(customerKey)usage[customerKey]=Math.max(0,Number(usage[customerKey]||0)+delta);
     const uses=Math.max(0,Number(promo.uses_count||0)+delta);
     await client.query('UPDATE app_records SET data=data||$4::jsonb,updated_at=now() WHERE id=$1 AND store_id=$2 AND entity_name=$3',[row.id,tenant,'Coupon',JSON.stringify({uses_count:uses,usage_by_customer:usage,limit_reached:Boolean(totalLimit&&uses>=totalLimit)})]);
+    if(promo.loyalty_reward_id)await client.query(`UPDATE loyalty_rewards SET status=$3,redeemed_at=$4,redeemed_order_id=$5
+      WHERE id=$1 AND store_id=$2`,[promo.loyalty_reward_id,tenant,isEligible?'redeemed':'active',isEligible?new Date():null,isEligible?orderId:null]);
   }
   await client.query("UPDATE orders SET details=details||$3::jsonb,updated_at=now() WHERE id=$1 AND store_id=$2",[orderId,tenant,JSON.stringify({promotion_usage_recorded:isEligible,promotion_usage_recorded_at:isEligible?new Date().toISOString():null})]);
 }
@@ -260,6 +264,7 @@ async function saveEntity(request:AuthRequest,response:express.Response){
         }
         await syncDelivery(client,tenant,savedId as string);
         let savedOrder=(await readOrders(tenant,client)).find(row=>row.id===savedId);
+        if(savedOrder?.status==='delivered'&&prior?.status!=='delivered')await processOrderDeliveryLoyalty(client,savedId as string,tenant);
         await syncPromotionUsage(client,tenant,savedId as string,prior,savedOrder!);
         savedOrder=(await readOrders(tenant,client)).find(row=>row.id===savedId);
         if (!id) await client.query(`UPDATE idempotency_keys SET response_status=201,response_body=$4

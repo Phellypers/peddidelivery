@@ -63,6 +63,8 @@
     "mini_banner_text": { "type": "string" },
     "cta_label": { "type": "string" },
     "image_url": { "type": "string" }
+    ,"restricted_user_id": { "type": "string" }
+    ,"loyalty_reward_id": { "type": "string" }
   },
   "required": [
     "code",
