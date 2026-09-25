@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { Link, Navigate, useLocation } from 'react-router-dom';
-import { Bike, ArrowLeft, ArrowRight, CheckCircle2, Loader2, Package, ShieldCheck, Eye, EyeOff } from 'lucide-react';
+import { ArrowLeft, ArrowRight, BarChart3, CheckCircle2, CircleDollarSign, Eye, EyeOff, Loader2, Package, ShieldCheck, Truck } from 'lucide-react';
 import { peddiApi } from '@/services/api/peddiApi';
 import { useAuth } from '@/lib/AuthContext';
 import peddiLogo from '../../Logo Peddi/logo3.png';
+import './DelivererRegister.css';
 
 const inputClass='w-full min-h-12 rounded-xl border border-gray-200 bg-gray-50 px-4 text-sm text-[#111111] focus:outline-none focus:ring-2 focus:ring-[#22C55E]/30';
 export default function DelivererRegister() {
@@ -40,12 +41,19 @@ export default function DelivererRegister() {
     }catch(err){setError(err.message||'Não foi possível enviar sua solicitação.');}finally{setBusy(false);}
   };
   const query=params.get('store')?`?store=${encodeURIComponent(params.get('store'))}`:'';
-  return <main className="min-h-[100dvh] bg-[#F3F4F6] px-5 py-6 text-[#111111] sm:py-12" style={{paddingBottom:'max(2rem, env(safe-area-inset-bottom))'}}>
-    <div className="mx-auto max-w-4xl">
-      <header className="mb-10 flex items-center justify-between gap-4"><div><img src={peddiLogo} alt="PEDDI" className="h-10 w-auto max-w-[150px] object-contain"/><span className="text-xs text-gray-500">Entregadores</span></div><Link to="/entregador/login" className="py-3 text-sm font-semibold text-gray-600">Já tenho conta</Link></header>
-      {!isForm?<section className="grid items-center gap-10 rounded-3xl border border-gray-200 bg-white p-7 sm:p-12 md:grid-cols-2">
-        <div><span className="mb-5 inline-flex rounded-full bg-green-50 px-3 py-2 text-xs font-semibold text-green-700">Sua próxima entrega começa aqui</span><h1 className="text-3xl font-bold leading-tight tracking-tight sm:text-5xl">Entregue com a PEDDI.</h1><p className="mt-5 text-base leading-relaxed text-[#6B7280]">Receba pedidos, acompanhe rotas e converse com a loja em um só lugar. Envie seu cadastro e aguarde a aprovação do gestor.</p><Link to={`/entregador/cadastro${query}`} className="mt-7 inline-flex min-h-12 items-center justify-center gap-3 rounded-xl bg-[#22C55E] px-6 py-3 font-semibold text-white hover:bg-green-600">Quero ser entregador<ArrowRight size={19}/></Link></div>
-        <div className="space-y-3 rounded-3xl bg-green-50 p-6"><div className="mb-7 flex h-20 w-20 items-center justify-center rounded-2xl bg-[#22C55E] text-white"><Bike size={42}/></div>{[[Package,'Pedidos organizados','Todas as entregas atribuídas pela loja.'],[ShieldCheck,'Cadastro aprovado pela loja','Acesso exclusivo à operação de entregas.'],[CheckCircle2,'Tudo sincronizado','Aceite, recusa e status acompanhados pelo gestor.']].map(([Icon,title,text])=><div key={title} className="flex gap-3 rounded-xl bg-white p-4"><Icon className="mt-1 shrink-0 text-green-600" size={21}/><div><h2 className="text-sm font-semibold">{title}</h2><p className="mt-1 text-xs leading-relaxed text-gray-500">{text}</p></div></div>)}</div>
+  return <main className={isForm?'min-h-[100dvh] bg-[#F3F4F6] px-5 py-6 text-[#111111] sm:py-12':'deliverer-entry-page'} style={{paddingBottom:'max(2rem, env(safe-area-inset-bottom))'}}>
+    <div className={isForm?'mx-auto max-w-4xl':'deliverer-entry-shell'}>
+      <header className={isForm?'mb-10 flex items-center justify-between gap-4':'deliverer-entry-header'}><div className={isForm?'':'deliverer-entry-brand'}><img src={peddiLogo} alt="PEDDI" className={isForm?'h-10 w-auto max-w-[150px] object-contain':'deliverer-entry-logo'}/><span className={isForm?'text-xs text-gray-500':'deliverer-entry-section-name'}>Entregadores</span></div><div className={isForm?'':'deliverer-entry-login'}><span className="deliverer-entry-login-label">Já tenho conta</span><Link to="/entregador/login" className={isForm?'py-3 text-sm font-semibold text-gray-600':'deliverer-entry-login-button'}>Entrar<ArrowRight size={19}/></Link></div></header>
+      {!isForm?<section className="deliverer-entry-card">
+        <div className="deliverer-entry-copy">
+          <span className="deliverer-entry-badge"><Truck size={20}/>Sua próxima entrega começa aqui</span>
+          <h1>Entregue com a<br/><strong>PEDDI.</strong></h1>
+          <p className="deliverer-entry-description">Receba pedidos, acompanhe rotas e converse com a loja em um só lugar. Envie seu cadastro e aguarde a aprovação do gestor.</p>
+          <Link to={`/entregador/cadastro${query}`} className="deliverer-entry-cta">Quero ser entregador<ArrowRight size={24}/></Link>
+          <div className="deliverer-entry-mini-benefits">{[[CircleDollarSign,'Mais entregas'],[BarChart3,'Rotas otimizadas'],[ShieldCheck,'Trabalho seguro']].map(([Icon,label])=><div key={label}><Icon aria-hidden="true"/><span>{label}</span></div>)}</div>
+        </div>
+        <div className="deliverer-entry-benefit-panel" aria-label="Benefícios para entregadores">{[[Package,'Pedidos organizados','Todas as entregas atribuídas pela loja em um único lugar.'],[ShieldCheck,'Cadastro aprovado pela loja','Acesso exclusivo à operação de entregas.'],[CheckCircle2,'Tudo sincronizado','Aceite, recusa e status acompanhados pelo gestor em tempo real.']].map(([Icon,title,text])=><article key={title} className="deliverer-entry-benefit"><Icon aria-hidden="true"/><div><h2>{title}</h2><p>{text}</p></div></article>)}</div>
+        <div className="deliverer-entry-driver-wrap" aria-hidden="true"><img src="/Landing/como-funciona-pedidos.png" alt="" className="deliverer-entry-driver"/></div>
       </section>:<section className="mx-auto max-w-lg rounded-3xl border border-gray-200 bg-white p-6 sm:p-8">
         <Link to={`/entregador${query}`} className="mb-6 inline-flex min-h-10 items-center gap-2 text-sm text-gray-500"><ArrowLeft size={18}/>Voltar</Link>
         {sent?<div role="status" className="space-y-4 text-center"><CheckCircle2 size={54} className="mx-auto text-green-500"/><h1 className="text-2xl font-bold">Solicitação enviada!</h1><p className="leading-relaxed text-gray-500">O gestor da loja vai analisar seu cadastro. Seu acesso às entregas será liberado após a aprovação.</p><p className="text-sm text-gray-500">Use o e-mail e a senha que você cadastrou para entrar quando for aprovado.</p><Link to="/entregador/login" className="inline-flex min-h-12 items-center rounded-xl bg-green-500 px-5 font-semibold text-white">Ir para login do entregador</Link></div>:<>
@@ -60,7 +68,7 @@ export default function DelivererRegister() {
           </form>
         </>}
       </section>}
-      <p className="mt-7 text-center text-xs text-gray-400">PEDDI · Operação de entregas</p>
+      <p className={isForm?'mt-7 text-center text-xs text-gray-400':'deliverer-entry-footer'}>PEDDI · Operação de entregas</p>
     </div>
   </main>;
 }
