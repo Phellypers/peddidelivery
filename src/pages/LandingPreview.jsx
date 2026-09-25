@@ -7,9 +7,9 @@ const Button=({children,secondary=false,to='/register'})=><Link to={to} classNam
 const Media=({label,className=''})=><div className={`lp-media ${className}`} aria-label={label}><span>{label}</span></div>;
 
 const steps=[
-  ['01','Cadastre seu restaurante','É rápido, gratuito e sem burocracia.'],
-  ['02','Publique seu cardápio','Personalize produtos, preços e categorias.'],
-  ['03','Comece a receber pedidos','Pelo site, retirada ou delivery.'],
+  ['01','Cadastre seu restaurante','É rápido, gratuito e sem burocracia.','/Landing/como-funciona-cadastro.png','Notebook exibindo a plataforma PEDDI'],
+  ['02','Publique seu cardápio','Personalize produtos, preços e categorias.','/Landing/como-funciona-cardapio.png','Hambúrguer representando o cardápio digital'],
+  ['03','Comece a receber pedidos','Pelo site, retirada ou delivery.','/Landing/como-funciona-pedidos.png','Entregador PEDDI em uma motocicleta'],
 ];
 const features=[
   [ShoppingBag,'Cardápio digital'],[Megaphone,'Campanhas de marketing'],
@@ -37,7 +37,7 @@ export default function LandingPreview(){
     <div className="lp-hero-art"><div className="lp-blob"></div><img src="/Landing/hero-principal.png" alt="Profissional de restaurante apresentando o cardápio digital PEDDI" className="lp-hero-image"/><div className="lp-floating lp-floating--top"><PackageCheck/> Pedidos em tempo real</div><div className="lp-floating lp-floating--bottom"><BarChart3/> Mais controle, mais vendas</div></div>
    </div></section>
 
-   <section id="sobre" className="lp-section lp-how"><div className="lp-wrap"><div className="lp-heading"><h2>Como <em>funciona?</em></h2><p>Em poucos passos seu restaurante já está vendendo no digital.</p></div><div className="lp-steps">{steps.map(([n,title,text],i)=><article key={n}><Media label={`Imagem da etapa ${i+1}`}/><b>{n}</b><h3>{title}</h3><p>{text}</p>{i<2&&<ArrowRight className="lp-step-arrow"/>}</article>)}</div></div></section>
+   <section id="sobre" className="lp-section lp-how"><div className="lp-wrap"><div className="lp-heading"><h2>Como <em>funciona?</em></h2><p>Em poucos passos seu restaurante já está vendendo no digital.</p></div><div className="lp-steps">{steps.map(([n,title,text,image,alt],i)=><article key={n}><div className="lp-step-media"><img src={image} alt={alt} loading="lazy"/></div><b>{n}</b><h3>{title}</h3><p>{text}</p>{i<2&&<ArrowRight className="lp-step-arrow"/>}</article>)}</div></div></section>
 
    <section className="lp-trust"><div className="lp-wrap"><h2>Restaurantes que já <em>confiam na PEDDI</em></h2><div className="lp-brands">{['Sabor Expresso','Pizza da Vila','Burger House','Cantinho do Açaí','Bistrô Gourmet','Tacos'].map(name=><span key={name}>{name}</span>)}</div></div></section>
 
