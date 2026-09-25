@@ -11,6 +11,7 @@ export default function Banners() {
   const [banners, setBanners] = useState([]);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(null); // index being uploaded
+  const [uploadError, setUploadError] = useState('');
 
   useEffect(() => {
     Promise.all([
@@ -36,11 +37,18 @@ export default function Banners() {
   const handleUpload = async (e, index) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    setUploadError('');
     setUploading(index);
-    const { file_url } = await base44.integrations.Core.UploadFile({ file });
-    const updated = banners.map((b, i) => i === index ? { ...b, image_url: file_url } : b);
-    setBanners(updated);
-    setUploading(null);
+    try {
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      const updated = banners.map((b, i) => i === index ? { ...b, image_url: file_url } : b);
+      setBanners(updated);
+    } catch (error) {
+      setUploadError(error.message || 'Não foi possível enviar a imagem. Tente novamente.');
+    } finally {
+      setUploading(null);
+      e.target.value = '';
+    }
   };
 
   const addBanner = () => {
@@ -100,6 +108,7 @@ export default function Banners() {
       )}
 
       <div className="space-y-4">
+        {uploadError && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">{uploadError}</p>}
         {banners.map((banner, index) => (
           <div key={index} className="bg-card rounded-2xl border border-border/50 p-4 space-y-3">
             <div className="flex items-center justify-between">
@@ -121,20 +130,22 @@ export default function Banners() {
             </div>
 
             {/* Image */}
-            <div className="aspect-[3/1] rounded-xl overflow-hidden bg-muted relative">
+            <div className="aspect-[23/10] overflow-hidden rounded-xl bg-muted">
               {banner.image_url
                 ? <img src={banner.image_url} alt="" className="w-full h-full object-cover" />
                 : <div className="w-full h-full flex items-center justify-center text-muted-foreground text-sm">Sem imagem</div>
               }
-              <label className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 hover:opacity-100 transition-opacity cursor-pointer">
-                {uploading === index
-                  ? <Loader2 size={24} className="text-white animate-spin" />
-                  : <div className="flex items-center gap-2 text-white font-medium text-sm"><Upload size={18} /> Upload de imagem</div>
-                }
-                <input type="file" accept="image/*" className="hidden" onChange={e => handleUpload(e, index)} disabled={uploading !== null} />
-              </label>
             </div>
 
+            <div className="flex flex-wrap items-center gap-2">
+              <label className={`inline-flex min-h-11 items-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-white ${uploading !== null ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:bg-primary/90'}`}>
+                {uploading === index ? <Loader2 size={18} className="animate-spin" /> : <Upload size={18} />}
+                {uploading === index ? 'Enviando imagem...' : banner.image_url ? 'Trocar imagem' : 'Enviar imagem'}
+                <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={e => handleUpload(e, index)} disabled={uploading !== null} />
+              </label>
+              {banner.image_url && <button type="button" onClick={() => update(index, 'image_url', '')} disabled={uploading !== null} className="min-h-11 rounded-xl border border-red-200 px-4 text-sm font-medium text-red-600 disabled:opacity-50">Remover imagem</button>}
+            </div>
+            <p className="text-xs text-muted-foreground">Recomendado: 1200 × 522 px (proporção 2,3:1), em PNG, JPG ou WebP.</p>
             <ImageUrlInput onApply={url => update(index, 'image_url', url)} disabled={uploading !== null} />
 
             {/* Title */}
