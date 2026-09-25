@@ -11,6 +11,7 @@ import GoogleIcon from "@/components/GoogleIcon";
 import { toast } from "@/components/ui/use-toast";
 import { safeReturnTo } from "@/lib/authReturnTo";
 import { storefrontStoreRef } from '@/lib/storefrontTenant';
+import peddiLogo from '../../Logo Peddi/logo3.png';
 
 export default function Register() {
   const storeRef = storefrontStoreRef();
@@ -82,6 +83,8 @@ export default function Register() {
     return (
       <AuthLayout
         icon={Mail}
+        logoUrl={peddiLogo}
+        brandName="PEDDI"
         title="Verify your email"
         subtitle={`We sent a code to ${email}`}
       >
@@ -135,6 +138,8 @@ export default function Register() {
   return (
     <AuthLayout
       icon={UserPlus}
+      logoUrl={peddiLogo}
+      brandName="PEDDI"
       title="Create your account"
       subtitle="Sign up to get started"
       footer={
