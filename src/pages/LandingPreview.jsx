@@ -34,7 +34,7 @@ export default function LandingPreview(){
   <main>
    <section id="inicio" className="lp-hero"><div className="lp-wrap lp-hero-grid">
     <div className="lp-hero-copy"><span className="lp-eyebrow">Tecnologia para restaurantes</span><h1>Seu restaurante<br/>no digital,<br/><em>sem complicação.</em></h1><p>Cardápio digital e delivery para vender mais, sem taxas por pedido e sem mensalidades escondidas.</p><div className="lp-actions"><Button>Cadastre seu restaurante</Button><Button secondary to="/loja?demo=1">Ver como funciona</Button></div></div>
-    <div className="lp-hero-art"><div className="lp-blob"></div><Media label="Imagem principal — profissional + celular" className="lp-media--hero"/><div className="lp-floating lp-floating--top"><PackageCheck/> Pedidos em tempo real</div><div className="lp-floating lp-floating--bottom"><BarChart3/> Mais controle, mais vendas</div></div>
+    <div className="lp-hero-art"><div className="lp-blob"></div><img src="/Landing/hero-principal.png" alt="Profissional de restaurante apresentando o cardápio digital PEDDI" className="lp-hero-image"/><div className="lp-floating lp-floating--top"><PackageCheck/> Pedidos em tempo real</div><div className="lp-floating lp-floating--bottom"><BarChart3/> Mais controle, mais vendas</div></div>
    </div></section>
 
    <section id="sobre" className="lp-section lp-how"><div className="lp-wrap"><div className="lp-heading"><h2>Como <em>funciona?</em></h2><p>Em poucos passos seu restaurante já está vendendo no digital.</p></div><div className="lp-steps">{steps.map(([n,title,text],i)=><article key={n}><Media label={`Imagem da etapa ${i+1}`}/><b>{n}</b><h3>{title}</h3><p>{text}</p>{i<2&&<ArrowRight className="lp-step-arrow"/>}</article>)}</div></div></section>
