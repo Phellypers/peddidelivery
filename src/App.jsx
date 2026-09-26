@@ -10,6 +10,7 @@ import { BrowserRouter as Router, Route, Routes, Navigate, useLocation } from 'r
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import ScrollToTop from '@/components/ScrollToTop';
+import GoogleAnalyticsPageView from '@/components/GoogleAnalyticsPageView';
 import { CartProvider } from '@/lib/CartContext';
 import { WishlistProvider } from '@/lib/WishlistContext';
 import NotificationSounds from '@/components/NotificationSounds';
@@ -91,6 +92,7 @@ function App() {
           <WishlistProvider>
             <Router>
               <AppNavigationTracker />
+              <GoogleAnalyticsPageView />
               <PublicDemoGuard />
               <NotificationSounds />
               <ScrollToTop />
