@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
-import { Megaphone, Gift, ShoppingBag, ToggleLeft, ToggleRight, Plus, Trash2, Edit2, Save, X, Loader2, ChevronDown, ChevronUp, Send, Check, Award, Zap, UserCheck } from 'lucide-react';
+import { Megaphone, Gift, ShoppingBag, ToggleLeft, ToggleRight, Plus, Trash2, Edit2, Save, X, Loader2, ChevronDown, ChevronUp, Send, Check, Award, Zap, UserCheck, Search, CalendarDays, Clock3, Copy, GripVertical } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import MarketingDispatch from '@/components/admin/MarketingDispatch';
 import FidelityTab from '@/components/admin/marketing/FidelityTab';
@@ -8,31 +8,14 @@ import AutomationTab from '@/components/admin/marketing/AutomationTab';
 import ReactivationTab from '@/components/admin/marketing/ReactivationTab';
 
 // ─── Tab: Campanhas ───────────────────────────────────────────────────────────
-function CampaignRow({ campaign, onToggle, onDelete, onEdit }) {
-  const typeLabel = { cart_value: '🛒 Por valor de carrinho', order_count: '📦 Por qtd. de pedidos', buy_x_get_y: '🎁 Compre X e ganhe Y' };
+const TYPE_LABEL = { cart_value: 'Desconto por valor do carrinho', order_count: 'Desconto por quantidade de produtos', buy_x_get_y: 'Compre X e ganhe Y' };
+const formatDate=value=>value?new Date(`${value}T12:00:00`).toLocaleDateString('pt-BR'):'';
+function MarketingToggle({active,onClick}){return <button type="button" onClick={onClick} className={`relative h-7 w-24 rounded-xl text-[11px] font-bold ${active?'bg-emerald-500 text-emerald-900':'bg-red-100 text-red-500'}`}><i className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow ${active?'left-[72px]':'left-1'}`}/><span className={active?'pr-5':'pl-5'}>{active?'Ativo':'Inativo'}</span></button>}
+function CampaignRow({ campaign, position, onToggle, onDelete, onEdit, onDuplicate, onDragStart, onDrop }) {
+  const rule=campaign.type==='cart_value'?`Carrinho ≥ R$ ${Number(campaign.min_cart_value||0).toFixed(2).replace('.',',')}`:campaign.type==='order_count'?`${campaign.min_order_count||0} ou mais produtos`:`Compre ${campaign.buy_quantity||0} produtos selecionados`;
+  const benefit=campaign.type==='buy_x_get_y'?`Ganhe ${campaign.get_quantity||1} produto`:campaign.discount_type==='percentage'?`${campaign.discount_value||0}% OFF`:`R$ ${Number(campaign.discount_value||0).toFixed(2).replace('.',',')} OFF`;
   return (
-    <div className="flex items-center gap-3 p-4 bg-card rounded-2xl border border-border/50">
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 flex-wrap">
-          <p className="font-semibold text-sm text-foreground">{campaign.name}</p>
-          <span className="text-[10px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{typeLabel[campaign.type]}</span>
-        </div>
-        <p className="text-xs text-muted-foreground mt-0.5">
-          {campaign.type === 'cart_value' && `Carrinho ≥ R$ ${campaign.min_cart_value?.toFixed(2)} → ${campaign.discount_type === 'percentage' ? campaign.discount_value + '%' : 'R$ ' + campaign.discount_value?.toFixed(2)} off`}
-          {campaign.type === 'order_count' && `A partir do ${campaign.min_order_count}º pedido → ${campaign.discount_type === 'percentage' ? campaign.discount_value + '%' : 'R$ ' + campaign.discount_value?.toFixed(2)} off`}
-          {campaign.type === 'buy_x_get_y' && `Compre ${campaign.buy_quantity} ganhe ${campaign.get_quantity}`}
-        </p>
-      </div>
-      <div className="flex items-center gap-2 flex-shrink-0">
-        <button onClick={() => onToggle(campaign)} title={campaign.is_active ? 'Desativar' : 'Ativar'}>
-          {campaign.is_active
-            ? <ToggleRight size={26} className="text-green-500" />
-            : <ToggleLeft size={26} className="text-gray-300" />}
-        </button>
-        <button onClick={() => onEdit(campaign)} className="p-1.5 hover:bg-accent rounded-lg transition-colors"><Edit2 size={15} className="text-muted-foreground" /></button>
-        <button onClick={() => onDelete(campaign.id)} className="p-1.5 hover:bg-destructive/10 rounded-lg transition-colors"><Trash2 size={15} className="text-destructive" /></button>
-      </div>
-    </div>
+    <tr draggable onDragStart={onDragStart} onDragOver={event=>event.preventDefault()} onDrop={onDrop} className="border-t border-slate-100 text-sm"><td className="pl-3"><GripVertical size={18} className="cursor-grab text-slate-400"/></td><td className="p-3"><div className="flex items-center gap-3"><span className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-50 text-emerald-500"><Gift size={21}/></span><span><b className="block text-slate-950">{campaign.name}</b><small className="text-slate-500">{campaign.description||'Campanha promocional'}</small></span></div></td><td className="p-3"><span className="inline-flex max-w-48 rounded-lg bg-blue-50 px-3 py-2 text-xs font-medium text-blue-600">{TYPE_LABEL[campaign.type]}</span></td><td className="p-3 text-slate-700">{rule}</td><td className="p-3 font-bold text-emerald-500">{benefit}</td><td className="p-3 text-slate-600"><span className="flex gap-1.5"><CalendarDays size={14}/>{campaign.start_date||campaign.end_date?`${formatDate(campaign.start_date)||'Início imediato'} - ${formatDate(campaign.end_date)||'sem data final'}`:'Início imediato'}</span><span className="mt-1 flex gap-1.5 text-xs"><Clock3 size={14}/>{campaign.end_date?'Tempo integral':'sem data final'}</span></td><td className="p-3"><MarketingToggle active={campaign.is_active!==false} onClick={()=>onToggle(campaign)}/></td><td className="p-3"><div className="flex justify-end"><button title="Editar" onClick={()=>onEdit(campaign)} className="p-2"><Edit2 size={17}/></button><button title="Duplicar" onClick={()=>onDuplicate(campaign)} className="p-2"><Copy size={17}/></button><button title="Excluir" onClick={()=>onDelete(campaign.id)} className="p-2 text-red-500"><Trash2 size={17}/></button></div></td><td className="sr-only">{position}</td></tr>
   );
 }
 
@@ -254,6 +237,11 @@ export default function Marketing() {
   const [showForm, setShowForm] = useState(false);
   const [editCampaign, setEditCampaign] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [campaignQuery, setCampaignQuery] = useState('');
+  const [typeFilter, setTypeFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [campaignSort, setCampaignSort] = useState('recent');
+  const dragCampaign = useRef(null);
 
   const load = () => {
     base44.entities.Campaign.list().then(setCampaigns);
@@ -272,6 +260,9 @@ export default function Marketing() {
   const toggleCampaign = (c) => base44.entities.Campaign.update(c.id, { is_active: !c.is_active }).then(load);
   const deleteCampaign = (id) => base44.entities.Campaign.delete(id).then(load);
   const startEdit = (c) => { setEditCampaign(c); setShowForm(true); };
+  const duplicateCampaign = async campaign => { const {id,created_date,updated_date,...copy}=campaign; await base44.entities.Campaign.create({...copy,name:`${campaign.name} - cópia`,is_active:false});load(); };
+  const visibleCampaigns = useMemo(() => campaigns.filter(c => c.name?.toLowerCase().includes(campaignQuery.toLowerCase()) && (typeFilter==='all'||c.type===typeFilter) && (statusFilter==='all'||(statusFilter==='active')===(c.is_active!==false))).sort((a,b)=>campaignSort==='name'?a.name.localeCompare(b.name):campaignSort==='position'?Number(a.sort_order||0)-Number(b.sort_order||0):String(b.created_date||'').localeCompare(String(a.created_date||''))), [campaigns,campaignQuery,typeFilter,statusFilter,campaignSort]);
+  const reorderCampaigns = async (fromId,toId) => { if(!fromId||fromId===toId)return;const next=[...campaigns],from=next.findIndex(c=>c.id===fromId),to=next.findIndex(c=>c.id===toId),item=next.splice(from,1)[0];next.splice(to,0,item);setCampaigns(next);await Promise.all(next.map((campaign,index)=>base44.entities.Campaign.update(campaign.id,{sort_order:index})));load(); };
 
   return (
     <div className="space-y-6">
@@ -281,11 +272,11 @@ export default function Marketing() {
       </div>
 
       {/* Tabs */}
-      <div className="flex flex-wrap gap-1 bg-muted p-1 rounded-2xl w-full sm:w-fit max-w-full">
+      <div className="flex max-w-full gap-1 overflow-x-auto rounded-2xl border border-slate-200 bg-white p-1 scrollbar-hide">
         {TABS.map(t => {
           const Icon = t.icon;
           return (
-            <button key={t.id} onClick={() => setTab(t.id)} className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${tab === t.id ? 'bg-white text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>
+            <button key={t.id} onClick={() => setTab(t.id)} className={`flex min-h-10 shrink-0 items-center gap-2 rounded-xl px-5 text-sm font-semibold transition-colors ${tab === t.id ? 'bg-emerald-100 text-slate-950' : 'text-slate-500 hover:text-slate-900'}`}>
               <Icon size={15} /> {t.label}
             </button>
           );
@@ -294,35 +285,26 @@ export default function Marketing() {
 
       {/* Campaigns Tab */}
       {tab === 'campaigns' && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-muted-foreground">{campaigns.length} campanhas criadas</p>
-            <button onClick={() => { setShowForm(true); setEditCampaign(null); }} className="flex items-center gap-1.5 px-3 py-2 bg-primary text-white rounded-xl text-sm font-bold">
+        <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+          <div className="flex flex-wrap items-start justify-between gap-3 p-5"><div className="flex items-start gap-3"><Gift size={28} className="text-emerald-500"/><div><h2 className="text-lg font-bold text-slate-950">Campanhas do checkout</h2><p className="text-sm text-slate-500">Crie regras promocionais aplicadas automaticamente ao carrinho.</p></div></div>
+            <button onClick={() => { setShowForm(true); setEditCampaign(null); }} className="flex min-h-11 items-center gap-2 rounded-xl bg-emerald-500 px-5 text-sm font-bold text-white">
               <Plus size={15} /> Nova campanha
             </button>
           </div>
 
+          <div className="grid gap-3 border-y border-slate-100 p-4 md:grid-cols-[1.2fr_1fr_1fr_.8fr]"><label className="relative"><Search size={17} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"/><input value={campaignQuery} onChange={e=>setCampaignQuery(e.target.value)} placeholder="Buscar campanha por nome..." className="h-11 w-full rounded-lg border border-slate-200 pl-10 pr-3 text-sm"/></label><select value={typeFilter} onChange={e=>setTypeFilter(e.target.value)} className="h-11 rounded-lg border border-slate-200 px-3 text-sm"><option value="all">Todos os tipos</option><option value="cart_value">Valor do carrinho</option><option value="order_count">Quantidade de produtos</option><option value="buy_x_get_y">Compre X e ganhe Y</option></select><select value={statusFilter} onChange={e=>setStatusFilter(e.target.value)} className="h-11 rounded-lg border border-slate-200 px-3 text-sm"><option value="all">Todos os status</option><option value="active">Ativos</option><option value="inactive">Inativos</option></select><select value={campaignSort} onChange={e=>setCampaignSort(e.target.value)} className="h-11 rounded-lg border border-slate-200 px-3 text-sm"><option value="recent">Mais recentes</option><option value="position">Posição</option><option value="name">Nome</option></select></div>
+
           {showForm && (
-            <CampaignForm
+            <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-0 sm:items-center sm:p-4" onClick={()=>{setShowForm(false);setEditCampaign(null)}}><div className="max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-t-3xl bg-white p-5 sm:rounded-2xl" onClick={e=>e.stopPropagation()}><CampaignForm
               initial={editCampaign}
               onSave={saveCampaign}
               onCancel={() => { setShowForm(false); setEditCampaign(null); }}
               saving={saving}
-            />
+            /></div></div>
           )}
 
-          <div className="space-y-3">
-            {campaigns.map(c => (
-              <CampaignRow key={c.id} campaign={c} onToggle={toggleCampaign} onDelete={deleteCampaign} onEdit={startEdit} />
-            ))}
-            {campaigns.length === 0 && !showForm && (
-              <div className="text-center py-12 text-muted-foreground text-sm">
-                <Gift size={32} className="mx-auto mb-3 opacity-30" />
-                Nenhuma campanha criada ainda
-              </div>
-            )}
-          </div>
-        </div>
+          <div className="overflow-x-auto"><table className="w-full min-w-[1200px] text-left"><thead className="bg-slate-50 text-xs text-slate-500"><tr><th/><th className="p-3">Nome da campanha</th><th className="p-3">Tipo</th><th className="p-3">Regra / Condição</th><th className="p-3">Desconto / Benefício</th><th className="p-3">Período de exibição</th><th className="p-3">Status</th><th className="p-3 text-right">Ações</th></tr></thead><tbody>{visibleCampaigns.map((c,index)=><CampaignRow key={c.id} campaign={c} position={index} onToggle={toggleCampaign} onDelete={deleteCampaign} onEdit={startEdit} onDuplicate={duplicateCampaign} onDragStart={()=>{dragCampaign.current=c.id}} onDrop={()=>reorderCampaigns(dragCampaign.current,c.id)}/>)}</tbody></table>{!visibleCampaigns.length&&<p className="py-12 text-center text-sm text-slate-400">Nenhuma campanha encontrada.</p>}</div><footer className="border-t p-4 text-sm text-slate-500">Mostrando {visibleCampaigns.length} de {campaigns.length} campanhas</footer>
+        </section>
       )}
 
       {tab === 'dispatch' && <MarketingDispatch />}
