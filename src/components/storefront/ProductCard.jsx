@@ -64,11 +64,11 @@ export default function ProductCard({ product }) {
       <div className="p-3 flex flex-col gap-1 flex-1">
         <p className="text-sm font-semibold text-gray-800 leading-snug line-clamp-2 min-h-[2.5rem]">{product.name}</p>
 
+        <ProductRating product={product} />
+
         {product.description && (
           <p className="peddi-product-description text-[11px] text-gray-400 leading-tight line-clamp-2 min-h-[14px]">{product.description}</p>
         )}
-
-        <ProductRating product={product} />
 
         <div className="peddi-product-price flex flex-wrap items-baseline gap-1.5 mt-0.5 min-w-0">
           {hasPromo && (
