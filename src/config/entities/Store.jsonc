@@ -53,6 +53,14 @@
         "type": "object"
       }
     },
+    "promo_ticker_text_color": {
+      "type": "string",
+      "default": "#111827"
+    },
+    "promo_ticker_background_color": {
+      "type": "string",
+      "default": "#FFF7ED"
+    },
     "stories": {
       "type": "array",
       "items": {

@@ -108,6 +108,8 @@
 .peddi-promo-slide { position: relative; flex: 0 0 82%; min-width: 0; aspect-ratio: 2.3; max-height: 220px; overflow: hidden; border-radius: var(--store-radius, 16px); scroll-snap-align: start; scroll-snap-stop: always; background: #f3f4f6; }
 .peddi-promo-slide.single { flex-basis: 100%; }
 .peddi-promo-slide:focus-visible { outline: 2px solid var(--store-primary, #22c55e); outline-offset: -3px; }
+@keyframes peddi-text-ticker-scroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+.peddi-text-ticker { animation: peddi-text-ticker-scroll 32s linear infinite; will-change: transform; }
 .peddi-promo-shade { position: absolute; inset: 0; background: linear-gradient(90deg, #052e16e6, #052e1670 55%, transparent); }
 .peddi-promo-copy { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; gap: 5px; padding: 12px; max-width: 70%; color: white; }
 .peddi-promo-copy h3 { font-size: clamp(16px, 4.5vw, 25px); line-height: 1.1; font-weight: 800; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }

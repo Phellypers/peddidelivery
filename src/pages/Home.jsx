@@ -7,6 +7,7 @@ import { getCategoryCover } from '@/lib/categoryCovers';
 import { hasRecentProduct } from '@/lib/productHighlights';
 import PromoBannerCarousel from '@/components/storefront/PromoBannerCarousel';
 import PromoHeaderBanner from '@/components/storefront/PromoHeaderBanner';
+import PromoTextTicker from '@/components/storefront/PromoTextTicker';
 import MenuDrawer from '@/components/storefront/MenuDrawer';
 import StoriesRing from '@/components/storefront/StoriesRing';
 import SocialProofToast from '@/components/storefront/SocialProofToast';
@@ -255,6 +256,8 @@ export default function Home() {
           <div className="relative"><input type="search" aria-label="Buscar no cardápio" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Buscar no cardápio..." /><Search size={23} aria-hidden="true" /></div>
         </div>
 
+        {!searchQuery && !activeCategory && <PromoTextTicker messages={store?.promo_messages || []} textColor={store?.promo_ticker_text_color} backgroundColor={store?.promo_ticker_background_color}/>}
+
         {/* ── Promo Banner Carousel ── */}
         {!searchQuery && !activeCategory && (
           <div className="px-0 pt-1 pb-0">
@@ -265,7 +268,7 @@ export default function Home() {
         )}
 
         {/* ── Section Label ── */}
-        {!searchQuery && !activeCategory && <PromoHeaderBanner products={products} messages={store?.promo_messages || []}/>}
+        {!searchQuery && !activeCategory && <PromoHeaderBanner products={products}/>}
 
         <div id="cardapio-produtos" className="flex items-center justify-between px-4 pt-4 pb-2">
           <h2 className="font-heading font-bold text-base text-gray-900">{getSectionLabel()}</h2>
