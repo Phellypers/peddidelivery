@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { getBannerProductIds } from '@/lib/bannerProducts';
 
 // Default banners shown when no store banners configured
 const DEFAULT_BANNERS = [
@@ -32,7 +31,8 @@ const DEFAULT_BANNERS = [
 
 export default function PromoBannerCarousel({ banners, onSelectBanner }) {
   const slides = useMemo(() => {
-    const active = banners?.filter(b => b.is_active && b.image_url) || [];
+    const today = new Date().toISOString().slice(0, 10);
+    const active = banners?.filter(b => b.is_active !== false && b.image_url && (!b.start_date || b.start_date <= today) && (!b.end_date || b.end_date >= today)) || [];
     return active.length ? active : DEFAULT_BANNERS;
   }, [banners]);
   const [current, setCurrent] = useState(0);
@@ -70,17 +70,10 @@ export default function PromoBannerCarousel({ banners, onSelectBanner }) {
     <div ref={trackRef} onScroll={onScroll} onPointerDown={() => {interacting.current=true;}} onPointerUp={() => {interacting.current=false;}} onPointerCancel={() => {interacting.current=false;}} onPointerLeave={() => {interacting.current=false;}}
       className="peddi-promo-track scrollbar-hide">
       {slides.map((banner,index) => {
-        const linked = getBannerProductIds(banner).length > 0;
-        const campaignPath = `/loja/campanha/${encodeURIComponent(banner.id || `index-${banners?.indexOf(banner) ?? index}`)}`;
+        const campaignPath = banner.destination_url || `/loja/campanha/${encodeURIComponent(banner.id || `index-${banners?.indexOf(banner) ?? index}`)}`;
         return <a key={banner.id || index} href={campaignPath} className={`peddi-promo-slide ${slides.length === 1 ? 'single' : ''}`}
-          aria-label={banner.title || `Banner ${index + 1}`} onClick={event => {if(onSelectBanner) {event.preventDefault();onSelectBanner(banner,index);}}}>
+          aria-label={banner.title || `Banner ${index + 1}`} onClick={event => {if(onSelectBanner&&!banner.destination_url) {event.preventDefault();onSelectBanner(banner,index);}}}>
           <img src={banner.image_url || banner.image} alt={banner.title || ''} className="h-full w-full object-cover" draggable="false" loading={index === 0 ? 'eager' : 'lazy'}/>
-          {(banner.title || banner.subtitle || banner.badge) && <><div className="peddi-promo-shade"/><div className="peddi-promo-copy">
-            {banner.badge && <span className="peddi-promo-badge">{banner.badge}</span>}
-            {banner.title && <h3>{banner.title}</h3>}
-            {banner.subtitle && <p>{banner.subtitle}</p>}
-            <span className="peddi-promo-cta">{linked ? 'Ver campanha' : 'Peça já!'} <ChevronRight size={14}/></span>
-          </div></>}
         </a>;
       })}
     </div>

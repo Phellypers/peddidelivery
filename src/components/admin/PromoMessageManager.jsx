@@ -1,57 +1,16 @@
-import React, { useEffect, useState } from 'react';
-import { Edit2, Megaphone, Plus, Save, ToggleLeft, ToggleRight, Trash2, X } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
-
-const emptyForm = () => ({ text: '', is_active: true, start_date: '', end_date: '', sort_order: 0 });
-
-export default function PromoMessageManager({ store, onStoreChange }) {
-  const [messages, setMessages] = useState(store?.promo_messages || []);
-  const [showForm, setShowForm] = useState(false);
-  const [editing, setEditing] = useState(null);
-  const [form, setForm] = useState(emptyForm);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
-
-  useEffect(() => { setMessages(store?.promo_messages || []); }, [store?.promo_messages]);
-  const persist = async nextMessages => {
-    if (!store?.id) throw new Error('Loja não encontrada. Atualize a página e tente novamente.');
-    const ordered = [...nextMessages].sort((a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0));
-    const updatedStore = await base44.entities.Store.update(store.id, { promo_messages: ordered });
-    setMessages(ordered);
-    onStoreChange?.(previous => ({ ...previous, ...updatedStore, promo_messages: ordered }));
-  };
-  const startNew = () => { setEditing(null); setForm(emptyForm()); setShowForm(true); };
-  const startEdit = message => { setEditing(message); setForm({ text: message.text, is_active: message.is_active, start_date: message.start_date || '', end_date: message.end_date || '', sort_order: message.sort_order || 0 }); setShowForm(true); };
-  const save = async () => {
-    setSaving(true); setError('');
-    try {
-      const record = { ...form, text: form.text.trim(), id: editing?.id || crypto.randomUUID() };
-      const nextMessages = editing
-        ? messages.map(message => message.id === editing.id ? record : message)
-        : [...messages, record];
-      await persist(nextMessages);
-      setShowForm(false); setEditing(null); setForm(emptyForm());
-    } catch (saveError) {
-      setError(saveError.message || 'Não foi possível salvar a faixa promocional.');
-    } finally { setSaving(false); }
-  };
-
-  const toggle = async message => {
-    setError('');
-    try { await persist(messages.map(item => item.id === message.id ? { ...item, is_active: !item.is_active } : item)); }
-    catch (saveError) { setError(saveError.message || 'Não foi possível alterar a faixa promocional.'); }
-  };
-
-  const remove = async message => {
-    setError('');
-    try { await persist(messages.filter(item => item.id !== message.id)); }
-    catch (saveError) { setError(saveError.message || 'Não foi possível excluir a faixa promocional.'); }
-  };
-
-  return <section className="space-y-4 rounded-2xl border border-border/60 bg-card p-4 sm:p-5" aria-labelledby="promo-strip-title">
-    <div className="flex flex-wrap items-center justify-between gap-3"><div><h2 id="promo-strip-title" className="flex items-center gap-2 font-heading font-bold"><Megaphone size={18} className="text-primary"/>Faixa promocional do topo</h2><p className="mt-1 text-sm text-muted-foreground">Mensagens rotativas exibidas acima das categorias do cardápio.</p></div><button onClick={startNew} className="flex min-h-11 items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-white"><Plus size={16}/>Nova mensagem</button></div>
-    {error&&<p role="alert" className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
-    {showForm&&<div className="space-y-3 rounded-xl border border-border bg-muted/40 p-4"><textarea value={form.text} onChange={event=>setForm(previous=>({...previous,text:event.target.value}))} rows={2} placeholder="Texto da mensagem promocional" className="w-full resize-none rounded-xl border border-border bg-white px-3 py-2.5 text-sm"/><div className="grid gap-3 sm:grid-cols-2"><label className="text-xs text-muted-foreground">Início (opcional)<input type="date" value={form.start_date} onChange={event=>setForm(previous=>({...previous,start_date:event.target.value}))} className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2.5 text-sm"/></label><label className="text-xs text-muted-foreground">Fim (opcional)<input type="date" value={form.end_date} onChange={event=>setForm(previous=>({...previous,end_date:event.target.value}))} className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2.5 text-sm"/></label></div><div className="flex gap-2"><button onClick={save} disabled={saving||!form.text.trim()} className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-bold text-white disabled:opacity-50"><Save size={16}/>{saving?'Salvando...':'Salvar mensagem'}</button><button aria-label="Cancelar" onClick={()=>setShowForm(false)} className="flex h-11 w-11 items-center justify-center rounded-xl bg-white"><X size={17}/></button></div></div>}
-    <div className="space-y-2">{messages.map(message=><article key={message.id} className="flex items-center gap-3 rounded-xl border border-border/60 bg-white p-3"><div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{message.text}</p><p className="mt-1 text-xs text-muted-foreground">{message.start_date?`De ${new Date(message.start_date).toLocaleDateString('pt-BR')}`:'Início imediato'}{message.end_date?` até ${new Date(message.end_date).toLocaleDateString('pt-BR')}`:' • sem data final'}</p></div><button aria-label={message.is_active?'Desativar mensagem':'Ativar mensagem'} onClick={()=>toggle(message)}>{message.is_active?<ToggleRight size={26} className="text-green-500"/>:<ToggleLeft size={26} className="text-gray-300"/>}</button><button aria-label="Editar mensagem" onClick={()=>startEdit(message)} className="p-2 text-muted-foreground"><Edit2 size={16}/></button><button aria-label="Excluir mensagem" onClick={()=>remove(message)} className="p-2 text-destructive"><Trash2 size={16}/></button></article>)}{!messages.length&&!showForm&&<p className="py-5 text-center text-sm text-muted-foreground">Nenhuma faixa promocional cadastrada.</p>}</div>
-  </section>;
-}
+import React,{useEffect,useRef,useState}from'react';
+import{CalendarDays,Copy,Eye,GripVertical,Megaphone,Pencil,Plus,Save,Trash2,X}from'lucide-react';
+import{base44}from'@/api/base44Client';
+const fresh=()=>({id:crypto.randomUUID(),text:'',is_active:true,start_date:'',end_date:'',sort_order:0});
+const fmt=v=>v?new Date(`${v}T12:00:00`).toLocaleDateString('pt-BR'):'';
+const period=m=>m.start_date||m.end_date?`${fmt(m.start_date)||'Início imediato'} – ${fmt(m.end_date)||'sem data final'}`:'Início imediato • sem data final';
+function Toggle({value,onClick}){return <button type="button" onClick={onClick} className={`relative h-7 w-24 rounded-lg text-[11px] font-bold ${value?'bg-emerald-500 text-emerald-900':'bg-red-100 text-red-500'}`}><i className={`absolute top-1 h-5 w-5 rounded-md bg-white shadow ${value?'left-[72px]':'left-1'}`}/><span className={value?'pr-5':'pl-5'}>{value?'Ativo':'Inativo'}</span></button>}
+export default function PromoMessageManager({store,onStoreChange}){const[messages,setMessages]=useState(store?.promo_messages||[]),[editing,setEditing]=useState(),[preview,setPreview]=useState(),[busy,setBusy]=useState(false),[error,setError]=useState('');const drag=useRef();
+ useEffect(()=>setMessages(store?.promo_messages||[]),[store?.promo_messages]);
+ const persist=async rows=>{if(!store?.id)return;setBusy(true);setError('');const next=rows.map((m,i)=>({...m,sort_order:i}));try{const saved=await base44.entities.Store.update(store.id,{promo_messages:next});setMessages(next);onStoreChange?.(p=>({...p,...saved,promo_messages:next}))}catch(e){setError(e.message||'Não foi possível salvar.')}finally{setBusy(false)}};
+ const save=async()=>{if(!editing?.text?.trim())return;const exists=messages.some(m=>m.id===editing.id);await persist(exists?messages.map(m=>m.id===editing.id?{...editing,text:editing.text.trim()}:m):[...messages,{...editing,text:editing.text.trim()}]);setEditing()};
+ const move=(from,to)=>{if(from==null||from===to)return;const next=[...messages],item=next.splice(from,1)[0];next.splice(to,0,item);persist(next)};
+ return <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white"><header className="flex flex-wrap items-center justify-between gap-3 p-5"><div className="flex items-start gap-3"><Megaphone size={27}/><div><h2 className="font-bold text-slate-950">Faixa promocional do topo</h2><p className="mt-1 text-sm text-slate-500">Mensagens rotativas exibidas acima das categorias do cardápio.</p></div></div><button onClick={()=>setEditing(fresh())} className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-emerald-500 px-5 text-sm font-bold text-white"><Plus size={16}/>Nova mensagem</button></header>{error&&<p className="mx-5 mb-3 rounded-lg bg-red-50 p-3 text-sm text-red-600">{error}</p>}
+ <div className="overflow-x-auto"><table className="w-full min-w-[760px] text-left text-sm"><thead className="bg-slate-50 text-xs text-slate-500"><tr><th/><th className="p-3">Mensagem</th><th className="p-3">Período de exibição</th><th className="p-3">Status</th><th className="p-3 text-right">Ações</th></tr></thead><tbody>{messages.map((m,i)=><tr key={m.id} draggable onDragStart={()=>drag.current=i} onDragOver={e=>e.preventDefault()} onDrop={()=>move(drag.current,i)} className="border-t"><td className="pl-4"><GripVertical size={18} className="cursor-grab text-slate-400"/></td><td className="p-3 font-semibold text-slate-900">{m.text}</td><td className="p-3 text-slate-600"><span className="flex items-center gap-1.5"><CalendarDays size={14}/>{period(m)}</span></td><td className="p-3"><Toggle value={m.is_active!==false} onClick={()=>persist(messages.map(x=>x.id===m.id?{...x,is_active:x.is_active===false}:x))}/></td><td className="p-3"><div className="flex justify-end"><button title="Visualizar" onClick={()=>setPreview(m)} className="p-2"><Eye size={17}/></button><button title="Editar" onClick={()=>setEditing({...m})} className="p-2"><Pencil size={17}/></button><button title="Duplicar" onClick={()=>persist([...messages,{...m,id:crypto.randomUUID(),text:`${m.text} - cópia`}])} className="p-2"><Copy size={17}/></button><button title="Excluir" onClick={()=>confirm('Excluir esta mensagem?')&&persist(messages.filter(x=>x.id!==m.id))} className="p-2 text-red-500"><Trash2 size={17}/></button></div></td></tr>)}</tbody></table>{!messages.length&&<p className="py-10 text-center text-sm text-slate-400">Nenhuma faixa promocional cadastrada.</p>}</div>{busy&&<p className="border-t py-2 text-center text-xs text-slate-400">Salvando alterações...</p>}
+ {editing&&<div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 sm:items-center sm:p-4" onClick={()=>setEditing()}><div className="w-full max-w-lg rounded-t-3xl bg-white p-5 sm:rounded-2xl" onClick={e=>e.stopPropagation()}><header className="mb-4 flex justify-between"><h3 className="font-bold">{messages.some(m=>m.id===editing.id)?'Editar mensagem':'Nova mensagem'}</h3><button onClick={()=>setEditing()}><X size={19}/></button></header><textarea value={editing.text} onChange={e=>setEditing(p=>({...p,text:e.target.value}))} rows={3} placeholder="Texto da mensagem promocional" className="w-full resize-none rounded-xl border p-3 text-sm"/><div className="mt-3 grid grid-cols-2 gap-3"><label className="text-xs text-slate-500">Início<input type="date" value={editing.start_date||''} onChange={e=>setEditing(p=>({...p,start_date:e.target.value}))} className="mt-1 w-full rounded-lg border p-2.5 text-sm"/></label><label className="text-xs text-slate-500">Fim<input type="date" value={editing.end_date||''} onChange={e=>setEditing(p=>({...p,end_date:e.target.value}))} className="mt-1 w-full rounded-lg border p-2.5 text-sm"/></label></div><button disabled={!editing.text.trim()||busy} onClick={save} className="mt-4 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-emerald-500 text-sm font-bold text-white disabled:opacity-50"><Save size={16}/>Salvar mensagem</button></div></div>}
+ {preview&&<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={()=>setPreview()}><div className="w-full max-w-xl rounded-2xl bg-gradient-to-r from-green-50 to-emerald-50 p-6 text-center shadow-xl"><p className="font-bold text-slate-900">{preview.text}</p></div></div>}</section>}

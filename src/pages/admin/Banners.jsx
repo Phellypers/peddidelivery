@@ -1,190 +1,23 @@
-import ImageUrlInput from '@/components/admin/ImageUrlInput';
-import React, { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
-import { Plus, Trash2, Upload, Loader2, ToggleLeft, ToggleRight, Link, Save } from 'lucide-react';
-import { ensureBannerIds, getBannerProductIds, withBannerProductIds } from '@/lib/bannerProducts';
-import PromoMessageManager from '@/components/admin/PromoMessageManager';
+import React,{useEffect,useMemo,useRef,useState}from'react';
+import{base44}from'@/api/base44Client';
+import{CalendarDays,Copy,Eye,GripVertical,Image as ImageIcon,Loader2,Pencil,Plus,Save,Search,Trash2,Upload,X}from'lucide-react';
+import{ensureBannerIds}from'@/lib/bannerProducts';
+import PromoMessageManager from'@/components/admin/PromoMessageManager';
 
-export default function Banners() {
-  const [store, setStore] = useState(null);
-  const [products, setProducts] = useState([]);
-  const [banners, setBanners] = useState([]);
-  const [saving, setSaving] = useState(false);
-  const [uploading, setUploading] = useState(null); // index being uploaded
-  const [uploadError, setUploadError] = useState('');
-
-  useEffect(() => {
-    Promise.all([
-      base44.entities.Store.list(),
-      base44.entities.Product.filter({ is_published: true }, 'name'),
-    ]).then(([stores, prods]) => {
-      const s = stores[0];
-      setStore(s);
-      setProducts(prods);
-      setBanners(ensureBannerIds(s?.banners || []));
-    });
-  }, []);
-
-  const save = async (newBanners) => {
-    if (!store) return;
-    setSaving(true);
-    await base44.entities.Store.update(store.id, { banners: newBanners });
-    setBanners(newBanners);
-    setStore(s => ({ ...s, banners: newBanners }));
-    setSaving(false);
-  };
-
-  const handleUpload = async (e, index) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setUploadError('');
-    setUploading(index);
-    try {
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
-      const updated = banners.map((b, i) => i === index ? { ...b, image_url: file_url } : b);
-      setBanners(updated);
-    } catch (error) {
-      setUploadError(error.message || 'Não foi possível enviar a imagem. Tente novamente.');
-    } finally {
-      setUploading(null);
-      e.target.value = '';
-    }
-  };
-
-  const addBanner = () => {
-    setBanners(prev => [...prev, { id: crypto.randomUUID(), image_url: '', title: '', product_id: '', product_ids: [], is_active: true }]);
-  };
-
-  const update = (index, key, val) => {
-    setBanners(prev => prev.map((b, i) => i === index ? { ...b, [key]: val } : b));
-  };
-
-  const toggleProduct = (index, productId) => {
-    setBanners(prev => prev.map((banner, i) => {
-      if (i !== index) return banner;
-      const linked = getBannerProductIds(banner);
-      return withBannerProductIds(banner, linked.includes(productId)
-        ? linked.filter(id => id !== productId)
-        : [...linked, productId]);
-    }));
-  };
-
-  const remove = (index) => {
-    const updated = banners.filter((_, i) => i !== index);
-    save(updated);
-  };
-
-  const moveUp = (index) => {
-    if (index === 0) return;
-    const arr = [...banners];
-    [arr[index - 1], arr[index]] = [arr[index], arr[index - 1]];
-    setBanners(arr);
-  };
-
-  const moveDown = (index) => {
-    if (index === banners.length - 1) return;
-    const arr = [...banners];
-    [arr[index], arr[index + 1]] = [arr[index + 1], arr[index]];
-    setBanners(arr);
-  };
-
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="font-heading font-bold text-2xl text-foreground">Banners</h1>
-          <p className="text-sm text-muted-foreground mt-1">Gerencie os banners do carrossel na vitrine</p>
-        </div>
-        <button onClick={addBanner} className="flex items-center gap-2 px-4 py-2.5 bg-primary text-white rounded-xl text-sm font-semibold hover:bg-primary/90 transition-colors">
-          <Plus size={16} /> Novo Banner
-        </button>
-      </div>
-
-      {banners.length === 0 && (
-        <div className="text-center py-16 text-muted-foreground">
-          <p className="mb-2">Nenhum banner cadastrado.</p>
-          <button onClick={addBanner} className="text-primary font-medium text-sm">+ Adicionar primeiro banner</button>
-        </div>
-      )}
-
-      <div className="space-y-4">
-        {uploadError && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">{uploadError}</p>}
-        {banners.map((banner, index) => (
-          <div key={index} className="bg-card rounded-2xl border border-border/50 p-4 space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="flex flex-col gap-0.5">
-                  <button onClick={() => moveUp(index)} className="p-0.5 hover:bg-accent rounded text-muted-foreground hover:text-foreground transition-colors" disabled={index === 0}>▲</button>
-                  <button onClick={() => moveDown(index)} className="p-0.5 hover:bg-accent rounded text-muted-foreground hover:text-foreground transition-colors" disabled={index === banners.length - 1}>▼</button>
-                </div>
-                <span className="text-sm font-semibold text-foreground">Banner {index + 1}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <button onClick={() => update(index, 'is_active', !banner.is_active)} title={banner.is_active ? 'Desativar' : 'Ativar'}>
-                  {banner.is_active ? <ToggleRight size={24} className="text-green-500" /> : <ToggleLeft size={24} className="text-gray-300" />}
-                </button>
-                <button onClick={() => remove(index)} className="p-1.5 hover:bg-red-50 rounded-lg transition-colors">
-                  <Trash2 size={15} className="text-red-400" />
-                </button>
-              </div>
-            </div>
-
-            {/* Image */}
-            <div className="aspect-[23/10] overflow-hidden rounded-xl bg-muted">
-              {banner.image_url
-                ? <img src={banner.image_url} alt="" className="w-full h-full object-cover" />
-                : <div className="w-full h-full flex items-center justify-center text-muted-foreground text-sm">Sem imagem</div>
-              }
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2">
-              <label className={`inline-flex min-h-11 items-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-white ${uploading !== null ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:bg-primary/90'}`}>
-                {uploading === index ? <Loader2 size={18} className="animate-spin" /> : <Upload size={18} />}
-                {uploading === index ? 'Enviando imagem...' : banner.image_url ? 'Trocar imagem' : 'Enviar imagem'}
-                <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={e => handleUpload(e, index)} disabled={uploading !== null} />
-              </label>
-              {banner.image_url && <button type="button" onClick={() => update(index, 'image_url', '')} disabled={uploading !== null} className="min-h-11 rounded-xl border border-red-200 px-4 text-sm font-medium text-red-600 disabled:opacity-50">Remover imagem</button>}
-            </div>
-            <p className="text-xs text-muted-foreground">Recomendado: 1200 × 522 px (proporção 2,3:1), em PNG, JPG ou WebP.</p>
-            <ImageUrlInput onApply={url => update(index, 'image_url', url)} disabled={uploading !== null} />
-
-            {/* Title */}
-            <input
-              value={banner.title || ''}
-              onChange={e => update(index, 'title', e.target.value)}
-              placeholder="Título do banner (opcional)"
-              className="w-full px-3 py-2.5 bg-muted rounded-xl text-sm border-0 focus:outline-none focus:ring-2 focus:ring-primary/20"
-            />
-
-            {/* Product links */}
-            <div>
-              <label className="mb-2 flex items-center gap-1 text-xs text-muted-foreground"><Link size={11} /> Produtos da campanha</label>
-              <p className="mb-3 text-xs text-muted-foreground">Ao clicar neste banner, o cliente verá todos os produtos selecionados.</p>
-              <div className="grid max-h-56 grid-cols-1 gap-2 overflow-y-auto rounded-xl border border-border/60 bg-muted/40 p-2 sm:grid-cols-2">
-                {products.map(product => {
-                  const selected = getBannerProductIds(banner).includes(product.id);
-                  return (
-                    <label key={product.id} className={`flex min-h-11 cursor-pointer items-center gap-3 rounded-lg border px-3 py-2 text-sm transition-colors ${selected ? 'border-primary bg-primary/10 text-foreground' : 'border-transparent bg-white text-muted-foreground hover:border-primary/30'}`}>
-                      <input type="checkbox" checked={selected} onChange={() => toggleProduct(index, product.id)} className="h-4 w-4 accent-primary" />
-                      <span className="min-w-0 truncate">{product.name}</span>
-                    </label>
-                  );
-                })}
-                {products.length === 0 && <p className="p-3 text-xs text-muted-foreground">Nenhum produto publicado disponível.</p>}
-              </div>
-              <p className="mt-2 text-xs font-medium text-primary">{getBannerProductIds(banner).length} produto(s) vinculado(s)</p>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {banners.length > 0 && (
-        <button onClick={() => save(banners)} disabled={saving}
-          className="w-full flex items-center justify-center gap-2 py-3.5 bg-primary text-white rounded-2xl font-heading font-bold text-sm hover:bg-primary/90 transition-colors disabled:opacity-50">
-          {saving ? <Loader2 size={18} className="animate-spin" /> : <><Save size={18} /> Salvar todos os banners</>}
-        </button>
-      )}
-      <PromoMessageManager store={store} onStoreChange={setStore} />
-    </div>
-  );
-}
+const empty=()=>({id:crypto.randomUUID(),image_url:'',title:'',internal_description:'',destination_url:'',start_date:'',end_date:'',is_active:true,views:0,clicks:0});
+const date=v=>v?new Date(`${v}T12:00:00`).toLocaleDateString('pt-BR'):'';
+const period=b=>b.start_date||b.end_date?`${date(b.start_date)||'Início imediato'} – ${date(b.end_date)||'sem data final'}`:'Início imediato • sem data final';
+function Toggle({value,onClick}){return <button type="button" onClick={onClick} aria-pressed={value} className={`relative h-7 w-24 rounded-lg text-[11px] font-bold ${value?'bg-emerald-500 text-emerald-900':'bg-red-100 text-red-500'}`}><i className={`absolute top-1 h-5 w-5 rounded-md bg-white shadow transition-all ${value?'left-[72px]':'left-1'}`}/><span className={value?'pr-5':'pl-5'}>{value?'Ativo':'Inativo'}</span></button>}
+function Editor({value,onClose,onSave}){const[form,setForm]=useState({...value}),[busy,setBusy]=useState(false),[uploading,setUploading]=useState(false);const set=(k,v)=>setForm(p=>({...p,[k]:v}));const upload=async e=>{const file=e.target.files?.[0];if(!file)return;setUploading(true);try{const{file_url}=await base44.integrations.Core.UploadFile({file});set('image_url',file_url)}finally{setUploading(false)}};return <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 sm:items-center sm:p-4" onClick={onClose}><div className="max-h-[94vh] w-full max-w-2xl overflow-y-auto rounded-t-3xl bg-white p-5 sm:rounded-2xl" onClick={e=>e.stopPropagation()}><header className="mb-5 flex items-center justify-between"><h2 className="text-lg font-bold">{value.image_url?'Editar banner':'Novo banner'}</h2><button onClick={onClose}><X size={20}/></button></header><div className="grid gap-4 sm:grid-cols-2"><label className="text-xs font-semibold text-slate-600 sm:col-span-2">Arte do banner<div className="mt-1 aspect-[23/10] overflow-hidden rounded-xl bg-slate-100">{form.image_url?<img src={form.image_url} alt="" className="h-full w-full object-cover"/>:<div className="flex h-full items-center justify-center text-slate-400"><ImageIcon/></div>}</div><span className="mt-2 inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-lg bg-emerald-500 px-4 text-sm font-bold text-white">{uploading?<Loader2 size={16} className="animate-spin"/>:<Upload size={16}/>}Enviar imagem<input type="file" accept="image/*" className="hidden" onChange={upload}/></span></label><label className="text-xs font-semibold text-slate-600">Nome administrativo<input value={form.title||''} onChange={e=>set('title',e.target.value)} className="mt-1 w-full rounded-lg border px-3 py-2.5 text-sm" placeholder="Lanches em destaque"/></label><label className="text-xs font-semibold text-slate-600">Link de redirecionamento<input value={form.destination_url||''} onChange={e=>set('destination_url',e.target.value)} className="mt-1 w-full rounded-lg border px-3 py-2.5 text-sm" placeholder="/loja/campanha/..."/></label><label className="text-xs font-semibold text-slate-600 sm:col-span-2">Descrição interna<textarea value={form.internal_description||''} onChange={e=>set('internal_description',e.target.value)} rows={2} className="mt-1 w-full resize-none rounded-lg border px-3 py-2.5 text-sm"/></label><label className="text-xs font-semibold text-slate-600">Início<input type="date" value={form.start_date||''} onChange={e=>set('start_date',e.target.value)} className="mt-1 w-full rounded-lg border px-3 py-2.5 text-sm"/></label><label className="text-xs font-semibold text-slate-600">Fim<input type="date" value={form.end_date||''} onChange={e=>set('end_date',e.target.value)} className="mt-1 w-full rounded-lg border px-3 py-2.5 text-sm"/></label><label className="flex items-center gap-2 text-sm sm:col-span-2"><input type="checkbox" checked={form.is_active!==false} onChange={e=>set('is_active',e.target.checked)} className="accent-emerald-500"/>Banner ativo</label><p className="text-xs text-slate-400 sm:col-span-2">Os campos são administrativos. A arte será exibida sem textos sobrepostos.</p></div><footer className="mt-6 flex justify-end gap-2"><button onClick={onClose} className="min-h-11 rounded-lg border px-5 text-sm font-semibold">Cancelar</button><button disabled={busy||uploading||!form.image_url} onClick={async()=>{setBusy(true);await onSave(form);setBusy(false)}} className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-emerald-500 px-5 text-sm font-bold text-white disabled:opacity-50"><Save size={16}/>Salvar banner</button></footer></div></div>}
+export default function Banners(){const[store,setStore]=useState(),[banners,setBanners]=useState([]),[filter,setFilter]=useState('all'),[query,setQuery]=useState(''),[sort,setSort]=useState('position'),[editing,setEditing]=useState(),[preview,setPreview]=useState(),[saving,setSaving]=useState(false);const drag=useRef();
+ useEffect(()=>{base44.entities.Store.list().then(rows=>{const s=rows[0];setStore(s);setBanners(ensureBannerIds(s?.banners||[]))})},[]);
+ const persist=async rows=>{if(!store)return;setSaving(true);const next=rows.map((b,i)=>({...b,position:i+1}));try{const saved=await base44.entities.Store.update(store.id,{banners:next});setBanners(next);setStore(p=>({...p,...saved,banners:next}))}finally{setSaving(false)}};
+ const visible=useMemo(()=>banners.map((b,i)=>({...b,_index:i})).filter(b=>(filter==='all'||(filter==='active')===(b.is_active!==false))&&`${b.title||''} ${b.internal_description||''}`.toLowerCase().includes(query.toLowerCase())).sort((a,b)=>sort==='recent'?String(b.created_date||'').localeCompare(String(a.created_date||'')):a._index-b._index),[banners,filter,query,sort]);
+ const save=async form=>{const found=banners.some(b=>b.id===form.id);await persist(found?banners.map(b=>b.id===form.id?form:b):[...banners,form]);setEditing()};
+ const move=(from,to)=>{if(from===to||from==null)return;const next=[...banners],item=next.splice(from,1)[0];next.splice(to,0,item);persist(next)};
+ const active=banners.filter(b=>b.is_active!==false&&b.image_url);
+ return <div className="space-y-5"><header className="flex flex-wrap items-start justify-between gap-3"><div><h1 className="text-2xl font-bold text-slate-950">Banners</h1><p className="mt-1 text-sm text-slate-500">Gerencie os banners do carrossel na vitrine do seu cardápio.</p></div><button onClick={()=>setEditing(empty())} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-emerald-500 px-5 text-sm font-bold text-white"><Plus size={17}/>Novo Banner</button></header>
+ <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white"><div className="flex gap-3 overflow-x-auto border-b p-4 scrollbar-hide">{active.map(b=><button key={b.id} onClick={()=>setPreview(b)} className="aspect-[23/10] w-[315px] shrink-0 overflow-hidden rounded-xl bg-slate-100"><img src={b.image_url} alt={b.title||'Banner'} className="h-full w-full object-cover"/></button>)}{!active.length&&<div className="flex h-32 w-full items-center justify-center rounded-xl bg-slate-50 text-sm text-slate-400">Nenhum banner ativo cadastrado</div>}</div>
+ <div className="flex flex-wrap items-center justify-between gap-3 border-b px-3"><nav className="flex">{[['all',`Todos (${banners.length})`],['active',`Ativos (${banners.filter(b=>b.is_active!==false).length})`],['inactive',`Inativos (${banners.filter(b=>b.is_active===false).length})`]].map(([k,label])=><button key={k} onClick={()=>setFilter(k)} className={`min-h-12 border-b-2 px-3 text-sm font-semibold ${filter===k?'border-emerald-500 text-emerald-600':'border-transparent text-slate-500'}`}>{label}</button>)}</nav><div className="flex flex-1 justify-end gap-2 pb-2 sm:pb-0"><label className="relative max-w-xs flex-1"><Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Buscar por nome..." className="h-10 w-full rounded-lg border pl-9 pr-3 text-sm"/></label><select value={sort} onChange={e=>setSort(e.target.value)} className="h-10 rounded-lg border px-3 text-sm"><option value="position">Posição</option><option value="recent">Mais recentes</option></select></div></div>
+ <div className="overflow-x-auto"><table className="w-full min-w-[1050px] text-left text-sm"><thead className="bg-slate-50 text-xs text-slate-500"><tr><th/><th className="p-3">Imagem</th><th className="p-3">Nome</th><th className="p-3">Período de exibição</th><th className="p-3">Posição</th><th className="p-3">Status</th><th className="p-3">Visualizações</th><th className="p-3">Cliques</th><th className="p-3 text-right">Ações</th></tr></thead><tbody>{visible.map(b=><tr key={b.id} draggable onDragStart={()=>drag.current=b._index} onDragOver={e=>e.preventDefault()} onDrop={()=>move(drag.current,b._index)} className="border-t"><td className="pl-3"><GripVertical size={18} className="cursor-grab text-slate-400"/></td><td className="p-2"><div className="h-12 w-24 overflow-hidden rounded-lg bg-slate-100">{b.image_url&&<img src={b.image_url} alt="" className="h-full w-full object-cover"/>}</div></td><td className="p-3"><b className="block text-slate-950">{b.title||'Banner sem nome'}</b><small className="block max-w-[220px] truncate text-slate-500">{b.internal_description||'Sem descrição interna'}</small></td><td className="p-3"><span className="flex items-center gap-1.5"><CalendarDays size={14}/>{period(b)}</span></td><td className="p-3">{b._index+1}</td><td className="p-3"><Toggle value={b.is_active!==false} onClick={()=>persist(banners.map(x=>x.id===b.id?{...x,is_active:x.is_active===false}:x))}/></td><td className="p-3">{Number(b.views||0).toLocaleString('pt-BR')}</td><td className="p-3">{Number(b.clicks||0).toLocaleString('pt-BR')}</td><td className="p-3"><div className="flex justify-end"><button title="Visualizar" onClick={()=>setPreview(b)} className="p-2"><Eye size={17}/></button><button title="Editar" onClick={()=>setEditing(b)} className="p-2"><Pencil size={17}/></button><button title="Duplicar" onClick={()=>persist([...banners,{...b,id:crypto.randomUUID(),title:`${b.title||'Banner'} - cópia`,views:0,clicks:0}])} className="p-2"><Copy size={17}/></button><button title="Excluir" onClick={()=>confirm('Excluir este banner?')&&persist(banners.filter(x=>x.id!==b.id))} className="p-2 text-red-500"><Trash2 size={17}/></button></div></td></tr>)}</tbody></table>{!visible.length&&<p className="py-10 text-center text-sm text-slate-400">Nenhum banner encontrado.</p>}</div>{saving&&<p className="flex items-center justify-center gap-2 border-t py-2 text-xs text-slate-400"><Loader2 size={13} className="animate-spin"/>Salvando...</p>}</section>
+ <PromoMessageManager store={store} onStoreChange={setStore}/>{editing&&<Editor value={editing} onClose={()=>setEditing()} onSave={save}/>} {preview&&<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={()=>setPreview()}><div className="relative max-w-5xl overflow-hidden rounded-2xl"><button className="absolute right-3 top-3 rounded-full bg-white p-2" onClick={()=>setPreview()}><X size={18}/></button><img src={preview.image_url} alt={preview.title||''} className="max-h-[85vh] w-full object-contain"/></div></div>}</div>}
