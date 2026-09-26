@@ -7,10 +7,11 @@ import {storefrontStoreRef,withStore} from '@/lib/storefrontTenant';
 const activeToday=item=>{const today=new Date().toISOString().slice(0,10);return item?.is_active!==false&&(!item?.start_date||item.start_date<=today)&&(!item?.expires_at||item.expires_at>=today)&&(!item?.end_date||item.end_date>=today)};
 const linkedIds=promotion=>Array.from(new Set([promotion?.product_id,...(promotion?.product_ids||[]),promotion?.benefit_product_id].filter(Boolean)));
 
-export default function PromoHeaderBanner({products=[]}){
- const[messages,setMessages]=useState([]),[promotions,setPromotions]=useState([]);const location=useLocation(),storeRef=storefrontStoreRef(location.search);
+export default function PromoHeaderBanner({products=[],messages:storeMessages=[]}){
+ const[entityMessages,setEntityMessages]=useState([]),[promotions,setPromotions]=useState([]);const location=useLocation(),storeRef=storefrontStoreRef(location.search);
  const trackRef=useRef(null),interacting=useRef(false),currentRef=useRef(0);
- useEffect(()=>{Promise.all([base44.entities.PromoMessage.filter({is_active:true},'sort_order'),base44.entities.Coupon.filter({is_active:true})]).then(([m,p])=>{setMessages(m.filter(activeToday));setPromotions(p.filter(activeToday))}).catch(()=>{})},[storeRef]);
+ useEffect(()=>{Promise.all([base44.entities.PromoMessage.filter({is_active:true},'sort_order'),base44.entities.Coupon.filter({is_active:true})]).then(([m,p])=>{setEntityMessages(m.filter(activeToday));setPromotions(p.filter(activeToday))}).catch(()=>{})},[storeRef]);
+ const messages=useMemo(()=>Array.from(new Map([...storeMessages.filter(activeToday),...entityMessages].map(message=>[message.id,message])).values()).sort((a,b)=>Number(a.sort_order||0)-Number(b.sort_order||0)),[storeMessages,entityMessages]);
  const cards=useMemo(()=>messages.map(message=>{
   const promotion=message.promotion_id?promotions.find(item=>item.id===message.promotion_id):null;
   if(message.promotion_id&&(!promotion||promotion.display_in_catalog===false))return null;

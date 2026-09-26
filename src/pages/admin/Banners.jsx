@@ -184,7 +184,7 @@ export default function Banners() {
           {saving ? <Loader2 size={18} className="animate-spin" /> : <><Save size={18} /> Salvar todos os banners</>}
         </button>
       )}
-      <PromoMessageManager />
+      <PromoMessageManager store={store} onStoreChange={setStore} />
     </div>
   );
 }

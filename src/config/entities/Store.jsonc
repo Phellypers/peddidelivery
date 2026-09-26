@@ -47,6 +47,12 @@
         }
       }
     },
+    "promo_messages": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
     "stories": {
       "type": "array",
       "items": {

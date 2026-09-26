@@ -265,7 +265,7 @@ export default function Home() {
         )}
 
         {/* ── Section Label ── */}
-        {!searchQuery && !activeCategory && <PromoHeaderBanner products={products}/>}
+        {!searchQuery && !activeCategory && <PromoHeaderBanner products={products} messages={store?.promo_messages || []}/>}
 
         <div id="cardapio-produtos" className="flex items-center justify-between px-4 pt-4 pb-2">
           <h2 className="font-heading font-bold text-base text-gray-900">{getSectionLabel()}</h2>
