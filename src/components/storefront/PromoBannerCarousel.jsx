@@ -49,9 +49,9 @@ export default function PromoBannerCarousel({ banners, onSelectBanner }) {
   useEffect(() => {
     currentRef.current = 0;setCurrent(0);
     trackRef.current?.scrollTo({left: 0, behavior: 'auto'});
-    if (slides.length < 2 || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return undefined;
+    if (slides.length < 2) return undefined;
     const timer = setInterval(() => {
-      if (!interacting.current && !document.hidden && !trackRef.current?.parentElement.contains(document.activeElement)) goTo((currentRef.current + 1) % slides.length);
+      if (!interacting.current && !document.hidden) goTo((currentRef.current + 1) % slides.length);
     }, 6000);
     return () => clearInterval(timer);
   }, [slides]);
@@ -67,8 +67,7 @@ export default function PromoBannerCarousel({ banners, onSelectBanner }) {
     currentRef.current = closest;setCurrent(closest);
   };
   return <section aria-label="Banners promocionais" aria-roledescription="carrossel" className="peddi-promo-compact relative">
-    <div ref={trackRef} onScroll={onScroll} onPointerDown={() => {interacting.current=true;}} onPointerUp={() => {interacting.current=false;}} onPointerCancel={() => {interacting.current=false;}}
-      onMouseEnter={() => {interacting.current=true;}} onMouseLeave={() => {interacting.current=false;}}
+    <div ref={trackRef} onScroll={onScroll} onPointerDown={() => {interacting.current=true;}} onPointerUp={() => {interacting.current=false;}} onPointerCancel={() => {interacting.current=false;}} onPointerLeave={() => {interacting.current=false;}}
       className="peddi-promo-track scrollbar-hide">
       {slides.map((banner,index) => {
         const linked = getBannerProductIds(banner).length > 0;
