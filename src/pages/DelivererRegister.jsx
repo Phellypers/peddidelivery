@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, Navigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, Bike, CheckCircle2, ChevronDown, CircleDollarSign, Eye, EyeOff, Handshake, Loader2, MapPin, Package, Route, ShieldCheck, Smartphone, Truck } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Bell, Bike, CheckCircle2, ChevronDown, CircleDollarSign, Eye, EyeOff, Loader2, MapPin, Package, Route, ShieldCheck, Truck, UserRound, Wallet } from 'lucide-react';
 import { peddiApi } from '@/services/api/peddiApi';
 import { useAuth } from '@/lib/AuthContext';
 import peddiLogo from '../../Logo Peddi/logo3.png';
@@ -13,17 +13,23 @@ const earningOptions=[
   [Route,'Por rota','Aceite rotas e entregas oferecidas de acordo com a sua disponibilidade.'],
 ];
 const deliverySteps=[
-  ['01','Cadastre-se','Informe seus dados e envie seu cadastro.'],
-  ['02','Aguarde a aprovação','As lojas analisam e aprovam os entregadores parceiros.'],
-  ['03','Receba oportunidades','Veja os pedidos e entregas disponibilizados para você.'],
-  ['04','Faça a entrega','Aceite, realize a entrega e atualize o status pelo celular.'],
-  ['05','Receba pelo combinado','Ganhe conforme a modalidade e o valor definido para aquela entrega.'],
+  [UserRound,'01','Cadastre-se','Informe seus dados e envie seu cadastro.'],
+  [ShieldCheck,'02','Aguarde a aprovação','As lojas analisam e aprovam os entregadores parceiros.'],
+  [Bell,'03','Receba pedidos','Veja as oportunidades disponibilizadas no aplicativo.'],
+  [Bike,'04','Faça a entrega','Aceite, realize a entrega e atualize o status.'],
+  [Wallet,'05','Receba pelo combinado','Ganhe conforme a modalidade definida para aquela entrega.'],
 ];
 const courierBenefits=[
-  [Package,'Mais oportunidades','Conecte-se a estabelecimentos que precisam de entregadores.'],
-  [CircleDollarSign,'Ganhe por entrega','Tenha diferentes possibilidades de remuneração.'],
-  [Smartphone,'Tudo pelo celular','Pedidos, informações e status das entregas em um só lugar.'],
-  [Handshake,'Seja parceiro das lojas','Construa uma relação direta com os estabelecimentos da sua região.'],
+  'Mais oportunidades de entregas',
+  'Ganhe conforme a modalidade oferecida pela loja',
+  'Tudo pelo celular',
+  'Parceria direta com lojas da sua região',
+  'Acompanhe pedidos e status em tempo real',
+];
+const vehicleOptions=[
+  ['🛵','Moto',['Cadastro aprovado pela loja','Veículo em boas condições','Documentação válida quando exigida']],
+  ['🚲','Bicicleta',['Cadastro aprovado pela loja','Equipamentos de segurança','Disponibilidade na região']],
+  ['🚗','Carro',['Cadastro aprovado pela loja','Veículo em boas condições','Documentação válida quando exigida']],
 ];
 const courierFaq=[
   ['Como faço meu cadastro?','Clique em “Quero ser entregador PEDDI”, informe seus dados e selecione a loja para a qual deseja enviar sua solicitação.'],
@@ -87,12 +93,16 @@ export default function DelivererRegister() {
         <div className="deliverer-card-grid deliverer-card-grid--three">{earningOptions.map(([Icon,title,text])=><article className="deliverer-info-card" key={title}><span className="deliverer-info-icon"><Icon aria-hidden="true"/></span><h3>{title}</h3><p>{text}</p></article>)}</div>
       </section>
       <section className="deliverer-info-section deliverer-how">
-        <div className="deliverer-section-heading"><span>Como funciona</span><h2>Comece a entregar com a PEDDI</h2></div>
-        <div className="deliverer-steps">{deliverySteps.map(([number,title,text])=><article key={number}><strong>{number}</strong><div><h3>{title}</h3><p>{text}</p></div></article>)}</div>
+        <div className="deliverer-section-heading"><span>Como funciona</span><h2>Comece a entregar com a PEDDI</h2><p>É simples e rápido. Siga o passo a passo e comece a receber oportunidades.</p></div>
+        <div className="deliverer-steps">{deliverySteps.map(([Icon,number,title,text])=><article key={number}><div className="deliverer-step-top"><span><Icon aria-hidden="true"/></span><strong>{number}</strong></div><div><h3>{title}</h3><p>{text}</p></div></article>)}</div>
       </section>
-      <section className="deliverer-info-section">
-        <div className="deliverer-section-heading"><span>Vantagens da parceria</span><h2>Por que ser entregador PEDDI?</h2></div>
-        <div className="deliverer-card-grid deliverer-card-grid--four">{courierBenefits.map(([Icon,title,text])=><article className="deliverer-info-card" key={title}><span className="deliverer-info-icon"><Icon aria-hidden="true"/></span><h3>{title}</h3><p>{text}</p></article>)}</div>
+      <section className="deliverer-info-section deliverer-freedom">
+        <div className="deliverer-freedom-copy"><span>Por que ser entregador PEDDI?</span><h2>Mais liberdade<br/>para trabalhar</h2><p>Conecte-se às lojas parceiras, encontre novas oportunidades e acompanhe suas entregas em uma plataforma feita para facilitar sua rotina.</p><ul>{courierBenefits.map(benefit=><li key={benefit}><CheckCircle2 aria-hidden="true"/><span>{benefit}</span></li>)}</ul></div>
+        <div className="deliverer-freedom-art" aria-hidden="true"><div className="deliverer-freedom-shape"></div><img src="/Deliverer/entregador-hero.png" alt=""/><div className="deliverer-earning-card"><CircleDollarSign/><span>Ganhos da parceria<strong>Conforme combinado</strong><small>com cada loja</small></span></div></div>
+      </section>
+      <section className="deliverer-info-section deliverer-vehicles">
+        <div className="deliverer-section-heading"><span>Escolha seu veículo</span><h2>Com o que posso trabalhar?</h2><p>Use o veículo que mais se adapta à sua rotina e às oportunidades oferecidas pelas lojas.</p></div>
+        <div className="deliverer-vehicle-grid">{vehicleOptions.map(([emoji,title,requirements])=><article key={title}><div className="deliverer-vehicle-title"><span aria-hidden="true">{emoji}</span><h3>{title}</h3></div><ul>{requirements.map(item=><li key={item}><CheckCircle2 aria-hidden="true"/>{item}</li>)}</ul></article>)}</div>
       </section>
       <section className="deliverer-info-section deliverer-faq">
         <div className="deliverer-section-heading"><span>Perguntas frequentes</span><h2>Tem alguma dúvida? A gente explica.</h2></div>
