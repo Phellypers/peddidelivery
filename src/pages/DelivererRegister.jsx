@@ -8,7 +8,7 @@ import './DelivererRegister.css';
 
 const inputClass='w-full min-h-12 rounded-xl border border-gray-200 bg-gray-50 px-4 text-sm text-[#111111] focus:outline-none focus:ring-2 focus:ring-[#22C55E]/30';
 const earningOptions=[
-  [CircleDollarSign,'Por valor por entrega','A loja pode oferecer um valor fixo para cada entrega realizada.'],
+  [Package,'Por entrega','Receba um valor definido por cada entrega concluída.'],
   [MapPin,'Por quilômetro','A remuneração pode considerar a distância percorrida na entrega.'],
   [Route,'Por rota','Aceite rotas e entregas oferecidas de acordo com a sua disponibilidade.'],
 ];
