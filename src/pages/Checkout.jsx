@@ -129,7 +129,8 @@ export default function Checkout() {
   const pixDiscount = (!form.splitPayment && form.paymentMethod === 'pix') ? (subtotal * (store?.pix_discount_percent || 5) / 100) : 0;
 
   // ─── Campaign discounts ───
-  const activeCampaigns = campaigns.filter(c => c.is_active);
+  const today = new Date().toISOString().slice(0, 10);
+  const activeCampaigns = campaigns.filter(c => c.is_active && (!c.start_date || c.start_date <= today) && (!c.end_date || c.end_date >= today));
   const cartValueCampaign = activeCampaigns
     .filter(c => c.type === 'cart_value' && subtotal >= (c.min_cart_value || 0))
     .sort((a, b) => {

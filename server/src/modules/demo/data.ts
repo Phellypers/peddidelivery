@@ -43,7 +43,7 @@ async function calculateCheckoutBenefits(client: PoolClient, tenant: string, dat
   const campaigns = (await client.query("SELECT id,data FROM app_records WHERE store_id=$1 AND entity_name='Campaign' AND COALESCE((data->>'is_active')::boolean,true)=true ORDER BY id FOR UPDATE",[tenant])).rows;
   const orderCount = data.customer_user_id ? Number((await client.query(`SELECT count(*) FROM orders WHERE store_id=$1 AND details->>'customer_user_id'=$2 AND status<>'cancelled'`,[tenant,data.customer_user_id])).rows[0]?.count||0) : 0;
   const applicable=campaigns.map(row=>({id:row.id,...row.data})).filter((campaign:any)=>
-    (!campaign.start_date||campaign.start_date<=today)&&(!campaign.expires_at||campaign.expires_at>=today)&&
+    (!campaign.start_date||campaign.start_date<=today)&&(!(campaign.end_date||campaign.expires_at)||(campaign.end_date||campaign.expires_at)>=today)&&
     ((campaign.type==='cart_value'&&subtotal>=Number(campaign.min_cart_value||0))||(campaign.type==='order_count'&&orderCount>=Number(campaign.min_order_count||0)))
   ).map((campaign:any)=>({...campaign,calculated:money(campaign.discount_type==='percentage'?subtotal*Number(campaign.discount_value||0)/100:Number(campaign.discount_value||0))})).sort((a:any,b:any)=>b.calculated-a.calculated);
   if(applicable[0]?.calculated>0) breakdown.push({key:'campaign',label:String(applicable[0].name||'Promoção aplicada'),value:Math.min(subtotal,applicable[0].calculated),promotion_id:applicable[0].id});

@@ -20,8 +20,9 @@ function CampaignRow({ campaign, position, onToggle, onDelete, onEdit, onDuplica
 }
 
 function CampaignForm({ initial, onSave, onCancel, saving }) {
-  const [form, setForm] = useState(initial || { name: '', type: 'cart_value', is_active: true, discount_type: 'percentage', discount_value: 10, min_cart_value: 50, min_order_count: 10, buy_quantity: 10, get_quantity: 1, description: '' });
+  const [form, setForm] = useState(initial || { name: '', type: 'cart_value', is_active: true, discount_type: 'percentage', discount_value: 10, min_cart_value: 50, min_order_count: 10, buy_quantity: 10, get_quantity: 1, description: '', start_date: '', end_date: '' });
   const u = (k, v) => setForm(p => ({ ...p, [k]: v }));
+  const invalidPeriod = Boolean(form.start_date && form.end_date && form.end_date < form.start_date);
   return (
     <div className="bg-muted/50 rounded-2xl p-5 space-y-3 border border-border">
       <input value={form.name} onChange={e => u('name', e.target.value)} placeholder="Nome da campanha *" className="w-full px-3 py-2.5 bg-white rounded-xl text-sm border border-border/50 focus:outline-none focus:ring-2 focus:ring-primary/20" />
@@ -72,10 +73,23 @@ function CampaignForm({ initial, onSave, onCancel, saving }) {
         </div>
       )}
 
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div>
+          <label className="text-xs text-muted-foreground mb-1 block">Início da exibição</label>
+          <input type="date" value={form.start_date || ''} max={form.end_date || undefined} onChange={e => u('start_date', e.target.value)} className="w-full px-3 py-2.5 bg-white rounded-xl text-sm border border-border/50 focus:outline-none focus:ring-2 focus:ring-primary/20" />
+          <p className="mt-1 text-[10px] text-muted-foreground">Vazio: início imediato</p>
+        </div>
+        <div>
+          <label className="text-xs text-muted-foreground mb-1 block">Fim da exibição</label>
+          <input type="date" value={form.end_date || ''} min={form.start_date || undefined} onChange={e => u('end_date', e.target.value)} className={`w-full px-3 py-2.5 bg-white rounded-xl text-sm border focus:outline-none focus:ring-2 ${invalidPeriod ? 'border-red-400 focus:ring-red-200' : 'border-border/50 focus:ring-primary/20'}`} />
+          <p className={`mt-1 text-[10px] ${invalidPeriod ? 'text-red-500' : 'text-muted-foreground'}`}>{invalidPeriod ? 'A data final deve ser posterior à inicial.' : 'Vazio: sem data final'}</p>
+        </div>
+      </div>
+
       <input value={form.description} onChange={e => u('description', e.target.value)} placeholder="Descrição interna (opcional)" className="w-full px-3 py-2.5 bg-white rounded-xl text-sm border border-border/50 focus:outline-none focus:ring-2 focus:ring-primary/20" />
 
       <div className="flex gap-2 pt-1">
-        <button onClick={() => onSave(form)} disabled={saving || !form.name} className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-primary text-white rounded-xl text-sm font-bold disabled:opacity-50">
+        <button onClick={() => onSave(form)} disabled={saving || !form.name || invalidPeriod} className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-primary text-white rounded-xl text-sm font-bold disabled:opacity-50">
           {saving ? <Loader2 size={15} className="animate-spin" /> : <><Save size={15} /> Salvar</>}
         </button>
         <button onClick={onCancel} className="px-4 py-2.5 bg-muted rounded-xl text-sm font-medium"><X size={15} /></button>
