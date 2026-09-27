@@ -63,6 +63,14 @@ O gerenciador indicado pelo manifesto e npm. Os scripts existentes sao `dev`, `b
 
 O backend proprio esta presente em `server/`, com persistencia, autenticacao, autorizacao, entidades, pedidos, catalogo, entregas e upload. Pagamentos, comunicacao e analytics continuam como integracoes futuras. Ver `REGRAS_DE_NEGOCIO_PEDDI.md` e `MAPA_BACKEND_PEDDI.md`.
 
+## Integração Twilio e SendGrid
+
+O serviço `server/src/modules/communications/service.ts` concentra SMS, WhatsApp Sandbox, e-mail SendGrid e chamadas de voz. As rotas administrativas ficam em `/api/v1/admin/communications/*` e exigem autenticação de gestor.
+
+Dependências oficiais: `npm install twilio @sendgrid/mail`. O projeto já utiliza `dotenv` no backend.
+
+Configure somente no `.env` local e nas variáveis privadas do Render: `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_PHONE_NUMBER`, `TWILIO_WHATSAPP_NUMBER`, `SENDGRID_API_KEY` e `SENDGRID_EMAIL_FROM`. Em contas Trial, números de SMS e voz precisam estar verificados no Twilio e destinatários do WhatsApp precisam ingressar no Sandbox.
+
 ## Consolidacao realizada
 
 `marketing` foi adotado como origem principal porque possui o roteador, 110 arquivos de codigo, paginas de cliente/admin/entregador e os componentes funcionais. De `Logo Peddi/entities` foram aproveitados os 24 schemas JSONC e os seis componentes financeiros. A raiz agora possui `package.json`, `index.html`, `public/` e `src/`.

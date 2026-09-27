@@ -14,6 +14,7 @@ import { accountRouter } from './modules/account/routes.js';
 import { blogRouter } from './modules/blog/routes.js';
 import { loyaltyRouter } from './modules/loyalty/routes.js';
 import { emailRouter } from './modules/email/routes.js';
+import { communicationsRouter } from './modules/communications/routes.js';
 
 export const app = express();
 app.set('trust proxy', 1);
@@ -42,6 +43,7 @@ app.use('/api/v1/my-peddi',accountRouter);
 app.use('/api/v1',blogRouter);
 app.use('/api/v1',loyaltyRouter);
 app.use('/api/v1',emailRouter);
+app.use('/api/v1',communicationsRouter);
 app.use('/uploads', express.static(uploadPath, { dotfiles:'deny' }));
 
 app.get('/health', async (_request, response) => {

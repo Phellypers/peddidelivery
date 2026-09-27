@@ -29,6 +29,12 @@ export const env = {
   publicAppUrl: process.env.PUBLIC_APP_URL ?? process.env.CLIENT_ORIGIN ?? 'http://localhost:5173',
   publicApiUrl: process.env.PUBLIC_API_URL ?? `http://localhost:${process.env.PORT ?? 3333}`,
   resendWebhookSecret: process.env.RESEND_WEBHOOK_SECRET ?? '',
+  twilioAccountSid: process.env.TWILIO_ACCOUNT_SID ?? '',
+  twilioAuthToken: process.env.TWILIO_AUTH_TOKEN ?? '',
+  twilioPhoneNumber: process.env.TWILIO_PHONE_NUMBER ?? '',
+  twilioWhatsAppNumber: process.env.TWILIO_WHATSAPP_NUMBER ?? '',
+  sendgridApiKey: process.env.SENDGRID_API_KEY ?? '',
+  sendgridEmailFrom: process.env.SENDGRID_EMAIL_FROM ?? process.env.NOTIFICATION_EMAIL_FROM ?? '',
 };
 
 if (!env.jwtSecret || (process.env.NODE_ENV === 'production' && (env.jwtSecret.length < 32 || /change-me|gere-|development/i.test(env.jwtSecret)))) {

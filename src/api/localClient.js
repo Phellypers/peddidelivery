@@ -176,7 +176,7 @@ export function createLocalClient() {
     },
     integrations: { Core: {
       UploadFile: ({file}) => isPresentationDemo() ? Promise.resolve({ file_url: URL.createObjectURL(file), demo_temporary: true }) : call('/api/v1/demo/upload','POST',file,{'Content-Type':file.type}),
-      SendEmail: async data => {const result=isPresentationDemo()?{demo:true,message:'Envio simulado na apresentação.'}:await call('/api/v1/demo/email','POST',data);window.dispatchEvent(new CustomEvent('peddi-demo-email',{detail:result.message}));return result;},
+      SendEmail: async data => {const result=isPresentationDemo()?{demo:true,message:'Envio simulado na apresentação.'}:await call('/api/v1/admin/communications/email','POST',{to:data.to,subject:data.subject,content:data.body||data.content||data.message});window.dispatchEvent(new CustomEvent('peddi-demo-email',{detail:result.message||'E-mail enviado.'}));return result;},
     } },
   };
 }
