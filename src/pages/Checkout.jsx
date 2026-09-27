@@ -47,6 +47,7 @@ export default function Checkout() {
   const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [couponError, setCouponError] = useState('');
   const [couponApplied, setCouponApplied] = useState(false);
+  const [loyaltyProductId, setLoyaltyProductId] = useState('');
   useEffect(() => {
     if (appliedCoupon && subtotal < Number(appliedCoupon.min_order_value || 0)) {
       setAppliedCoupon(null);
@@ -121,8 +122,9 @@ export default function Checkout() {
   const deliveryFee = Math.max(0,regularDeliveryFee-freeShippingDiscount);
   const couponEligible = appliedCoupon && subtotal >= Number(appliedCoupon.min_order_value || 0);
   const couponFreeShipping = couponEligible && appliedCoupon.discount_type === 'free_shipping';
+  const loyaltyItem = appliedCoupon?.loyalty_reward_mode ? items.find(item=>item.product_id===loyaltyProductId) : null;
   const couponDiscount = couponEligible && !couponFreeShipping
-    ? Number(appliedCoupon.type === 'percentage' ? subtotal * appliedCoupon.value / 100 : appliedCoupon.value)
+    ? Number(appliedCoupon.loyalty_reward_mode?Math.min(Number(loyaltyItem?.unit_price||0),Number(appliedCoupon.loyalty_value_limit||appliedCoupon.value||0)):appliedCoupon.type === 'percentage' ? subtotal * appliedCoupon.value / 100 : appliedCoupon.value)
     : 0;
   const couponShippingDiscount = couponFreeShipping ? deliveryFee : 0;
 
@@ -210,6 +212,12 @@ export default function Checkout() {
     const customerKey=user?.id?`user:${user.id}`:(user?.email||form.email)?`email:${String(user?.email||form.email).trim().toLowerCase()}`:'';
     if (customerLimit&&customerKey&&Number(coupon.usage_by_customer?.[customerKey]||0)>=customerLimit) { setCouponError('Você já atingiu o limite de uso desta promoção.'); return; }
     if(coupon.allow_stacking===false&&campaignDiscount>0){setCouponError('Esta promoção não pode ser usada junto com outra promoção.');return;}
+    if(coupon.loyalty_reward_mode){
+      const eligible=coupon.loyalty_reward_mode==='specific_product'?[coupon.loyalty_product_id]:coupon.loyalty_reward_mode==='participating_products_limit'?(coupon.loyalty_eligible_product_ids||[]):items.map(item=>item.product_id);
+      const candidate=items.find(item=>eligible.includes(item.product_id));
+      if(!candidate){setCouponError(coupon.loyalty_product_name?`Adicione ${coupon.loyalty_product_name} ao carrinho para usar o benefício.`:'Adicione um produto participante ao carrinho para usar o benefício.');return;}
+      setLoyaltyProductId(candidate.product_id);
+    }
     setAppliedCoupon(coupon);
     setCouponApplied(true);
   };
@@ -249,6 +257,7 @@ export default function Checkout() {
           notes: i.notes
         })),
       coupon_code: couponApplied ? form.couponCode : '',
+      loyalty_selected_product_id: couponApplied ? loyaltyProductId : '',
       payment_method: form.splitPayment ? 'split' : form.paymentMethod,
       split_payments: form.splitPayment ? form.splitAmounts : {},
       payment_status: 'pending',
@@ -511,7 +520,7 @@ export default function Checkout() {
           <div className="flex gap-2">
             <input
               value={form.couponCode}
-              onChange={e => { updateForm('couponCode', e.target.value.toUpperCase()); setCouponError(''); setCouponApplied(false); setAppliedCoupon(null); }}
+              onChange={e => { updateForm('couponCode', e.target.value.toUpperCase()); setCouponError(''); setCouponApplied(false); setAppliedCoupon(null); setLoyaltyProductId(''); }}
               placeholder="Digite o código"
               className="min-w-0 flex-1 px-4 py-2.5 bg-muted rounded-xl text-sm border-0 focus:outline-none focus:ring-2 focus:ring-primary/20 uppercase"
               disabled={couponApplied}
@@ -521,7 +530,8 @@ export default function Checkout() {
             </button>
           </div>
           {couponError && <p className="text-xs text-destructive mt-1 flex items-center gap-1"><AlertCircle size={12} /> {couponError}</p>}
-          {couponApplied && <p className="text-xs text-green-600 mt-1">Cupom aplicado! Desconto de R$ {couponDiscount.toFixed(2)}</p>}
+          {couponApplied&&appliedCoupon?.loyalty_reward_mode&&<label className="mt-3 block text-xs font-semibold text-gray-700">Produto que receberá o benefício<select value={loyaltyProductId} onChange={e=>setLoyaltyProductId(e.target.value)} className="mt-1 h-11 w-full rounded-xl border border-green-200 bg-green-50 px-3 text-sm">{items.filter(item=>appliedCoupon.loyalty_reward_mode==='value_limit'||(appliedCoupon.loyalty_reward_mode==='specific_product'?[appliedCoupon.loyalty_product_id]:appliedCoupon.loyalty_eligible_product_ids||[]).includes(item.product_id)).map(item=><option key={item.key||item.product_id} value={item.product_id}>{item.product_name} — {formatMoney(item.unit_price)}</option>)}</select></label>}
+          {couponApplied && <p className="text-xs text-green-600 mt-2">{appliedCoupon?.loyalty_reward_mode?`Benefício aplicado em ${loyaltyItem?.product_name||'produto selecionado'}: ${formatMoney(couponDiscount)}${Number(loyaltyItem?.unit_price||0)>couponDiscount?' de desconto; você paga a diferença.':''}`:`Cupom aplicado! Desconto de ${formatMoney(couponDiscount)}`}</p>}
         </Section>
 
         <UpsellSection />

@@ -8,17 +8,17 @@ test('loyalty grants one stamp per delivered order and creates one private rewar
   const client=await pool.connect();
   try{
     await client.query('BEGIN');
-    await client.query('CREATE TEMP TABLE loyalty_programs(id uuid DEFAULT gen_random_uuid(),store_id uuid UNIQUE,active boolean,name text,required_steps int,minimum_order_total numeric,reward_type text,reward_value numeric,reward_minimum_order numeric,reward_validity_days int,created_at timestamptz DEFAULT now(),updated_at timestamptz DEFAULT now()) ON COMMIT DROP');
+    await client.query('CREATE TEMP TABLE loyalty_programs(id uuid DEFAULT gen_random_uuid(),store_id uuid UNIQUE,active boolean,name text,required_steps int,minimum_order_total numeric,reward_type text,reward_value numeric,reward_minimum_order numeric,reward_validity_days int,reward_mode text,reward_product_id uuid,eligible_product_ids uuid[] DEFAULT \'{}\',reward_value_limit numeric,over_limit_behavior text,created_at timestamptz DEFAULT now(),updated_at timestamptz DEFAULT now()) ON COMMIT DROP');
     await client.query('CREATE TEMP TABLE user_loyalty_progress(id uuid DEFAULT gen_random_uuid(),store_id uuid,user_id uuid,current_steps int DEFAULT 0,required_steps int,completed_cycles int DEFAULT 0,updated_at timestamptz DEFAULT now(),UNIQUE(store_id,user_id)) ON COMMIT DROP');
     await client.query('CREATE TEMP TABLE loyalty_order_events(id uuid DEFAULT gen_random_uuid(),store_id uuid,user_id uuid,order_id uuid,cycle_number int,created_at timestamptz DEFAULT now(),UNIQUE(store_id,order_id)) ON COMMIT DROP');
-    await client.query('CREATE TEMP TABLE loyalty_rewards(id uuid DEFAULT gen_random_uuid(),store_id uuid,user_id uuid,loyalty_program_id uuid,coupon_record_id uuid,code text UNIQUE,status text DEFAULT \'active\',discount_type text,discount_value numeric,minimum_order_value numeric,issued_at timestamptz DEFAULT now(),expires_at timestamptz,redeemed_at timestamptz,redeemed_order_id uuid) ON COMMIT DROP');
+    await client.query('CREATE TEMP TABLE loyalty_rewards(id uuid DEFAULT gen_random_uuid(),store_id uuid,user_id uuid,loyalty_program_id uuid,coupon_record_id uuid,code text UNIQUE,status text DEFAULT \'active\',discount_type text,discount_value numeric,minimum_order_value numeric,reward_mode text,product_id uuid,product_name text,eligible_product_ids uuid[] DEFAULT \'{}\',value_limit numeric,over_limit_behavior text,issued_at timestamptz DEFAULT now(),expires_at timestamptz,redeemed_at timestamptz,redeemed_order_id uuid) ON COMMIT DROP');
     await client.query('CREATE TEMP TABLE customers(id uuid,user_id uuid) ON COMMIT DROP');
-    await client.query('CREATE TEMP TABLE orders(id uuid,store_id uuid,customer_id uuid,status text,total numeric) ON COMMIT DROP');
+    await client.query("CREATE TEMP TABLE orders(id uuid,store_id uuid,customer_id uuid,status text,total numeric,details jsonb DEFAULT '{}') ON COMMIT DROP");
     await client.query('CREATE TEMP TABLE app_records(id uuid DEFAULT gen_random_uuid(),store_id uuid,entity_name text,owner_id uuid,data jsonb) ON COMMIT DROP');
     await client.query('SET LOCAL search_path TO pg_temp,public');
     const ids=(await client.query('SELECT gen_random_uuid() store,gen_random_uuid() customer,gen_random_uuid() owner,gen_random_uuid() first_order,gen_random_uuid() second_order')).rows[0];
     await client.query('INSERT INTO customers VALUES($1,$2)',[ids.customer,ids.owner]);
-    await client.query("INSERT INTO orders VALUES($1,$2,$3,'delivered',30),($4,$2,$3,'delivered',40)",[ids.first_order,ids.store,ids.customer,ids.second_order]);
+    await client.query("INSERT INTO orders(id,store_id,customer_id,status,total) VALUES($1,$2,$3,'delivered',30),($4,$2,$3,'delivered',40)",[ids.first_order,ids.store,ids.customer,ids.second_order]);
     await client.query("INSERT INTO loyalty_programs(store_id,active,name,required_steps,minimum_order_total,reward_type,reward_value,reward_minimum_order,reward_validity_days) VALUES($1,true,'Clube',2,20,'percentage_discount',10,0,30)",[ids.store]);
     const first=await processOrderDeliveryLoyalty(client,ids.first_order,ids.store);
     assert.equal(first.applied,true);assert.equal(first.new_steps,1);assert.equal(first.cycle_completed,false);

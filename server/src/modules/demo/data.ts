@@ -60,8 +60,19 @@ async function calculateCheckoutBenefits(client: PoolClient, tenant: string, dat
     if(customerLimit&&customerKey&&Number(coupon.usage_by_customer?.[customerKey]||0)>=customerLimit)throw new Error('Você já atingiu o limite de uso desta promoção.');
     if(coupon.allow_stacking===false&&breakdown.length)throw new Error('Esta promoção não pode ser usada junto com outra promoção.');
     const freeShipping=(coupon.discount_type||coupon.type)==='free_shipping';
-    const value=money(freeShipping?deliveryFee:(coupon.discount_type||coupon.type)==='percentage'?subtotal*Number(coupon.value||0)/100:Number(coupon.value||0));
-    if(value>0)breakdown.push({key:'coupon',label:freeShipping?'Frete grátis':`Cupom ${couponCode}`,value:Math.min(freeShipping?deliveryFee:subtotal,value),promotion_id:row.id});
+    let value=money(freeShipping?deliveryFee:(coupon.discount_type||coupon.type)==='percentage'?subtotal*Number(coupon.value||0)/100:Number(coupon.value||0));
+    let label=freeShipping?'Frete grátis':`Cupom ${couponCode}`;
+    if(coupon.loyalty_reward_mode){
+      const selected=String(data.loyalty_selected_product_id||coupon.loyalty_product_id||'');
+      const eligible=coupon.loyalty_reward_mode==='specific_product'?[coupon.loyalty_product_id]:coupon.loyalty_reward_mode==='participating_products_limit'?(coupon.loyalty_eligible_product_ids||[]):data.items.map((item:any)=>item.product_id);
+      if(!selected||!eligible.includes(selected))throw new Error('Selecione um produto elegível para usar o benefício de fidelidade.');
+      const item=data.items.find((candidate:any)=>candidate.product_id===selected);
+      if(!item)throw new Error('Adicione o produto do benefício ao carrinho.');
+      const itemValue=Number(item.unit_price||0);
+      value=money(Math.min(itemValue,Number(coupon.loyalty_value_limit||coupon.value||0)));
+      label=`Fidelidade: ${item.product_name} (${coupon.loyalty_over_limit_behavior==='pay_difference'&&itemValue>value?'cliente paga a diferença':`até R$ ${value.toFixed(2)}`})`;
+    }
+    if(value>0)breakdown.push({key:'coupon',label,value:Math.min(freeShipping?deliveryFee:subtotal,value),promotion_id:row.id});
   }
   if(data.payment_method==='pix'){
     const store=(await client.query('SELECT details FROM stores WHERE id=$1',[tenant])).rows[0]?.details||{};
@@ -177,6 +188,7 @@ export async function readEntities(entity: string, request: AuthRequest) {
 
 export async function writeOrder(client: PoolClient, tenant: string, data: Record<string, any>, request: AuthRequest, orderId?: string) {
   const checkout = !orderId && (!isManager(request) || data.sale_origin === 'catalog');
+  if(checkout&&request.auth&&!isManager(request))data.customer_user_id=request.auth.userId;
   let area: import('../../../../src/lib/deliveryArea.js').DeliveryArea | null = null;
   if (checkout) {
     const regions = (await client.query("SELECT id,data FROM app_records WHERE store_id=$1 AND entity_name='City'", [tenant])).rows.map(row=>({...row.data,id:row.id}));
@@ -236,6 +248,7 @@ export async function writeOrder(client: PoolClient, tenant: string, data: Recor
     const store=(await client.query('SELECT details FROM stores WHERE id=$1',[tenant])).rows[0]?.details||{};
     deliveryFee=data.delivery_method==='delivery'?(area?.delivery_fee_type==='fixed'?Number(area.delivery_fee_value||0):Number(store.flat_delivery_fee||0)):0;
     if(Number(store.free_shipping_above||0)>0&&subtotal>=Number(store.free_shipping_above)&&deliveryFee>0){discountBreakdown=[{key:'shipping',label:'Frete grátis',value:money(deliveryFee)}];deliveryFee=0;}
+    data.items=normalized;
     const benefits=await calculateCheckoutBenefits(client,tenant,data,subtotal,deliveryFee);
     discount=benefits.discount;discountBreakdown=[...discountBreakdown,...benefits.breakdown];
     data.promotion_ids=benefits.promotionIds;

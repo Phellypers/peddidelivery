@@ -131,8 +131,13 @@ async function syncPromotionUsage(client:any,tenant:string,orderId:string,prior:
     if(customerKey)usage[customerKey]=Math.max(0,Number(usage[customerKey]||0)+delta);
     const uses=Math.max(0,Number(promo.uses_count||0)+delta);
     await client.query('UPDATE app_records SET data=data||$4::jsonb,updated_at=now() WHERE id=$1 AND store_id=$2 AND entity_name=$3',[row.id,tenant,'Coupon',JSON.stringify({uses_count:uses,usage_by_customer:usage,limit_reached:Boolean(totalLimit&&uses>=totalLimit)})]);
-    if(promo.loyalty_reward_id)await client.query(`UPDATE loyalty_rewards SET status=$3,redeemed_at=$4,redeemed_order_id=$5
-      WHERE id=$1 AND store_id=$2`,[promo.loyalty_reward_id,tenant,isEligible?'redeemed':'active',isEligible?new Date():null,isEligible?orderId:null]);
+    if(promo.loyalty_reward_id){
+      const reward=(await client.query(`UPDATE loyalty_rewards SET status=$3,redeemed_at=$4,redeemed_order_id=$5
+        WHERE id=$1 AND store_id=$2 RETURNING user_id,reward_mode`,[promo.loyalty_reward_id,tenant,isEligible?'redeemed':'active',isEligible?new Date():null,isEligible?orderId:null])).rows[0];
+      if(reward?.reward_mode)await client.query(`UPDATE user_loyalty_progress SET current_steps=CASE WHEN $3 THEN 0 ELSE required_steps END,
+        completed_cycles=GREATEST(0,completed_cycles+$4),updated_at=now() WHERE store_id=$1 AND user_id=$2`,
+        [tenant,reward.user_id,isEligible,isEligible?1:-1]);
+    }
   }
   await client.query("UPDATE orders SET details=details||$3::jsonb,updated_at=now() WHERE id=$1 AND store_id=$2",[orderId,tenant,JSON.stringify({promotion_usage_recorded:isEligible,promotion_usage_recorded_at:isEligible?new Date().toISOString():null})]);
 }

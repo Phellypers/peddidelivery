@@ -1,81 +1,28 @@
-import React, { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
-import { Plus, Trash2, Save, X, Loader2, ToggleLeft, ToggleRight, Search } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Award, CheckCircle2, Loader2, Save, Search } from 'lucide-react';
+import { peddiApi } from '@/services/api/peddiApi';
 
-export default function FidelityTab({ products }) {
-  const [rules, setRules] = useState([]);
-  const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ product_id: '', product_name: '', cashback_amount: 0, is_active: true });
-  const [saving, setSaving] = useState(false);
-  const [search, setSearch] = useState('');
+const auth=()=>({Authorization:`Bearer ${localStorage.getItem('peddi_access_token')||''}`});
+const money=value=>Number(value||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+const initial={active:true,name:'Clube de Fidelidade',required_steps:9,minimum_order_total:0,reward_type:'fixed_discount',reward_value:25,reward_minimum_order:0,reward_validity_days:30,reward_mode:'participating_products_limit',reward_product_id:null,eligible_product_ids:[],reward_value_limit:25,over_limit_behavior:'pay_difference'};
 
-  const load = () => base44.entities.CashbackRule.list().then(setRules);
-  useEffect(() => { load(); }, []);
-
-  const save = async () => {
-    setSaving(true);
-    const product = products.find(p => p.id === form.product_id);
-    const data = { ...form, product_name: product?.name || form.product_name };
-    await base44.entities.CashbackRule.create(data);
-    setSaving(false); setShowForm(false);
-    setForm({ product_id: '', product_name: '', cashback_amount: 0, is_active: true });
-    load();
-  };
-
-  const filteredProducts = products.filter(p => !search || p.name?.toLowerCase().includes(search.toLowerCase()));
-
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">Vincule produtos e defina o cashback por compra</p>
-        <button onClick={() => { setShowForm(true); setForm({ product_id: '', product_name: '', cashback_amount: 0, is_active: true }); }} className="flex items-center gap-1.5 px-3 py-2 bg-primary text-white rounded-xl text-sm font-bold">
-          <Plus size={15} /> Nova regra
-        </button>
-      </div>
-
-      {showForm && (
-        <div className="bg-muted/50 rounded-2xl p-5 space-y-3 border border-border">
-          <div className="relative">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar produto..." className="w-full pl-9 pr-3 py-2.5 bg-white rounded-xl text-sm border border-border/50 focus:outline-none focus:ring-2 focus:ring-primary/20" />
-          </div>
-          <div className="max-h-48 overflow-y-auto space-y-1">
-            {filteredProducts.map(p => (
-              <div key={p.id} onClick={() => setForm(f => ({ ...f, product_id: p.id, product_name: p.name }))} className={`flex items-center gap-2 px-3 py-2 rounded-xl cursor-pointer text-sm transition-colors ${form.product_id === p.id ? 'bg-primary/10 border border-primary' : 'bg-white border border-border/50 hover:bg-accent/50'}`}>
-                {p.images?.[0] && <img src={p.images[0]} className="w-8 h-8 rounded-lg object-cover" alt="" />}
-                <span className="truncate font-medium flex-1">{p.name}</span>
-                <span className="text-muted-foreground text-xs flex-shrink-0">R$ {(p.promo_price || p.price)?.toFixed(2)}</span>
-              </div>
-            ))}
-          </div>
-          <div>
-            <label className="text-xs text-muted-foreground mb-1 block">Cashback por item (R$)</label>
-            <input type="number" step="0.01" min="0" value={form.cashback_amount} onChange={e => setForm(f => ({ ...f, cashback_amount: parseFloat(e.target.value) || 0 }))} className="w-full px-3 py-2.5 bg-white rounded-xl text-sm border border-border/50 focus:outline-none focus:ring-2 focus:ring-primary/20" />
-          </div>
-          <div className="flex gap-2">
-            <button onClick={save} disabled={saving || !form.product_id} className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-primary text-white rounded-xl text-sm font-bold disabled:opacity-50">
-              {saving ? <Loader2 size={15} className="animate-spin" /> : <><Save size={15} /> Salvar</>}
-            </button>
-            <button onClick={() => setShowForm(false)} className="px-4 py-2.5 bg-muted rounded-xl text-sm"><X size={15} /></button>
-          </div>
-        </div>
-      )}
-
-      <div className="space-y-2">
-        {rules.map(r => (
-          <div key={r.id} className="bg-card rounded-2xl border border-border/50 p-4 flex items-center gap-3">
-            <div className="flex-1">
-              <p className="font-semibold text-sm">{r.product_name || 'Produto'}</p>
-              <p className="text-xs text-green-600 font-bold mt-0.5">R$ {r.cashback_amount?.toFixed(2)} de cashback por item</p>
-            </div>
-            <button onClick={() => base44.entities.CashbackRule.update(r.id, { is_active: !r.is_active }).then(load)}>
-              {r.is_active ? <ToggleRight size={26} className="text-green-500" /> : <ToggleLeft size={26} className="text-gray-300" />}
-            </button>
-            <button onClick={() => base44.entities.CashbackRule.delete(r.id).then(load)} className="p-1.5 hover:bg-destructive/10 rounded-lg"><Trash2 size={15} className="text-destructive" /></button>
-          </div>
-        ))}
-        {rules.length === 0 && !showForm && <p className="text-center text-sm text-muted-foreground py-8">Nenhuma regra de cashback criada</p>}
-      </div>
-    </div>
-  );
+export default function FidelityTab({products=[]}){
+ const[form,setForm]=useState(initial),[loading,setLoading]=useState(true),[saving,setSaving]=useState(false),[notice,setNotice]=useState(''),[error,setError]=useState(''),[search,setSearch]=useState('');
+ useEffect(()=>{peddiApi.request('/api/v1/admin/loyalty/program',{headers:auth()}).then(({program})=>setForm({...initial,...program,required_steps:9,eligible_product_ids:program.eligible_product_ids||[]})).catch(err=>setError(err.message)).finally(()=>setLoading(false))},[]);
+ const visible=useMemo(()=>products.filter(product=>!search||product.name?.toLowerCase().includes(search.toLowerCase())),[products,search]);
+ const update=(key,value)=>setForm(current=>({...current,[key]:value}));
+ const toggleProduct=id=>update('eligible_product_ids',form.eligible_product_ids.includes(id)?form.eligible_product_ids.filter(item=>item!==id):[...form.eligible_product_ids,id]);
+ const save=async()=>{setSaving(true);setError('');setNotice('');try{const payload={...form,required_steps:9,minimum_order_total:Number(form.minimum_order_total),reward_value:Number(form.reward_value_limit),reward_value_limit:Number(form.reward_value_limit),reward_minimum_order:Number(form.reward_minimum_order),reward_validity_days:Number(form.reward_validity_days),reward_product_id:form.reward_mode==='specific_product'?form.reward_product_id:null,eligible_product_ids:form.reward_mode==='participating_products_limit'?form.eligible_product_ids:[]};const{program}=await peddiApi.request('/api/v1/admin/loyalty/program',{method:'PUT',headers:auth(),body:JSON.stringify(payload)});setForm({...initial,...program,required_steps:9,eligible_product_ids:program.eligible_product_ids||[]});setNotice('Programa de fidelidade salvo.');}catch(err){setError(err.message)}finally{setSaving(false)}};
+ if(loading)return <div className="flex justify-center py-16"><Loader2 className="animate-spin text-primary"/></div>;
+ return <section className="space-y-5 rounded-2xl border border-slate-200 bg-white p-5">
+  <header className="flex flex-wrap items-start justify-between gap-4"><div className="flex gap-3"><span className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600"><Award/></span><div><h2 className="text-lg font-bold text-slate-950">Programa de Fidelidade</h2><p className="text-sm text-slate-500">9 pedidos concluídos liberam o benefício para o 10º pedido.</p></div></div><label className="flex items-center gap-2 text-sm font-semibold"><input type="checkbox" checked={form.active} onChange={e=>update('active',e.target.checked)} className="h-5 w-5 accent-emerald-500"/>Programa ativo</label></header>
+  <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-4"><div className="grid grid-cols-10 gap-2">{Array.from({length:10},(_,index)=><span key={index} className={`flex h-10 items-center justify-center rounded-lg text-xs font-bold ${index===9?'bg-emerald-500 text-white':'border border-emerald-200 bg-white text-emerald-700'}`}>{index===9?<><CheckCircle2 size={15} className="mr-1"/>Benefício</>:index+1}</span>)}</div><p className="mt-2 text-xs text-emerald-800">Somente pedidos entregues contam. Cancelamentos não geram carimbo.</p></div>
+  <div className="grid gap-4 md:grid-cols-3"><label className="text-sm font-medium">Nome da campanha<input value={form.name} onChange={e=>update('name',e.target.value)} className="mt-1 h-11 w-full rounded-xl border px-3"/></label><label className="text-sm font-medium">Pedido mínimo para contar (R$)<input type="number" min="0" step="0.01" value={form.minimum_order_total} onChange={e=>update('minimum_order_total',e.target.value)} className="mt-1 h-11 w-full rounded-xl border px-3"/></label><label className="text-sm font-medium">Validade do benefício (dias)<input type="number" min="1" value={form.reward_validity_days} onChange={e=>update('reward_validity_days',e.target.value)} className="mt-1 h-11 w-full rounded-xl border px-3"/></label></div>
+  <div><h3 className="mb-2 font-bold text-slate-900">Qual será a recompensa?</h3><div className="grid gap-3 md:grid-cols-3">{[['participating_products_limit','Produto participante até R$ X','O cliente escolhe entre os produtos definidos. Recomendado.'],['specific_product','Produto específico','Um produto definido pelo gestor fica grátis até o limite.'],['value_limit','Limite de valor','O cliente escolhe um item do carrinho e recebe desconto até o limite.']].map(([id,title,description])=><button type="button" key={id} onClick={()=>update('reward_mode',id)} className={`rounded-xl border p-4 text-left ${form.reward_mode===id?'border-emerald-500 bg-emerald-50 ring-1 ring-emerald-500':'border-slate-200'}`}><b className="block text-sm">{title}</b><span className="mt-1 block text-xs text-slate-500">{description}</span></button>)}</div></div>
+  <div className="grid gap-4 md:grid-cols-2"><label className="text-sm font-medium">Limite máximo do benefício (R$)<input type="number" min="0.01" step="0.01" value={form.reward_value_limit} onChange={e=>update('reward_value_limit',e.target.value)} className="mt-1 h-11 w-full rounded-xl border px-3"/><small className="mt-1 block font-normal text-slate-500">O desconto nunca ultrapassará {money(form.reward_value_limit)}.</small></label><label className="text-sm font-medium">Se o produto ultrapassar o limite<select value={form.over_limit_behavior} onChange={e=>update('over_limit_behavior',e.target.value)} className="mt-1 h-11 w-full rounded-xl border bg-white px-3"><option value="pay_difference">Cliente paga a diferença</option><option value="cap_discount">Aplicar desconto limitado ao valor</option></select></label></div>
+  {form.reward_mode==='specific_product'&&<label className="block text-sm font-medium">Produto da recompensa<select value={form.reward_product_id||''} onChange={e=>update('reward_product_id',e.target.value||null)} className="mt-1 h-11 w-full rounded-xl border bg-white px-3"><option value="">Selecione um produto</option>{products.map(product=><option key={product.id} value={product.id}>{product.name} — {money(product.promo_price||product.price)}</option>)}</select></label>}
+  {form.reward_mode==='participating_products_limit'&&<div><label className="relative block"><Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar produtos participantes" className="h-11 w-full rounded-xl border pl-9 pr-3 text-sm"/></label><div className="mt-2 grid max-h-64 gap-2 overflow-y-auto md:grid-cols-2">{visible.map(product=><label key={product.id} className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 ${form.eligible_product_ids.includes(product.id)?'border-emerald-400 bg-emerald-50':'border-slate-200'}`}><input type="checkbox" checked={form.eligible_product_ids.includes(product.id)} onChange={()=>toggleProduct(product.id)} className="accent-emerald-500"/><span className="min-w-0 flex-1 truncate text-sm font-medium">{product.name}</span><small>{money(product.promo_price||product.price)}</small></label>)}</div></div>}
+  {error&&<p className="rounded-lg bg-red-50 p-3 text-sm text-red-600">{error}</p>}{notice&&<p className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-700">{notice}</p>}
+  <div className="flex justify-end"><button onClick={save} disabled={saving} className="flex min-h-11 items-center gap-2 rounded-xl bg-emerald-500 px-5 text-sm font-bold text-white disabled:opacity-50">{saving?<Loader2 size={16} className="animate-spin"/>:<Save size={16}/>}Salvar programa</button></div>
+ </section>;
 }

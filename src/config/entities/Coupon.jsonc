@@ -65,6 +65,12 @@
     "image_url": { "type": "string" }
     ,"restricted_user_id": { "type": "string" }
     ,"loyalty_reward_id": { "type": "string" }
+    ,"loyalty_reward_mode": { "type": "string" }
+    ,"loyalty_product_id": { "type": "string" }
+    ,"loyalty_product_name": { "type": "string" }
+    ,"loyalty_eligible_product_ids": { "type": "array", "items": { "type": "string" } }
+    ,"loyalty_value_limit": { "type": "number" }
+    ,"loyalty_over_limit_behavior": { "type": "string" }
   },
   "required": [
     "code",

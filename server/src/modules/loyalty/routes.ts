@@ -40,12 +40,17 @@ loyaltyRouter.get('/admin/loyalty/program',requireAuth,requireRoles('manager','p
 });
 
 const programSchema=z.object({
-  active:z.boolean(),name:z.string().trim().min(2).max(255),required_steps:z.number().int().min(1).max(50),
+  active:z.boolean(),name:z.string().trim().min(2).max(255),required_steps:z.literal(9).default(9),
   minimum_order_total:z.number().min(0),reward_type:z.enum(['fixed_discount','percentage_discount','free_delivery']),
-  reward_value:z.number().min(0),reward_minimum_order:z.number().min(0),reward_validity_days:z.number().int().min(1).max(3650)
+  reward_value:z.number().min(0),reward_minimum_order:z.number().min(0),reward_validity_days:z.number().int().min(1).max(3650),
+  reward_mode:z.enum(['specific_product','value_limit','participating_products_limit']),
+  reward_product_id:z.string().uuid().nullable().optional(),eligible_product_ids:z.array(z.string().uuid()).max(500).default([]),
+  reward_value_limit:z.number().positive().max(100000),over_limit_behavior:z.enum(['cap_discount','pay_difference'])
 }).superRefine((value,context)=>{
   if(value.reward_type!=='free_delivery'&&value.reward_value<=0)context.addIssue({code:'custom',path:['reward_value'],message:'Informe um valor de recompensa maior que zero.'});
   if(value.reward_type==='percentage_discount'&&value.reward_value>100)context.addIssue({code:'custom',path:['reward_value'],message:'O percentual não pode ultrapassar 100%.'});
+  if(value.reward_mode==='specific_product'&&!value.reward_product_id)context.addIssue({code:'custom',path:['reward_product_id'],message:'Selecione o produto da recompensa.'});
+  if(value.reward_mode==='participating_products_limit'&&!value.eligible_product_ids.length)context.addIssue({code:'custom',path:['eligible_product_ids'],message:'Selecione ao menos um produto participante.'});
 });
 loyaltyRouter.put('/admin/loyalty/program',requireAuth,requireRoles('manager','peddi_admin'),blockPresentationDemoWrites,async(request:AuthRequest,response)=>{
   if(!authorization(request,response))return;
@@ -54,13 +59,17 @@ loyaltyRouter.put('/admin/loyalty/program',requireAuth,requireRoles('manager','p
   const value=parsed.data,client=await pool!.connect();
   try{
     const program=(await client.query(`INSERT INTO loyalty_programs(store_id,active,name,required_steps,minimum_order_total,
-      reward_type,reward_value,reward_minimum_order,reward_validity_days)
-      VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9) ON CONFLICT(store_id) DO UPDATE SET active=EXCLUDED.active,
+      reward_type,reward_value,reward_minimum_order,reward_validity_days,reward_mode,reward_product_id,
+      eligible_product_ids,reward_value_limit,over_limit_behavior)
+      VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) ON CONFLICT(store_id) DO UPDATE SET active=EXCLUDED.active,
       name=EXCLUDED.name,required_steps=EXCLUDED.required_steps,minimum_order_total=EXCLUDED.minimum_order_total,
       reward_type=EXCLUDED.reward_type,reward_value=EXCLUDED.reward_value,reward_minimum_order=EXCLUDED.reward_minimum_order,
-      reward_validity_days=EXCLUDED.reward_validity_days,updated_at=now() RETURNING *`,[
+      reward_validity_days=EXCLUDED.reward_validity_days,reward_mode=EXCLUDED.reward_mode,
+      reward_product_id=EXCLUDED.reward_product_id,eligible_product_ids=EXCLUDED.eligible_product_ids,
+      reward_value_limit=EXCLUDED.reward_value_limit,over_limit_behavior=EXCLUDED.over_limit_behavior,updated_at=now() RETURNING *`,[
       request.auth!.storeId,value.active,value.name,value.required_steps,value.minimum_order_total,value.reward_type,
-      value.reward_value,value.reward_minimum_order,value.reward_validity_days
+      value.reward_value,value.reward_minimum_order,value.reward_validity_days,value.reward_mode,value.reward_product_id||null,
+      value.eligible_product_ids,value.reward_value_limit,value.over_limit_behavior
     ])).rows[0];
     response.json({program});
   }finally{client.release();}
