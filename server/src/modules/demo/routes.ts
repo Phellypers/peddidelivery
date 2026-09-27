@@ -15,6 +15,7 @@ import { resolveChatSender } from './chat-sender.js';
 import { deliveryActionEvent } from '../../../../src/lib/deliveryEvents.js';
 import { storageConfigured, uploadImage, StorageUploadError } from '../storage/client.js';
 import { processOrderDeliveryLoyalty } from '../loyalty/data.js';
+import { enqueueEmail } from '../email/service.js';
 
 export const demoRouter=Router();
 demoRouter.use((request,response,next)=>(env.demoMode || env.mvpMode) ? next() : response.status(404).json({error:'Adaptador de entidades desativado.'}));
@@ -272,6 +273,11 @@ async function saveEntity(request:AuthRequest,response:express.Response){
         if(savedOrder?.status==='delivered'&&prior?.status!=='delivered')await processOrderDeliveryLoyalty(client,savedId as string,tenant);
         await syncPromotionUsage(client,tenant,savedId as string,prior,savedOrder!);
         savedOrder=(await readOrders(tenant,client)).find(row=>row.id===savedId);
+        if(savedOrder?.customer_email&&(!id||prior?.status!==savedOrder.status)){
+          const label:{[key:string]:string}={pending:'recebido',confirmed:'confirmado',preparing:'em preparação',ready:'pronto',assigned:'com entregador atribuído',out_for_delivery:'saiu para entrega',delivered:'entregue',cancelled:'cancelado'};
+          await enqueueEmail(client,{storeId:tenant,orderId:savedId as string,template:'order_status',to:savedOrder.customer_email,
+            subject:`Pedido ${label[savedOrder.status]||'atualizado'} — PEDDI`,payload:{title:`Pedido ${label[savedOrder.status]||'atualizado'}`,orderNumber:savedOrder.order_number||String(savedId).slice(0,8),label:label[savedOrder.status]||savedOrder.status},idempotencyKey:`order-status:${savedId}:${savedOrder.status}`});
+        }
         if (!id) await client.query(`UPDATE idempotency_keys SET response_status=201,response_body=$4
           WHERE store_id=$1 AND actor_key=$2 AND endpoint='POST Order' AND idempotency_key=$3`,[tenant,actorKey,idempotencyKey,JSON.stringify(savedOrder)]);
         await client.query('COMMIT');

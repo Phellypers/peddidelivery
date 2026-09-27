@@ -5,6 +5,7 @@ import { pool, query } from '../../db/client.js';
 import { requireAuth, requireRoles, blockPresentationDemoWrites, type AuthRequest } from '../../auth/middleware.js';
 import { courierView } from './data.js';
 import { env } from '../../config/env.js';
+import { enqueueEmail } from '../email/service.js';
 
 export const courierApplicationRouter = Router();
 const application = z.object({
@@ -70,11 +71,8 @@ courierApplicationRouter.post('/admin/courier-applications/:id/decision', ...man
     await client.query("UPDATE users SET active=$2 WHERE id=$1 AND store_id=$3 AND role='courier'", [row.user_id,approved,request.auth!.storeId]);
     await client.query('UPDATE refresh_tokens SET revoked_at=now() WHERE user_id=$1 AND revoked_at IS NULL', [row.user_id]);
     if (approved) {
-      await client.query("INSERT INTO app_records(store_id,entity_name,owner_id,data) VALUES($1,'OutboundNotification',$2,$3)", [request.auth!.storeId,row.user_id,JSON.stringify({
-        type:'courier_approved',channel:'email',status:env.resendApiKey && env.notificationEmailFrom ? 'queued' : 'pending_configuration',courier_id:row.id,
-        to:row.details.email,subject:'Seu cadastro de entregador foi aprovado — PEDDI',
-        text:`Olá, ${row.details.name}! Seu cadastro foi aprovado. Você já pode entrar com seu e-mail e senha para receber e acompanhar entregas: ${env.clientOrigin}/entregador/login`,
-      })]);
+      await enqueueEmail(client,{storeId:request.auth!.storeId,userId:row.user_id,template:'courier_approved',to:row.details.email,
+        subject:'Seu cadastro de entregador foi aprovado — PEDDI',payload:{name:row.details.name,loginUrl:`${env.publicAppUrl}/entregador/login`},idempotencyKey:`courier-approved:${row.id}`});
     }
     await client.query('COMMIT');
     response.json({ status:request.body.decision,notification_status:approved ? (env.resendApiKey && env.notificationEmailFrom ? 'queued' : 'pending_configuration') : null });

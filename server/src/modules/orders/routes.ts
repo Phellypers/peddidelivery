@@ -3,6 +3,7 @@ import { pool, query } from '../../db/client.js';
 import { blockPresentationDemoWrites, requireAuth, requireRoles, type AuthRequest } from '../../auth/middleware.js';
 import { syncDelivery } from '../deliveries/data.js';
 import { readOrders, writeOrder } from '../demo/data.js';
+import { enqueueEmail } from '../email/service.js';
 
 export const orderRouter = Router();
 
@@ -42,6 +43,7 @@ orderRouter.post('/orders', requireAuth, blockPresentationDemoWrites, async (req
     },request);
     await syncDelivery(client,request.auth.storeId,savedId);
     const saved=(await readOrders(request.auth.storeId,client)).find(order=>order.id===savedId)!;
+    if(saved?.customer_email)await enqueueEmail(client,{storeId:request.auth.storeId,userId:request.auth.userId,orderId:savedId,template:'order_status',to:saved.customer_email,subject:'Pedido recebido — PEDDI',payload:{title:'Pedido recebido',orderNumber:saved.order_number||String(savedId).slice(0,8),label:'recebido'},idempotencyKey:`order-status:${savedId}:pending`});
     const resultBody={order:saved};
     await client.query(`UPDATE idempotency_keys SET response_status=201,response_body=$4
       WHERE store_id=$1 AND actor_key=$2 AND endpoint='POST /orders' AND idempotency_key=$3`,[request.auth.storeId,request.auth.userId,idempotencyKey,JSON.stringify(resultBody)]);

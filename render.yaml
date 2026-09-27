@@ -20,6 +20,16 @@ services:
         value: "true"
       - key: CLIENT_ORIGIN
         value: https://peddidelivery-5c848.web.app
+      - key: PUBLIC_APP_URL
+        value: https://peddidelivery-5c848.web.app
+      - key: PUBLIC_API_URL
+        value: https://peddi-api.onrender.com
+      - key: RESEND_API_KEY
+        sync: false
+      - key: NOTIFICATION_EMAIL_FROM
+        sync: false
+      - key: RESEND_WEBHOOK_SECRET
+        sync: false
       - key: DATABASE_SSL_MODE
         value: verify-full
       - key: DATABASE_POOL_MAX

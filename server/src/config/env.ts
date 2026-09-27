@@ -26,6 +26,9 @@ export const env = {
   supabaseStorageBucket: process.env.SUPABASE_STORAGE_BUCKET ?? 'peddi-images',
   resendApiKey: process.env.RESEND_API_KEY ?? '',
   notificationEmailFrom: process.env.NOTIFICATION_EMAIL_FROM ?? '',
+  publicAppUrl: process.env.PUBLIC_APP_URL ?? process.env.CLIENT_ORIGIN ?? 'http://localhost:5173',
+  publicApiUrl: process.env.PUBLIC_API_URL ?? `http://localhost:${process.env.PORT ?? 3333}`,
+  resendWebhookSecret: process.env.RESEND_WEBHOOK_SECRET ?? '',
 };
 
 if (!env.jwtSecret || (process.env.NODE_ENV === 'production' && (env.jwtSecret.length < 32 || /change-me|gere-|development/i.test(env.jwtSecret)))) {
