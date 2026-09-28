@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { productService, ingredientService } from '@/services/api/catalog';
 import { calculateRecipeItemCost, calculateRecipeCost, UNITS, UNIT_LABELS } from '@/lib/recipeCost';
-import { X, Plus, Trash2, Loader2, ImageIcon, ArrowLeft } from 'lucide-react';
+import { X, Plus, Trash2, Loader2, ImageIcon, ArrowLeft, ClipboardList, Info, Package } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { ensureBannerIds, getBannerProductIds, withBannerProductIds } from '@/lib/bannerProducts';
 
@@ -337,7 +337,7 @@ export default function ProductForm({ product, categories, onClose, onSave, page
         <form onSubmit={handleSubmit} className={page ? 'flex min-w-0 flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white' : 'flex min-h-0 flex-1 flex-col'}>
           {error && <p role="alert" className="px-6 pt-4 text-sm text-red-600">{error}</p>}
           {sessionExpired && <a href="/gestor/login?returnTo=/admin/catalogo" className="block px-6 py-2 text-sm text-primary underline">Entrar novamente e recuperar este cadastro</a>}
-          {page && <div className="border-b border-gray-100 px-5 py-4"><h3 className="font-heading text-lg font-bold text-gray-900">{TABS[activeTabIndex]?.label}</h3><p className="text-sm text-gray-500">Edite somente os dados desta seção.</p></div>}
+          {page && <div className="border-b border-gray-100 px-5 py-4"><div className="flex items-center gap-3">{tab === 'recipe' && <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-emerald-100 bg-emerald-50 text-primary"><ClipboardList size={20}/></span>}<div><h3 className="font-heading text-lg font-bold text-gray-900">{TABS[activeTabIndex]?.label}</h3><p className="text-sm text-gray-500">{tab === 'recipe' ? 'Adicione os insumos utilizados neste produto e informe suas quantidades.' : 'Edite somente os dados desta seção.'}</p></div></div></div>}
           <div id={`product-panel-${tab}`} role="tabpanel" className={`peddi-product-form-content min-h-0 flex-1 space-y-5 p-4 sm:p-6 ${page ? '' : 'overflow-y-auto'}`}>
 
             {/* ── TAB: Informações ── */}
@@ -781,50 +781,40 @@ export default function ProductForm({ product, categories, onClose, onSave, page
             {tab === 'recipe' && (
               <div className="space-y-4">
                 {ingredientError && <p role="alert" className="text-sm text-red-600">{ingredientError}</p>}
-                <div>
-                  <p className="text-sm font-medium text-gray-800">Ficha Técnica do produto</p>
-                  <p className="text-xs text-gray-400 mt-0.5">Vincule insumos e quantidades para calcular o custo automático e salvar a ficha junto ao produto.</p>
-                </div>
+                <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_280px]">
+                  <div className="min-w-0 rounded-2xl border border-gray-200 bg-white p-3 sm:p-4">
+                    {form.recipe.length > 0 && <div className="mb-2 hidden grid-cols-[minmax(210px,1fr)_120px_110px_88px_40px] gap-3 px-3 text-xs font-semibold text-slate-600 md:grid"><span>Insumo</span><span>Quantidade</span><span>Unidade</span><span>Custo</span><span className="sr-only">Ações</span></div>}
 
-                {form.recipe.length === 0 && (
-                  <div className="text-center py-8 text-gray-400 text-sm border-2 border-dashed border-gray-200 rounded-xl">
-                    Nenhum insumo vinculado. Adicione insumos para calcular o custo real.
-                  </div>
-                )}
+                    {form.recipe.length === 0 && <div className="flex min-h-48 flex-col items-center justify-center rounded-xl border border-dashed border-gray-200 px-5 text-center"><span className="mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-emerald-50 text-primary"><Package size={20}/></span><p className="text-sm font-semibold text-slate-700">Nenhum insumo adicionado</p><p className="mt-1 max-w-sm text-xs leading-5 text-slate-400">Adicione os ingredientes usados para calcular automaticamente o custo deste produto.</p></div>}
 
-                {form.recipe.map((item, ri) => {
-                  const ing = ingredients.find(i => i.id === item.ingredient_id);
-                  const itemCost = calculateRecipeItemCost(item, ing);
-                  return (
-                    <div key={ri} className="flex items-center gap-2 p-2 bg-gray-50 rounded-xl border border-gray-100">
-                      <select value={item.ingredient_id} onChange={e => updateRecipeItem(ri, 'ingredient_id', e.target.value)} className={input + ' flex-1'}>
-                        <option value="">— Selecione o insumo —</option>
-                        {ingredients.map(i => <option key={i.id} value={i.id}>{i.name} ({UNIT_LABELS[i.unit] || i.unit})</option>)}
-                      </select>
-                      <input type="number" step="0.01" min="0" value={item.quantity} onChange={e => updateRecipeItem(ri, 'quantity', parseFloat(e.target.value) || 0)} className={input + ' w-16'} placeholder="Qtd" />
-                      <select value={item.unit} onChange={e => updateRecipeItem(ri, 'unit', e.target.value)} className={input + ' w-20'}>
-                        {UNITS.map(u => <option key={u} value={u}>{UNIT_LABELS[u]}</option>)}
-                      </select>
-                      <span className="text-xs text-primary font-bold w-16 text-right flex-shrink-0">R$ {itemCost.toFixed(2)}</span>
-                      <button type="button" onClick={() => removeRecipeItem(ri)} className="p-1.5 text-red-400 hover:bg-red-50 rounded-lg flex-shrink-0">
-                        <Trash2 size={15} />
-                      </button>
+                    <div className="space-y-2">
+                      {form.recipe.map((item, ri) => {
+                        const ing = ingredients.find(i => i.id === item.ingredient_id);
+                        const itemCost = calculateRecipeItemCost(item, ing);
+                        return <div key={ri} className="grid gap-3 rounded-xl border border-gray-200 bg-white p-3 transition-shadow hover:shadow-sm md:grid-cols-[minmax(210px,1fr)_120px_110px_88px_40px] md:items-center">
+                          <div className="min-w-0"><label className="mb-1 block text-[11px] font-semibold text-slate-500 md:sr-only">Insumo</label><select aria-label={`Insumo ${ri + 1}`} value={item.ingredient_id} onChange={e => updateRecipeItem(ri, 'ingredient_id', e.target.value)} className="h-11 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-slate-800 outline-none transition focus:border-primary/50 focus:ring-2 focus:ring-primary/15"><option value="">Selecione o insumo</option>{ingredients.map(i => <option key={i.id} value={i.id}>{i.name}</option>)}</select>{ing && <p className="mt-1.5 flex items-center gap-1.5 truncate text-[11px] text-slate-400"><span className="h-1.5 w-1.5 rounded-full bg-emerald-500"/>Estoque: {Number(ing.current_stock || 0).toLocaleString('pt-BR')} {UNIT_LABELS[ing.unit] || ing.unit}</p>}</div>
+                          <div><label className="mb-1 block text-[11px] font-semibold text-slate-500 md:sr-only">Quantidade</label><input aria-label={`Quantidade do insumo ${ri + 1}`} type="number" step="0.01" min="0" value={item.quantity} onChange={e => updateRecipeItem(ri, 'quantity', parseFloat(e.target.value) || 0)} className="h-11 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm outline-none transition focus:border-primary/50 focus:ring-2 focus:ring-primary/15"/></div>
+                          <div><label className="mb-1 block text-[11px] font-semibold text-slate-500 md:sr-only">Unidade</label><select aria-label={`Unidade do insumo ${ri + 1}`} value={item.unit} onChange={e => updateRecipeItem(ri, 'unit', e.target.value)} className="h-11 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm outline-none transition focus:border-primary/50 focus:ring-2 focus:ring-primary/15">{UNITS.map(u => <option key={u} value={u}>{UNIT_LABELS[u]}</option>)}</select></div>
+                          <div className="flex items-center justify-between md:block"><span className="text-[11px] font-semibold text-slate-500 md:hidden">Custo</span><span className="text-sm font-semibold text-slate-700">R$ {itemCost.toFixed(2).replace('.', ',')}</span></div>
+                          <button type="button" aria-label={`Remover insumo ${ri + 1}`} onClick={() => removeRecipeItem(ri)} className="flex h-10 w-full items-center justify-center rounded-lg text-red-500 transition-colors hover:bg-red-50 md:w-10"><Trash2 size={17}/></button>
+                        </div>;
+                      })}
                     </div>
-                  );
-                })}
 
-                <button type="button" onClick={addRecipeItem} className="w-full flex items-center justify-center gap-2 py-2.5 border-2 border-dashed border-primary/40 rounded-xl text-primary text-sm font-semibold hover:bg-primary/5 transition-colors">
-                  <Plus size={15} /> Adicionar insumo
-                </button>
-
-                {form.recipe.length > 0 && (
-                  <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-sm text-blue-700">
-                    💰 Custo calculado da ficha: <strong>R$ {calculateRecipeCost(form.recipe, ingredients).toFixed(2)}</strong>
-                    <p className="text-xs text-blue-600 mt-0.5">Ao salvar, o custo do produto será atualizado automaticamente.</p>
+                    <button type="button" onClick={addRecipeItem} className="mt-3 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-primary px-4 text-sm font-semibold text-primary transition-colors hover:bg-primary/5 sm:w-auto"><Plus size={16}/> Adicionar insumo</button>
+                    <p className="mt-4 flex items-start gap-2 border-t border-gray-100 pt-4 text-xs leading-5 text-slate-400"><Info size={15} className="mt-0.5 shrink-0"/>O custo do produto será atualizado automaticamente ao salvar.</p>
                   </div>
-                )}
+
+                  <aside className="overflow-hidden rounded-2xl border border-gray-200 bg-white xl:sticky xl:top-4">
+                    <div className="border-b border-emerald-100 bg-emerald-50/80 p-5"><p className="text-sm font-semibold text-slate-800">Custo da ficha técnica</p><strong className="mt-2 block text-3xl font-bold text-emerald-600">R$ {calculateRecipeCost(form.recipe, ingredients).toFixed(2).replace('.', ',')}</strong></div>
+                    <div className="p-5">
+                      {form.recipe.length === 0 ? <p className="text-sm text-slate-400">Os custos dos insumos aparecerão aqui.</p> : <div className="space-y-4">{form.recipe.map((item, ri) => { const ing = ingredients.find(i => i.id === item.ingredient_id); return <div key={`${item.ingredient_id}-${ri}`} className="flex items-start justify-between gap-3 text-sm"><span className="min-w-0 truncate text-slate-600">{ing?.name || 'Insumo não selecionado'}</span><span className="shrink-0 font-medium text-slate-800">R$ {calculateRecipeItemCost(item, ing).toFixed(2).replace('.', ',')}</span></div>; })}</div>}
+                      <div className="mt-5 flex items-center justify-between border-t border-gray-200 pt-5"><span className="font-bold text-slate-800">Custo total</span><strong className="text-xl text-emerald-600">R$ {calculateRecipeCost(form.recipe, ingredients).toFixed(2).replace('.', ',')}</strong></div>
+                    </div>
+                  </aside>
+                </div>
                 {ingredients.length === 0 && (
-                  <p className="text-xs text-orange-600">⚠️ Cadastre insumos em Admin → Estoque antes de montar a ficha técnica.</p>
+                  <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-700">Cadastre insumos em Admin → Estoque antes de montar a ficha técnica.</p>
                 )}
               </div>
             )}
