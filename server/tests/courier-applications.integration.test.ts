@@ -50,8 +50,8 @@ test('courier applications require store approval and revoke pending, rejected a
     assert.equal((await call(`/demo/entities/Deliverer/${approved.courier.id}`,'PATCH',{is_active:true,application_status:'approved'},token)).status,403);
     assert.equal((await call(`/demo/entities/Deliverer/${approved.courier.id}`,'PATCH',{lat:-15.8,lng:-48,location_updated_at:new Date().toISOString()},token)).status,200);
     assert.equal((await call('/demo/entities/Order','POST',{items:[]},token)).status,400);
-    const outbox=(await query("SELECT * FROM app_records WHERE store_id=$1 AND entity_name='OutboundNotification'",[stores[0].id])).rows;
-    assert.equal(outbox.length,1);assert.equal(outbox[0].owner_id,approved.user.id);assert.equal(outbox[0].data.to,approved.email);
+    const outbox=(await query("SELECT * FROM email_outbox WHERE store_id=$1 AND template='courier_approved'",[stores[0].id])).rows;
+    assert.equal(outbox.length,1);assert.equal(outbox[0].user_id,approved.user.id);assert.equal(outbox[0].recipient,approved.email);
     assert.equal((await call(`/admin/couriers/${approved.courier.id}`,'DELETE',undefined,manager)).status,204);
     assert.equal((await call('/me','GET',undefined,token)).status,403);
     assert.equal((await call('/deliveries','GET',undefined,token)).status,403);
@@ -61,7 +61,7 @@ test('courier applications require store approval and revoke pending, rejected a
     assert.equal((await call(`/admin/courier-applications/${rejected.courier.id}/decision`,'POST',{decision:'rejected'},manager)).status,200);
     assert.equal((await call('/auth/login','POST',{email:rejected.email,password})).status,401);
     assert.equal((await query('SELECT active FROM users WHERE id=$1',[rejected.user.id])).rows[0].active,false);
-    assert.equal((await query("SELECT count(*) FROM app_records WHERE store_id=$1 AND entity_name='OutboundNotification'",[stores[0].id])).rows[0].count,'1');
+    assert.equal((await query("SELECT count(*) FROM email_outbox WHERE store_id=$1 AND template='courier_approved'",[stores[0].id])).rows[0].count,'1');
   }finally{
     await query('DELETE FROM businesses WHERE id=$1',[business]);
     await new Promise<void>((resolve,reject)=>server.close(error=>error?reject(error):resolve()));
