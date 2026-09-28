@@ -1,4 +1,5 @@
 import React from 'react';
+import { getItemTotalCogs } from '@/lib/cogs';
 import { Loader2, TrendingUp, TrendingDown, Wallet, Package, ArrowUpCircle, ArrowDownCircle } from 'lucide-react';
 
 export default function CashBalance({ orders, products, accounts, loading }) {
@@ -9,7 +10,7 @@ export default function CashBalance({ orders, products, accounts, loading }) {
 
   const vendas = orders.reduce((s, o) => s + (o.total || 0), 0);
   const cmv = orders.reduce((s, o) =>
-    s + (o.items || []).reduce((si, i) => si + (productCostMap[i.product_id] || 0) * (i.quantity || 0), 0), 0);
+    s + (o.items || []).reduce((si, i) => si + getItemTotalCogs(i, productCostMap), 0), 0);
   const despesas = accounts.filter(a => a.type === 'payable').reduce((s, a) => s + (a.amount || 0), 0);
   const receitas = accounts.filter(a => a.type === 'receivable').reduce((s, a) => s + (a.amount || 0), 0);
 

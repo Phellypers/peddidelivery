@@ -1,11 +1,13 @@
 import React from 'react';
 import { Loader2, Package, Percent, AlertTriangle, TrendingUp } from 'lucide-react';
+import { getItemTotalCogs, getItemUnitCogs } from '@/lib/cogs';
 
 export default function CMV({ orders, products, loading }) {
   if (loading) return <div className="flex justify-center py-12"><Loader2 className="animate-spin text-primary" size={32} /></div>;
 
   const productMap = {};
-  products.forEach(p => { productMap[p.id] = p; });
+  const productCostMap = {};
+  products.forEach(p => { productMap[p.id] = p; productCostMap[p.id] = p.cost || 0; });
 
   const faturamento = orders.reduce((s, o) => s + (o.total || 0), 0);
 
@@ -14,9 +16,9 @@ export default function CMV({ orders, products, loading }) {
   orders.forEach(o => {
     (o.items || []).forEach(item => {
       const p = productMap[item.product_id];
-      const cost = p?.cost || 0;
+      const cost = getItemUnitCogs(item, productCostMap);
       const revenue = (item.unit_price || 0) * (item.quantity || 0);
-      const totalCost = cost * (item.quantity || 0);
+      const totalCost = getItemTotalCogs(item, productCostMap);
       const key = item.product_id || `_${item.product_name}`;
       if (!productStats[key]) {
         productStats[key] = {

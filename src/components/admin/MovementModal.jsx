@@ -8,6 +8,7 @@ export default function MovementModal({ ingredient, initialType, onClose, onSave
   const [quantity, setQuantity] = useState('');
   const [cost, setCost] = useState('');
   const [reason, setReason] = useState('');
+  const [exitType, setExitType] = useState('manual_exit');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -40,7 +41,13 @@ export default function MovementModal({ ingredient, initialType, onClose, onSave
       updateData.quantity_purchased = (ingredient.quantity_purchased || 0) + qty;
       updateData.cost = (ingredient.cost || 0) + purchaseCost;
     }
-    await ingredientService.update(ingredient.id, updateData);
+    await ingredientService.movement(ingredient.id, {
+      type: type === 'entry' ? 'purchase_entry' : exitType,
+      quantity: qty,
+      cost: type === 'entry' ? (parseFloat(cost) || 0) : undefined,
+      reason: reason || undefined,
+      fallback: updateData,
+    });
     await onSave();
     } catch (err) {
       setError(err.message || 'Não foi possível movimentar o insumo.');
@@ -79,6 +86,17 @@ export default function MovementModal({ ingredient, initialType, onClose, onSave
               <label className="text-xs font-semibold text-gray-500 mb-1 block uppercase">Custo total desta compra (R$)</label>
               <input type="number" step="0.01" required value={cost} onChange={e => setCost(e.target.value)} className={inp} placeholder="0.00" />
               <p className="text-[10px] text-gray-400 mt-1">O custo médio do insumo será recalculado automaticamente (média ponderada).</p>
+            </div>
+          )}
+          {type === 'exit' && (
+            <div>
+              <label className="text-xs font-semibold text-gray-500 mb-1 block uppercase">Origem da saída</label>
+              <select value={exitType} onChange={e => setExitType(e.target.value)} className={inp}>
+                <option value="manual_exit">Saída manual</option>
+                <option value="waste">Perda / descarte</option>
+                <option value="stock_adjustment">Ajuste de estoque</option>
+              </select>
+              <p className="mt-1 text-[10px] text-gray-400">O consumo por venda é lançado automaticamente pelo PEDDI.</p>
             </div>
           )}
           <div>

@@ -1,8 +1,9 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { query } from '../../db/client.js';
+import { pool, query } from '../../db/client.js';
 import { blockPresentationDemoWrites, requireAuth, requireRoles, type AuthRequest } from '../../auth/middleware.js';
 import { getPriceReductionUpdate } from '../../../../src/lib/productHighlights.js';
+import { registerInventoryMovement } from '../inventory/data.js';
 
 export const catalogRouter = Router();
 catalogRouter.use(requireAuth, requireRoles('manager', 'peddi_admin'));
@@ -60,7 +61,8 @@ catalogRouter.get('/reports', async (request: AuthRequest, response) => {
   const result = await query(`SELECT o.*, u.name AS customer_name, u.email AS customer_email,
     COALESCE((SELECT jsonb_agg(jsonb_build_object('product_id', i.product_id,
       'product_name', i.product_name, 'unit_price', i.unit_price, 'quantity', i.quantity,
-      'subtotal', i.subtotal)) FROM order_items i WHERE i.order_id=o.id), '[]'::jsonb) AS items
+      'subtotal', i.subtotal, 'unit_cogs', cs.unit_cogs, 'total_cogs', cs.total_cogs))
+      FROM order_items i LEFT JOIN order_item_cost_snapshots cs ON cs.order_item_id=i.id WHERE i.order_id=o.id), '[]'::jsonb) AS items
     FROM orders o JOIN customers c ON c.id=o.customer_id JOIN users u ON u.id=c.user_id
     WHERE o.store_id=$1 ORDER BY o.created_at DESC`, [request.auth!.storeId]);
   response.json({ orders: result.rows.map(row => ({ ...row, total: Number(row.total),
@@ -140,10 +142,25 @@ async function saveIngredient(request: AuthRequest, response: import('express').
   const result = request.method === 'POST'
     ? await query('INSERT INTO ingredients (store_id,details) VALUES ($1,$2) RETURNING id,details', [request.auth!.storeId, JSON.stringify(details)])
     : await query('UPDATE ingredients SET details=$3 WHERE id=$1 AND store_id=$2 RETURNING id,details', [request.params.id, request.auth!.storeId, JSON.stringify(details)]);
+  if(request.method==='POST'&&Number(details.current_stock)>0){
+    const quantity=Number(details.current_stock),totalCost=Number(details.cost||0);
+    await query(`INSERT INTO inventory_movements(store_id,ingredient_id,movement_type,quantity_delta,unit,unit_cost,total_cost,stock_before,stock_after,reason)
+      VALUES($1,$2,'purchase_entry',$3,$4,$5,$6,0,$3,'Compra inicial')`,[request.auth!.storeId,result.rows[0].id,quantity,details.unit,quantity>0?totalCost/quantity:0,totalCost]);
+  }
   response.status(request.method === 'POST' ? 201 : 200).json({ ingredient: { ...result.rows[0].details, id: result.rows[0].id } });
 }
 catalogRouter.post('/ingredients', saveIngredient);
 catalogRouter.patch('/ingredients/:id', saveIngredient);
+catalogRouter.post('/ingredients/:id/movements', async (request: AuthRequest, response) => {
+  if (!pool) return response.status(503).json({ error: 'Banco de dados indisponível.' });
+  if (!z.string().uuid().safeParse(request.params.id).success) return response.status(400).json({ error: 'Insumo inválido.' });
+  const parsed=z.object({type:z.enum(['purchase_entry','manual_exit','stock_adjustment','waste']),quantity:z.coerce.number().positive(),cost:z.coerce.number().nonnegative().optional(),reason:z.string().trim().max(300).optional()}).safeParse(request.body);
+  if(!parsed.success)return response.status(400).json({error:'Revise o tipo, a quantidade e o custo da movimentação.'});
+  const client=await pool.connect();
+  try{await client.query('BEGIN');const ingredient=await registerInventoryMovement(client,{storeId:request.auth!.storeId!,ingredientId:String(request.params.id),...parsed.data});await client.query('COMMIT');return response.status(201).json({ingredient});}
+  catch(error){await client.query('ROLLBACK');return response.status(400).json({error:error instanceof Error?error.message:'Não foi possível registrar a movimentação.'});}
+  finally{client.release();}
+});
 catalogRouter.delete('/ingredients/:id', async (request: AuthRequest, response) => {
   if (!z.string().uuid().safeParse(request.params.id).success) return response.status(400).json({ error: 'Insumo inválido.' });
   const linked = await query("SELECT id FROM products WHERE store_id=$1 AND deleted_at IS NULL AND details->'recipe' @> $2::jsonb", [request.auth!.storeId, JSON.stringify([{ ingredient_id: request.params.id }])]);

@@ -6,6 +6,7 @@ import AdvancedReports from '@/components/admin/AdvancedReports';
 import LiveNowBlock from '@/components/admin/LiveNowBlock';
 import { peddiApi } from '@/services/api/peddiApi';
 import { loadAdminCatalog, loadAdminReports } from '@/services/api/catalog';
+import { getItemTotalCogs } from '@/lib/cogs';
 
 const statusLabels = {
   pending: 'Pendente', confirmed: 'Confirmado', preparing: 'Preparando',
@@ -81,7 +82,7 @@ export default function Dashboard() {
   const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0, 0, 0, 0);
   const todayDelivered = orders.filter(o => o.status === 'delivered' && new Date(o.created_date) >= todayStart);
   const todayFaturamento = todayDelivered.reduce((s, o) => s + (o.total || 0), 0);
-  const todayCMV = todayDelivered.reduce((s, o) => s + (o.items || []).reduce((si, i) => si + (productCostMap[i.product_id] || 0) * (i.quantity || 0), 0), 0);
+  const todayCMV = todayDelivered.reduce((s, o) => s + (o.items || []).reduce((si, i) => si + getItemTotalCogs(i, productCostMap), 0), 0);
   const todayTicketMedio = todayDelivered.length > 0 ? todayFaturamento / todayDelivered.length : 0;
   const monthDespesas = accounts.filter(a => a.type === 'payable' && a.status === 'paid' && new Date(a.paid_date || a.due_date) >= monthStart).reduce((s, a) => s + (a.amount || 0), 0);
   const monthReceitas = accounts.filter(a => a.type === 'receivable' && a.status === 'received' && new Date(a.paid_date || a.due_date) >= monthStart).reduce((s, a) => s + (a.amount || 0), 0);

@@ -13,6 +13,9 @@ const entity = (path, key) => ({
 
 export const productService = entity('products', 'product');
 export const ingredientService = entity('ingredients', 'ingredient');
+ingredientService.movement = async (id, data) => isPresentationDemo()
+  ? ingredientService.update(id, data.fallback)
+  : (await peddiApi.request(`/api/v1/admin/ingredients/${id}/movements`, { method: 'POST', headers: headers(), body: JSON.stringify(data) })).ingredient;
 export async function loadAdminCatalog() {
   const catalog = await peddiApi.request('/api/v1/admin/catalog', { headers: headers() });
   if (!isPresentationDemo()) return catalog;

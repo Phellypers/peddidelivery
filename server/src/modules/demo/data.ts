@@ -112,7 +112,8 @@ export async function readOrders(tenant: string,database:Queryable=sharedDatabas
   const result = await database.query(`SELECT o.*,r.user_id AS deliverer_user_id, COALESCE(o.details->>'customer_name',c.guest_details->>'name',u.name) AS customer_name,
     COALESCE(o.details->>'customer_email',c.guest_details->>'email',u.email) AS customer_email,
     COALESCE((SELECT jsonb_agg(i.details || jsonb_build_object('product_id',i.product_id,'product_name',i.product_name,
-      'unit_price',i.unit_price,'quantity',i.quantity,'subtotal',i.subtotal) ORDER BY i.id) FROM order_items i WHERE i.order_id=o.id),'[]'::jsonb) AS items
+      'unit_price',i.unit_price,'quantity',i.quantity,'subtotal',i.subtotal,'unit_cogs',cs.unit_cogs,'total_cogs',cs.total_cogs) ORDER BY i.id)
+      FROM order_items i LEFT JOIN order_item_cost_snapshots cs ON cs.order_item_id=i.id WHERE i.order_id=o.id),'[]'::jsonb) AS items
     FROM orders o JOIN customers c ON c.id=o.customer_id LEFT JOIN users u ON u.id=c.user_id LEFT JOIN couriers r ON r.id=o.courier_id
     WHERE o.store_id=$1 ORDER BY o.created_at DESC`, [tenant]);
   return result.rows.map(row => ({ ...defaults('Order'), ...row.details, id: row.id, order_number: row.details.order_number || row.id.slice(0,8),

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Loader2, FileBarChart } from 'lucide-react';
+import { getItemTotalCogs } from '@/lib/cogs';
 
 function calc(orders, products, accounts, taxRate) {
   const productCostMap = {};
@@ -7,7 +8,7 @@ function calc(orders, products, accounts, taxRate) {
 
   const faturamento = orders.reduce((s, o) => s + (o.total || 0), 0);
   const cmv = orders.reduce((s, o) =>
-    s + (o.items || []).reduce((si, i) => si + (productCostMap[i.product_id] || 0) * (i.quantity || 0), 0), 0);
+    s + (o.items || []).reduce((si, i) => si + getItemTotalCogs(i, productCostMap), 0), 0);
   const despesas = accounts.filter(a => a.type === 'payable').reduce((s, a) => s + (a.amount || 0), 0);
   const impostos = faturamento * (taxRate / 100);
   const lucroBruto = faturamento - impostos - cmv;

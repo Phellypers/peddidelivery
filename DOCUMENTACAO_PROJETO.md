@@ -110,3 +110,10 @@ Esta etapa registra o estado real antes de movimentacoes. Alteracoes que possam 
 - `npm run typecheck`: bloqueado porque o `jsconfig.json` inclui `src/components`, `src/pages` e `src/Layout.jsx`, mas esses caminhos nao existem nessa raiz.
 - Execucao local, rotas, refresh, console e responsividade: pendentes enquanto o app nao tiver uma raiz compilavel e as variaveis Base44.
 - Testes automatizados: nao encontrados nesta copia.
+## Estoque, ficha técnica e CMV histórico
+
+- O Estoque é a origem única dos insumos. A ficha técnica apenas referencia insumos existentes e define o consumo necessário para uma unidade do produto.
+- Entradas, saídas manuais, perdas, ajustes e consumo por venda são registrados em `inventory_movements`, com saldo anterior, saldo posterior, custo e origem.
+- Quando um pedido passa para `delivered`, `consumeInventoryForDeliveredOrder` bloqueia o pedido e os insumos na mesma transação, registra a baixa uma única vez e grava o custo vigente em `order_item_cost_snapshots`.
+- A chave única parcial por pedido e insumo impede baixa duplicada. O custo histórico de cada item alimenta Dashboard, CMV, fluxo de caixa, relatórios e DRE; pedidos anteriores à migração usam o custo atual como compatibilidade.
+- O custo médio do insumo é formado pelas entradas de compra. Alterações futuras de preço não reescrevem o CMV das vendas já concluídas.
