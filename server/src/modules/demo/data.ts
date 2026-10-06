@@ -8,6 +8,8 @@ import { isProductAvailable } from '../../../../src/lib/productAvailability.js';
 import { courierView } from '../couriers/data.js';
 import { validateDeliveryAddress } from '../../../../src/lib/deliveryArea.js';
 import { getSplitPaymentStatus } from '../../../../src/lib/splitPayment.js';
+import { env } from '../../config/env.js';
+import { DedicatedEntityRepository, dedicatedEntityNames, type LegacyEntityName } from '../dedicated-entities/repository.js';
 
 export const entityNames = new Set(['Account','Campaign','CashbackRule','Category','ChatMessage','City','Coupon','CustomerProfile','Deliverer','DelivererRating','HelpArticle','Ingredient','LiveSession','Notification','Order','Product','PromoMessage','ReactivationCampaign','Review','ReviewComment','Store','SupportTicket','Table','UpsellGroup','User']);
 const schemaCache = new Map<string, Record<string, any>>();
@@ -169,7 +171,9 @@ export async function readEntities(entity: string, request: AuthRequest) {
       return result.rows.filter(row => row.data.role !== 'courier' && row.data.user_role !== 'courier').map(recordView);
     }
     default: {
-      const result = await query('SELECT * FROM app_records WHERE entity_name=$1 AND store_id=$2', [entity,tenant]);
+      const result = env.dedicatedEntityReads && dedicatedEntityNames.has(entity as LegacyEntityName)
+        ? {rows:await new DedicatedEntityRepository(sharedDatabase).list(entity as LegacyEntityName,tenant)}
+        : await query('SELECT * FROM app_records WHERE entity_name=$1 AND store_id=$2', [entity,tenant]);
       const ownConversations = new Set(result.rows.filter(row => request.auth ? row.owner_id === request.auth.userId : row.visitor_id === request.headers['x-peddi-visitor']).map(row => row.data.conversation_id));
       return result.rows.filter(row => {
         if (manager) return true;

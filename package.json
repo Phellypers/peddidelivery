@@ -19,6 +19,8 @@
     "db:seed": "node --import ./scripts/tsx-bootstrap.mjs --import tsx server/src/db/seed-mvp.ts",
     "db:seed:presentation": "node --import ./scripts/tsx-bootstrap.mjs --import tsx server/src/db/seed-presentation-demo.ts",
     "db:check:supabase": "node --import ./scripts/tsx-bootstrap.mjs --import tsx server/src/db/check-supabase.ts",
+    "db:backfill:dedicated": "node --import ./scripts/tsx-bootstrap.mjs --import tsx server/src/db/backfill-dedicated-domains.ts",
+    "db:reconcile:dedicated": "node --import ./scripts/tsx-bootstrap.mjs --import tsx server/src/db/reconcile-dedicated-domains.ts",
     "audit:code": "node scripts/audit-code.mjs",
     "test:frontend": "node --test tests/*.test.mjs scripts/tests/*.test.mjs"
   },

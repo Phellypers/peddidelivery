@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import type { PoolClient } from 'pg';
 import type { LoyaltyDiscountType, LoyaltyProgram, ProcessLoyaltyResult, UserLoyaltyProgress } from './types.js';
 import { enqueueEmail } from '../email/service.js';
+import { dualWriteEntity } from '../dedicated-entities/service.js';
 
 const code = () => `FID-${crypto.randomBytes(5).toString('hex').toUpperCase()}`;
 
@@ -83,8 +84,7 @@ export async function processOrderDeliveryLoyalty(client: PoolClient, orderId: s
       loyalty_eligible_product_ids:program.eligible_product_ids||[],loyalty_value_limit:configurable?rewardValue:null,
       loyalty_over_limit_behavior:program.over_limit_behavior||null
     };
-    const coupon=(await client.query<{id:string}>(`INSERT INTO app_records(store_id,entity_name,owner_id,data)
-      VALUES($1,'Coupon',$2,$3) RETURNING id`,[storeId,order.user_id,JSON.stringify(couponData)])).rows[0];
+    const coupon=await dualWriteEntity(client,{storeId,entity:'Coupon',ownerId:order.user_id,data:couponData});
     await client.query('UPDATE loyalty_rewards SET coupon_record_id=$1 WHERE id=$2',[coupon.id,reward.id]);
     const recipient=(await client.query<{email:string}>('SELECT email FROM users WHERE id=$1',[order.user_id])).rows[0]?.email;
     if(recipient)await enqueueEmail(client,{storeId,userId:order.user_id,template:'loyalty_reward',to:recipient,subject:'Seu benefício de fidelidade chegou — PEDDI',payload:{code:rewardCode},idempotencyKey:`loyalty-reward:${reward.id}`});

@@ -17,6 +17,8 @@ import { storageConfigured, uploadImage, StorageUploadError } from '../storage/c
 import { processOrderDeliveryLoyalty } from '../loyalty/data.js';
 import { enqueueEmail } from '../email/service.js';
 import { consumeInventoryForDeliveredOrder } from '../inventory/data.js';
+import { dualDeleteEntity, dualWriteEntity, usesDedicatedStorage } from '../dedicated-entities/service.js';
+import { DedicatedEntityRepository } from '../dedicated-entities/repository.js';
 
 export const demoRouter=Router();
 demoRouter.use((request,response,next)=>(env.demoMode || env.mvpMode) ? next() : response.status(404).json({error:'Adaptador de entidades desativado.'}));
@@ -132,7 +134,10 @@ async function syncPromotionUsage(client:any,tenant:string,orderId:string,prior:
     if(isEligible&&customerLimit&&customerKey&&Number(usage[customerKey]||0)>=customerLimit)throw new Error('Você já atingiu o limite de uso desta promoção.');
     if(customerKey)usage[customerKey]=Math.max(0,Number(usage[customerKey]||0)+delta);
     const uses=Math.max(0,Number(promo.uses_count||0)+delta);
-    await client.query('UPDATE app_records SET data=data||$4::jsonb,updated_at=now() WHERE id=$1 AND store_id=$2 AND entity_name=$3',[row.id,tenant,'Coupon',JSON.stringify({uses_count:uses,usage_by_customer:usage,limit_reached:Boolean(totalLimit&&uses>=totalLimit)})]);
+    const updatedCoupon=(await client.query('UPDATE app_records SET data=data||$4::jsonb,updated_at=now() WHERE id=$1 AND store_id=$2 AND entity_name=$3 RETURNING *',[row.id,tenant,'Coupon',JSON.stringify({uses_count:uses,usage_by_customer:usage,limit_reached:Boolean(totalLimit&&uses>=totalLimit)})])).rows[0];
+    await new DedicatedEntityRepository(client).upsert(updatedCoupon);
+    const existingUsage=(await client.query("SELECT id FROM app_records WHERE store_id=$1 AND entity_name='PromotionUsage' AND data->>'promotion_id'=$2 AND data->>'order_id'=$3 LIMIT 1",[tenant,row.id,orderId])).rows[0];
+    await dualWriteEntity(client,{id:existingUsage?.id,storeId:tenant,entity:'PromotionUsage',ownerId:details.customer_user_id||null,data:{promotion_id:row.id,order_id:orderId,user_id:details.customer_user_id||null,customer_key:customerKey,discount_amount:Number((details.discount_breakdown||[]).find((item:any)=>item.promotion_id===row.id)?.value||0),status:isEligible?'applied':'reversed'}});
     if(promo.loyalty_reward_id){
       const reward=(await client.query(`UPDATE loyalty_rewards SET status=$3,redeemed_at=$4,redeemed_order_id=$5
         WHERE id=$1 AND store_id=$2 RETURNING user_id,reward_mode`,[promo.loyalty_reward_id,tenant,isEligible?'redeemed':'active',isEligible?new Date():null,isEligible?orderId:null])).rows[0];
@@ -299,11 +304,21 @@ async function saveEntity(request:AuthRequest,response:express.Response){
     default:{
       if(!isManager(request) && ['Review','ReviewComment'].includes(entity)) {data.is_approved=false;data.is_store_reply=false;}
       if(entity==='Review' && (!z.string().uuid().safeParse(data.product_id).success || !Number.isFinite(Number(data.rating)) || Number(data.rating)<1 || Number(data.rating)>5)) return response.status(400).json({error:'Informe produto válido e uma nota entre 1 e 5.'});
-      const result=id
-        ?await query('UPDATE app_records SET data=$4,updated_at=now() WHERE id=$1 AND store_id=$2 AND entity_name=$3 RETURNING *',[id,tenant,entity,JSON.stringify(data)])
-        :await query('INSERT INTO app_records(store_id,entity_name,owner_id,visitor_id,data) VALUES($1,$2,$3,$4,$5) RETURNING *',[tenant,entity,request.auth?.userId||null,request.headers['x-peddi-visitor']||null,JSON.stringify(data)]);
-      if(entity==='Review') await updateRating(tenant,data.product_id);
-      response.status(id?200:201).json(recordView(result.rows[0]));
+      if(usesDedicatedStorage(entity)){
+        const client=await pool!.connect();
+        try{
+          await client.query('BEGIN');
+          const row=await dualWriteEntity(client,{id:id as string|undefined,storeId:tenant,entity,ownerId:request.auth?.userId||null,visitorId:String(request.headers['x-peddi-visitor']||'')||null,data});
+          await client.query('COMMIT');
+          if(entity==='Review')await updateRating(tenant,data.product_id);
+          response.status(id?200:201).json(recordView(row));
+        }catch(error){await client.query('ROLLBACK');throw error;}finally{client.release();}
+      }else{
+        const result=id
+          ?await query('UPDATE app_records SET data=$4,updated_at=now() WHERE id=$1 AND store_id=$2 AND entity_name=$3 RETURNING *',[id,tenant,entity,JSON.stringify(data)])
+          :await query('INSERT INTO app_records(store_id,entity_name,owner_id,visitor_id,data) VALUES($1,$2,$3,$4,$5) RETURNING *',[tenant,entity,request.auth?.userId||null,request.headers['x-peddi-visitor']||null,JSON.stringify(data)]);
+        response.status(id?200:201).json(recordView(result.rows[0]));
+      }
     }
   }
 }
@@ -325,7 +340,11 @@ demoRouter.delete('/entities/:entity/:id',async(request:AuthRequest,response)=>{
   }
   else if(entity==='Deliverer')await archiveCourier(pool!,tenant,id as string);
   else if(entity==='Store')return response.status(400).json({error:'A loja demo deve permanecer disponível.'});
-  else await query('DELETE FROM app_records WHERE id=$1 AND store_id=$2 AND entity_name=$3',[id,tenant,entity]);
+  else if(usesDedicatedStorage(entity)){
+    const client=await pool!.connect();
+    try{await client.query('BEGIN');await dualDeleteEntity(client,entity,id as string,tenant);await client.query('COMMIT');}
+    catch(error){await client.query('ROLLBACK');throw error;}finally{client.release();}
+  } else await query('DELETE FROM app_records WHERE id=$1 AND store_id=$2 AND entity_name=$3',[id,tenant,entity]);
   if(entity==='Review')await updateRating(tenant,prior.product_id);
   response.sendStatus(204);
 });

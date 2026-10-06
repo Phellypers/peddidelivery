@@ -35,6 +35,7 @@ export const env = {
   twilioWhatsAppNumber: process.env.TWILIO_WHATSAPP_NUMBER ?? '',
   sendgridApiKey: process.env.SENDGRID_API_KEY ?? '',
   sendgridEmailFrom: process.env.SENDGRID_EMAIL_FROM ?? process.env.NOTIFICATION_EMAIL_FROM ?? '',
+  dedicatedEntityReads: process.env.PEDDI_DEDICATED_READS === 'true',
 };
 
 if (!env.jwtSecret || (process.env.NODE_ENV === 'production' && (env.jwtSecret.length < 32 || /change-me|gere-|development/i.test(env.jwtSecret)))) {
